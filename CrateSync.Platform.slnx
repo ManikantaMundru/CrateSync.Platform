@@ -1,0 +1,85 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/CrateSync.Platform.BuildingBlocks.Application/CrateSync.Platform.BuildingBlocks.Application.csproj" />
+    <Project Path="src/BuildingBlocks/CrateSync.Platform.BuildingBlocks.Domain/CrateSync.Platform.BuildingBlocks.Domain.csproj" />
+    <Project Path="src/BuildingBlocks/CrateSync.Platform.BuildingBlocks.Infrastructure/CrateSync.Platform.BuildingBlocks.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/CrateSync.Platform.Api/CrateSync.Platform.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Catalog/">
+    <Project Path="src/Modules/Catalog/CrateSync.Platform.Catalog.Application/CrateSync.Platform.Catalog.Application.csproj" />
+    <Project Path="src/Modules/Catalog/CrateSync.Platform.Catalog.Contracts/CrateSync.Platform.Catalog.Contracts.csproj" />
+    <Project Path="src/Modules/Catalog/CrateSync.Platform.Catalog.Domain/CrateSync.Platform.Catalog.Domain.csproj" />
+    <Project Path="src/Modules/Catalog/CrateSync.Platform.Catalog.Infrastructure/CrateSync.Platform.Catalog.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Finance/">
+    <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Application/CrateSync.Platform.Finance.Application.csproj" />
+    <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Contracts/CrateSync.Platform.Finance.Contracts.csproj" />
+    <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Domain/CrateSync.Platform.Finance.Domain.csproj" />
+    <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Infrastructure/CrateSync.Platform.Finance.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/InboundLogistics/">
+    <Project Path="src/Modules/InboundLogistics/CrateSync.Platform.InboundLogistics.Application/CrateSync.Platform.InboundLogistics.Application.csproj" />
+    <Project Path="src/Modules/InboundLogistics/CrateSync.Platform.InboundLogistics.Contracts/CrateSync.Platform.InboundLogistics.Contracts.csproj" />
+    <Project Path="src/Modules/InboundLogistics/CrateSync.Platform.InboundLogistics.Domain/CrateSync.Platform.InboundLogistics.Domain.csproj" />
+    <Project Path="src/Modules/InboundLogistics/CrateSync.Platform.InboundLogistics.Infrastructure/CrateSync.Platform.InboundLogistics.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Inventory/">
+    <Project Path="src/Modules/Inventory/CrateSync.Platform.Inventory.Application/CrateSync.Platform.Inventory.Application.csproj" />
+    <Project Path="src/Modules/Inventory/CrateSync.Platform.Inventory.Contracts/CrateSync.Platform.Inventory.Contracts.csproj" />
+    <Project Path="src/Modules/Inventory/CrateSync.Platform.Inventory.Domain/CrateSync.Platform.Inventory.Domain.csproj" />
+    <Project Path="src/Modules/Inventory/CrateSync.Platform.Inventory.Infrastructure/CrateSync.Platform.Inventory.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Sales/">
+    <Project Path="src/Modules/Sales/CrateSync.Platform.Sales.Application/CrateSync.Platform.Sales.Application.csproj" />
+    <Project Path="src/Modules/Sales/CrateSync.Platform.Sales.Contracts/CrateSync.Platform.Sales.Contracts.csproj" />
+    <Project Path="src/Modules/Sales/CrateSync.Platform.Sales.Domain/CrateSync.Platform.Sales.Domain.csproj" />
+    <Project Path="src/Modules/Sales/CrateSync.Platform.Sales.Infrastructure/CrateSync.Platform.Sales.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Tenancy/">
+    <Project Path="src/Modules/Tenancy/CrateSync.Platform.Tenancy.Application/CrateSync.Platform.Tenancy.Application.csproj" />
+    <Project Path="src/Modules/Tenancy/CrateSync.Platform.Tenancy.Contracts/CrateSync.Platform.Tenancy.Contracts.csproj" />
+    <Project Path="src/Modules/Tenancy/CrateSync.Platform.Tenancy.Domain/CrateSync.Platform.Tenancy.Domain.csproj" />
+    <Project Path="src/Modules/Tenancy/CrateSync.Platform.Tenancy.Infrastructure/CrateSync.Platform.Tenancy.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/TradingPartners/">
+    <Project Path="src/Modules/TradingPartners/CrateSync.Platform.TradingPartners.Application/CrateSync.Platform.TradingPartners.Application.csproj" />
+    <Project Path="src/Modules/TradingPartners/CrateSync.Platform.TradingPartners.Contracts/CrateSync.Platform.TradingPartners.Contracts.csproj" />
+    <Project Path="src/Modules/TradingPartners/CrateSync.Platform.TradingPartners.Domain/CrateSync.Platform.TradingPartners.Domain.csproj" />
+    <Project Path="src/Modules/TradingPartners/CrateSync.Platform.TradingPartners.Infrastructure/CrateSync.Platform.TradingPartners.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Warehousing/">
+    <Project Path="src/Modules/Warehousing/CrateSync.Platform.Warehousing.Application/CrateSync.Platform.Warehousing.Application.csproj" />
+    <Project Path="src/Modules/Warehousing/CrateSync.Platform.Warehousing.Contracts/CrateSync.Platform.Warehousing.Contracts.csproj" />
+    <Project Path="src/Modules/Warehousing/CrateSync.Platform.Warehousing.Domain/CrateSync.Platform.Warehousing.Domain.csproj" />
+    <Project Path="src/Modules/Warehousing/CrateSync.Platform.Warehousing.Infrastructure/CrateSync.Platform.Warehousing.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/ArchitectureTests/">
+    <Project Path="tests/ArchitectureTests/CrateSync.Platform.ArchitectureTests/CrateSync.Platform.ArchitectureTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/IntegrationTests/">
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Api.IntegrationTests/CrateSync.Platform.Api.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Catalog.IntegrationTests/CrateSync.Platform.Catalog.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Finance.IntegrationTests/CrateSync.Platform.Finance.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.InboundLogistics.IntegrationTests/CrateSync.Platform.InboundLogistics.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Inventory.IntegrationTests/CrateSync.Platform.Inventory.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Sales.IntegrationTests/CrateSync.Platform.Sales.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Tenancy.IntegrationTests/CrateSync.Platform.Tenancy.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.TradingPartners.IntegrationTests/CrateSync.Platform.TradingPartners.IntegrationTests.csproj" />
+    <Project Path="tests/IntegrationTests/CrateSync.Platform.Warehousing.IntegrationTests/CrateSync.Platform.Warehousing.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/UnitTests/">
+    <Project Path="tests/UnitTests/CrateSync.Platform.Catalog.UnitTests/CrateSync.Platform.Catalog.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.Finance.UnitTests/CrateSync.Platform.Finance.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.InboundLogistics.UnitTests/CrateSync.Platform.InboundLogistics.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.Inventory.UnitTests/CrateSync.Platform.Inventory.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.Sales.UnitTests/CrateSync.Platform.Sales.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.Tenancy.UnitTests/CrateSync.Platform.Tenancy.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.TradingPartners.UnitTests/CrateSync.Platform.TradingPartners.UnitTests.csproj" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.Warehousing.UnitTests/CrateSync.Platform.Warehousing.UnitTests.csproj" />
+  </Folder>
+</Solution>

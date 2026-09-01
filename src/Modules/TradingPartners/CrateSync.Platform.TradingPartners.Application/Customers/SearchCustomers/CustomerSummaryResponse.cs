@@ -1,0 +1,3 @@
+﻿namespace CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
+
+public sealed record CustomerSummaryResponse;
