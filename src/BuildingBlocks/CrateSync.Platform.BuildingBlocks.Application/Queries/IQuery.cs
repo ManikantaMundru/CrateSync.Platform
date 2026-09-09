@@ -1,5 +1,5 @@
-﻿namespace CrateSync.Platform.BuildingBlocks.Application.Queries;
+using MediatR;
 
-public interface IQuery
-{
-}
+namespace CrateSync.Platform.BuildingBlocks.Application.Queries;
+
+public interface IQuery<TResponse> : IRequest<TResponse>;

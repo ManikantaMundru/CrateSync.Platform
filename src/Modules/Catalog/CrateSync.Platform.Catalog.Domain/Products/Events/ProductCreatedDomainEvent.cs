@@ -1,3 +1,5 @@
-﻿namespace CrateSync.Platform.Catalog.Domain.Products.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record ProductCreatedDomainEvent;
+namespace CrateSync.Platform.Catalog.Domain.Products.Events;
+
+public sealed record ProductCreatedDomainEvent(ProductId ProductId, Guid TenantId, string Name, DateTimeOffset OccurredAtUtc) : DomainEvent(OccurredAtUtc);

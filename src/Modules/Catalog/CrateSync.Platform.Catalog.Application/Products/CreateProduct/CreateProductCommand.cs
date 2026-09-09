@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Catalog.Application.Products.CreateProduct;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record CreateProductCommand;
+namespace CrateSync.Platform.Catalog.Application.Products.CreateProduct;
+
+public sealed record CreateProductCommand(string Name): ICommand<Result<Guid>>;

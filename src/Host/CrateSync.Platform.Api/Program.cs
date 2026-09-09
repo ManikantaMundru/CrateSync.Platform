@@ -1,6 +1,28 @@
-﻿var builder = WebApplication.CreateBuilder(args);
+using CrateSync.Platform.Api.ExceptionHandling;
+using CrateSync.Platform.Api.Extensions;
+using CrateSync.Platform.BuildingBlocks.Application;
+using CrateSync.Platform.BuildingBlocks.Application.Behaviors;
+using CrateSync.Platform.BuildingBlocks.Infrastructure;
+using CrateSync.Platform.Catalog.Application;
+using CrateSync.Platform.Catalog.Infrastructure;
+using MediatR;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<ITenantContext, HttpContextExtension>();
+
+builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
+builder.Services.AddCatalogApplication();
+builder.Services.AddCatalogInfrastructure(builder.Configuration);
+
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
 
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
 
@@ -24,6 +46,8 @@ app.MapGet("/health", () =>
         Status = "Healthy"
     });
 });
+
+app.MapControllers();
 
 app.Run();
 

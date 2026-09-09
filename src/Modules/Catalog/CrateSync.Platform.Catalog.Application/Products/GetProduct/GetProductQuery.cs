@@ -1,3 +1,8 @@
-﻿namespace CrateSync.Platform.Catalog.Application.Products.GetProduct;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record GetProductQuery;
+namespace CrateSync.Platform.Catalog.Application.Products.GetProduct;
+
+public sealed record GetProductQuery(
+    Guid ProductId)
+    : IQuery<Result<ProductResponse>>;

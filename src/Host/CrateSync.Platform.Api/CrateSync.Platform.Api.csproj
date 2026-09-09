@@ -6,4 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Modules\Catalog\CrateSync.Platform.Catalog.Application\CrateSync.Platform.Catalog.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Catalog\CrateSync.Platform.Catalog.Domain\CrateSync.Platform.Catalog.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Catalog\CrateSync.Platform.Catalog.Infrastructure\CrateSync.Platform.Catalog.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>

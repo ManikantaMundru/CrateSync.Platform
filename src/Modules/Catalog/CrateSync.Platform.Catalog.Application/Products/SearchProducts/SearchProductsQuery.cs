@@ -1,3 +1,8 @@
-﻿namespace CrateSync.Platform.Catalog.Application.Products.SearchProducts;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record SearchProductsQuery;
+namespace CrateSync.Platform.Catalog.Application.Products.SearchProducts;
+
+public sealed record SearchProductsQuery(
+    string? SearchTerm,
+    bool? IsActive)
+    : IQuery<IReadOnlyCollection<ProductSearchResponse>>;
