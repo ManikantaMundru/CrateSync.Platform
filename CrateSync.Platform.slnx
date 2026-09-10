@@ -67,23 +67,8 @@
   </Folder>
   <Folder Name="/tests/IntegrationTests/">
     <Project Path="tests/IntegrationTests/CrateSync.Platform.Api.IntegrationTests/CrateSync.Platform.Api.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.Catalog.IntegrationTests/CrateSync.Platform.Catalog.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.Finance.IntegrationTests/CrateSync.Platform.Finance.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.InboundLogistics.IntegrationTests/CrateSync.Platform.InboundLogistics.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.Inventory.IntegrationTests/CrateSync.Platform.Inventory.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.Sales.IntegrationTests/CrateSync.Platform.Sales.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.Tenancy.IntegrationTests/CrateSync.Platform.Tenancy.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.TradingPartners.IntegrationTests/CrateSync.Platform.TradingPartners.IntegrationTests.csproj" />
-    <Project Path="tests/IntegrationTests/CrateSync.Platform.Warehousing.IntegrationTests/CrateSync.Platform.Warehousing.IntegrationTests.csproj" />
   </Folder>
   <Folder Name="/tests/UnitTests/">
-    <Project Path="tests/UnitTests/CrateSync.Platform.Catalog.UnitTests/CrateSync.Platform.Catalog.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.Finance.UnitTests/CrateSync.Platform.Finance.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.InboundLogistics.UnitTests/CrateSync.Platform.InboundLogistics.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.Inventory.UnitTests/CrateSync.Platform.Inventory.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.Sales.UnitTests/CrateSync.Platform.Sales.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.Tenancy.UnitTests/CrateSync.Platform.Tenancy.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.TradingPartners.UnitTests/CrateSync.Platform.TradingPartners.UnitTests.csproj" />
-    <Project Path="tests/UnitTests/CrateSync.Platform.Warehousing.UnitTests/CrateSync.Platform.Warehousing.UnitTests.csproj" />
+    <Project Path="CrateSync.Platform.Catalog.Tests/CrateSync.Platform.Catalog.Tests.csproj" Id="886d2617-fc8a-40f4-b4f3-1e49f0d6091d" />
   </Folder>
 </Solution>
