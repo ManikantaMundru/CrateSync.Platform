@@ -1,3 +1,10 @@
-﻿namespace CrateSync.Platform.InboundLogistics.Domain.Shipments.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record ShipmentArrivedDomainEvent;
+namespace CrateSync.Platform.InboundLogistics.Domain.Shipments.Events;
+
+public sealed record ShipmentArrivedDomainEvent(
+    InboundShipmentId ShipmentId,
+    Guid TenantId,
+    Guid WarehouseId,
+    DateTimeOffset OccurredOnUtc)
+    : DomainEvent(OccurredOnUtc);

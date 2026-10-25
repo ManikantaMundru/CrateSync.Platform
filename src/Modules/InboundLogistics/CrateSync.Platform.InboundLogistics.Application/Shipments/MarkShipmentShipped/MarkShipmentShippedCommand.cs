@@ -1,3 +1,7 @@
-﻿namespace CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentShipped;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record MarkShipmentShippedCommand;
+namespace CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentShipped;
+
+public sealed record MarkShipmentShippedCommand(
+    Guid ShipmentId) : ICommand<Result>;

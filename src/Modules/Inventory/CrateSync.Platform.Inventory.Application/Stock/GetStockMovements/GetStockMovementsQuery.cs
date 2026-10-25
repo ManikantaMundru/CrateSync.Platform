@@ -1,3 +1,8 @@
-﻿namespace CrateSync.Platform.Inventory.Application.Stock.GetStockMovements;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record GetStockMovementsQuery;
+namespace CrateSync.Platform.Inventory.Application.Stock.GetStockMovements;
+
+public sealed record GetStockMovementsQuery(
+    Guid WarehouseId,
+    Guid ProductVarietyId)
+    : IQuery<IReadOnlyCollection<StockMovementResponse>>;

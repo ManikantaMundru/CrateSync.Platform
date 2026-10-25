@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+	<ProjectReference Include="..\..\..\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\CrateSync.Platform.Warehousing.Domain\CrateSync.Platform.Warehousing.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

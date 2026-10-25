@@ -1,3 +1,10 @@
-﻿namespace CrateSync.Platform.Inventory.Application.Stock.DispatchStock;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record DispatchStockCommand;
+namespace CrateSync.Platform.Inventory.Application.Stock.DispatchStock;
+
+public sealed record DispatchStockCommand(
+    Guid WarehouseId,
+    Guid ProductVarietyId,
+    int Quantity,
+    Guid SalesOrderId) : ICommand<Result>;

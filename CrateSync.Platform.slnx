@@ -70,5 +70,6 @@
   </Folder>
   <Folder Name="/tests/UnitTests/">
     <Project Path="CrateSync.Platform.Catalog.Tests/CrateSync.Platform.Catalog.Tests.csproj" Id="886d2617-fc8a-40f4-b4f3-1e49f0d6091d" />
+    <Project Path="CrateSync.Platform.InboundLogistics.Tests/CrateSync.Platform.InboundLogistics.Tests.csproj" Id="f50c3d99-7c28-4477-8b9a-b1449905ce0b" />
   </Folder>
 </Solution>

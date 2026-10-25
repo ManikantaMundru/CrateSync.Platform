@@ -1,3 +1,7 @@
-﻿namespace CrateSync.Platform.Inventory.Contracts;
+namespace CrateSync.Platform.Inventory.Contracts;
 
-public sealed record ReserveStockRequest;
+public sealed record ReserveStockRequest(
+    Guid WarehouseId,
+    Guid ProductVarietyId,
+    int Quantity,
+    Guid SalesOrderId);

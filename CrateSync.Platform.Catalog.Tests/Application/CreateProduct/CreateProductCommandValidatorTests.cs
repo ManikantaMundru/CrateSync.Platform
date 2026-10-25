@@ -13,7 +13,7 @@ public sealed class CreateProductCommandValidatorTests
     {
         var command = new CreateProductCommand("Apple");
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeTrue();
     }
@@ -25,7 +25,7 @@ public sealed class CreateProductCommandValidatorTests
     {
         var command = new CreateProductCommand(name);
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(x => x.PropertyName == nameof(CreateProductCommand.Name));
@@ -36,7 +36,7 @@ public sealed class CreateProductCommandValidatorTests
     {
         var command = new CreateProductCommand(new string('A', 151));
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(x => x.PropertyName == nameof(CreateProductCommand.Name));

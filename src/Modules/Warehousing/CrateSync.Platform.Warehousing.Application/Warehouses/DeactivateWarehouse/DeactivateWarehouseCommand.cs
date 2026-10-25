@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Warehousing.Application.Warehouses.DeactivateWarehouse;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record DeactivateWarehouseCommand;
+namespace CrateSync.Platform.Warehousing.Application.Warehouses.DeactivateWarehouse;
+
+public sealed record DeactivateWarehouseCommand(Guid WarehouseId) : ICommand<Result>;

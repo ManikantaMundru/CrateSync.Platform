@@ -1,3 +1,11 @@
-﻿namespace CrateSync.Platform.Warehousing.Domain.Warehouses.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record WarehouseCreatedDomainEvent;
+namespace CrateSync.Platform.Warehousing.Domain.Warehouses.Events;
+
+public sealed record WarehouseCreatedDomainEvent(
+    WarehouseId WarehouseId,
+    Guid TenantId,
+    string Name,
+    string Code,
+    DateTimeOffset OccurredOnUtc)
+    : DomainEvent(OccurredOnUtc);

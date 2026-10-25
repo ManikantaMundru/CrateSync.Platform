@@ -1,3 +1,8 @@
-﻿namespace CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record SearchCustomersQuery;
+namespace CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
+
+public sealed record SearchCustomersQuery(
+    string? SearchTerm,
+    bool? IsActive)
+    : IQuery<IReadOnlyCollection<CustomerSummaryResponse>>;

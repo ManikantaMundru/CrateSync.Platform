@@ -1,3 +1,9 @@
-﻿namespace CrateSync.Platform.TradingPartners.Domain.Suppliers.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record SupplierDeactivatedDomainEvent;
+namespace CrateSync.Platform.TradingPartners.Domain.Suppliers.Events;
+
+public sealed record SupplierDeactivatedDomainEvent(
+    SupplierId SupplierId,
+    Guid TenantId,
+    DateTimeOffset OccurredOnUtc)
+    : DomainEvent(OccurredOnUtc);

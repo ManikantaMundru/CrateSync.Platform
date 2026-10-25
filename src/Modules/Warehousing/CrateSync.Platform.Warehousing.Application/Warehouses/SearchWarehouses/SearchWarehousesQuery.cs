@@ -1,3 +1,8 @@
-﻿namespace CrateSync.Platform.Warehousing.Application.Warehouses.SearchWarehouses;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record SearchWarehousesQuery;
+namespace CrateSync.Platform.Warehousing.Application.Warehouses.SearchWarehouses;
+
+public sealed record SearchWarehousesQuery(
+    string? SearchTerm,
+    bool? IsActive)
+    : IQuery<IReadOnlyCollection<WarehouseSummaryResponse>>;

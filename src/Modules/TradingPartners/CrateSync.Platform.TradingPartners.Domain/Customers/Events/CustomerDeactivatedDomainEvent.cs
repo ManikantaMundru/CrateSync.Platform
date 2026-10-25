@@ -1,3 +1,9 @@
-﻿namespace CrateSync.Platform.TradingPartners.Domain.Customers.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record CustomerDeactivatedDomainEvent;
+namespace CrateSync.Platform.TradingPartners.Domain.Customers.Events;
+
+public sealed record CustomerDeactivatedDomainEvent(
+    CustomerId CustomerId,
+    Guid TenantId,
+    DateTimeOffset OccurredOnUtc)
+    : DomainEvent(OccurredOnUtc);

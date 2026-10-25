@@ -1,3 +1,13 @@
-﻿namespace CrateSync.Platform.Inventory.Domain.Stock.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record StockReservedDomainEvent;
+namespace CrateSync.Platform.Inventory.Domain.Stock.Events;
+
+public sealed record StockReservedDomainEvent(
+    InventoryBalanceId InventoryBalanceId,
+    Guid TenantId,
+    Guid WarehouseId,
+    Guid ProductVarietyId,
+    int Quantity,
+    Guid SalesOrderId,
+    DateTimeOffset OccurredOnUtc)
+    : DomainEvent(OccurredOnUtc);

@@ -17,6 +17,19 @@
     <ProjectReference Include="..\..\Modules\Catalog\CrateSync.Platform.Catalog.Application\CrateSync.Platform.Catalog.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\CrateSync.Platform.Catalog.Domain\CrateSync.Platform.Catalog.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\CrateSync.Platform.Catalog.Infrastructure\CrateSync.Platform.Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Application\CrateSync.Platform.InboundLogistics.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Infrastructure\CrateSync.Platform.InboundLogistics.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Inventory\CrateSync.Platform.Inventory.Application\CrateSync.Platform.Inventory.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Inventory\CrateSync.Platform.Inventory.Infrastructure\CrateSync.Platform.Inventory.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\TradingPartners\CrateSync.Platform.TradingPartners.Application\CrateSync.Platform.TradingPartners.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\TradingPartners\CrateSync.Platform.TradingPartners.Domain\CrateSync.Platform.TradingPartners.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\TradingPartners\CrateSync.Platform.TradingPartners.Infrastructure\CrateSync.Platform.TradingPartners.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Warehousing\CrateSync.Platform.Warehousing.Application\CrateSync.Platform.Warehousing.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Warehousing\CrateSync.Platform.Warehousing.Infrastructure\CrateSync.Platform.Warehousing.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Responses\Inventory\" />
   </ItemGroup>
 
 </Project>

@@ -1,3 +1,10 @@
-﻿namespace CrateSync.Platform.Inventory.Application.Stock.ReserveStock;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record ReserveStockCommand;
+namespace CrateSync.Platform.Inventory.Application.Stock.ReserveStock;
+
+public sealed record ReserveStockCommand(
+    Guid WarehouseId,
+    Guid ProductVarietyId,
+    int Quantity,
+    Guid SalesOrderId) : ICommand<Result>;

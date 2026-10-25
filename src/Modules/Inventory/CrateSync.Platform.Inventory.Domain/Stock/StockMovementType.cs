@@ -1,6 +1,10 @@
-﻿namespace CrateSync.Platform.Inventory.Domain.Stock;
+namespace CrateSync.Platform.Inventory.Domain.Stock;
 
 public enum StockMovementType
 {
-    Unknown = 0
+    Received = 1,
+    Reserved = 2,
+    ReservationReleased = 3,
+    Dispatched = 4,
+    Adjusted = 5
 }

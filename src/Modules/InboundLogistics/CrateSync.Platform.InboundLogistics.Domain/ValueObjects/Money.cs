@@ -1,5 +1,20 @@
-﻿namespace CrateSync.Platform.InboundLogistics.Domain.ValueObjects;
+namespace CrateSync.Platform.InboundLogistics.Domain.ValueObjects;
 
-public sealed class Money
+public sealed record Money
 {
+    private Money() { }
+
+    public Money(decimal amount, Currency currency)
+    {
+        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount cannot be negative.");
+
+        Amount = amount;
+        Currency = currency ?? throw new ArgumentNullException(nameof(currency));
+    }
+
+    public decimal Amount { get; private set; }
+
+    public Currency Currency { get; private set; } = null!;
+
+    public override string ToString() => $"{Amount:0.00} {Currency.Code}";
 }

@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.TradingPartners.Application.Customers.GetCustomer;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record GetCustomerQuery;
+namespace CrateSync.Platform.TradingPartners.Application.Customers.GetCustomer;
+
+public sealed record GetCustomerQuery(Guid CustomerId) : IQuery<Result<CustomerResponse>>;

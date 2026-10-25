@@ -13,7 +13,7 @@ public sealed class AddProductVarietyCommandValidatorTests
     {
         var command = new AddProductVarietyCommand(Guid.NewGuid(), "Royal Gala");
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeTrue();
     }
@@ -23,7 +23,7 @@ public sealed class AddProductVarietyCommandValidatorTests
     {
         var command = new AddProductVarietyCommand(Guid.Empty, "Royal Gala");
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(x => x.PropertyName == nameof(AddProductVarietyCommand.ProductId));
@@ -36,7 +36,7 @@ public sealed class AddProductVarietyCommandValidatorTests
     {
         var command = new AddProductVarietyCommand(Guid.NewGuid(), name);
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(x => x.PropertyName == nameof(AddProductVarietyCommand.Name));
@@ -47,7 +47,7 @@ public sealed class AddProductVarietyCommandValidatorTests
     {
         var command = new AddProductVarietyCommand(Guid.NewGuid(), new string('A', 151));
 
-        var result = await _validator.ValidateAsync(command);
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(x => x.PropertyName == nameof(AddProductVarietyCommand.Name));

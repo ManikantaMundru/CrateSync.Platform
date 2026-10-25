@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+		<PackageReference Include="NSubstitute" />
+		<PackageReference Include="Shouldly" />
+		<PackageReference Include="xunit.v3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
+		<ProjectReference Include="..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Application\CrateSync.Platform.InboundLogistics.Application.csproj" />
+		<ProjectReference Include="..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Domain\CrateSync.Platform.InboundLogistics.Domain.csproj" />
+	</ItemGroup>
+
+</Project>

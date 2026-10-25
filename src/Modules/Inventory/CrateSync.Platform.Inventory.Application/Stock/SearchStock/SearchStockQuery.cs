@@ -1,3 +1,8 @@
-﻿namespace CrateSync.Platform.Inventory.Application.Stock.SearchStock;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record SearchStockQuery;
+namespace CrateSync.Platform.Inventory.Application.Stock.SearchStock;
+
+public sealed record SearchStockQuery(
+    Guid? WarehouseId,
+    Guid? ProductVarietyId)
+    : IQuery<IReadOnlyCollection<StockSummaryResponse>>;

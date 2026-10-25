@@ -1,3 +1,10 @@
-﻿namespace CrateSync.Platform.Inventory.Application.Stock.AdjustStock;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record AdjustStockCommand;
+namespace CrateSync.Platform.Inventory.Application.Stock.AdjustStock;
+
+public sealed record AdjustStockCommand(
+    Guid WarehouseId,
+    Guid ProductVarietyId,
+    int QuantityChange,
+    string Reason) : ICommand<Result>;

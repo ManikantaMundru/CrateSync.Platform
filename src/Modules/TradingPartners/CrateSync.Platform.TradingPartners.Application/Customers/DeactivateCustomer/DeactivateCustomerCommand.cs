@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.TradingPartners.Application.Customers.DeactivateCustomer;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record DeactivateCustomerCommand;
+namespace CrateSync.Platform.TradingPartners.Application.Customers.DeactivateCustomer;
+
+public sealed record DeactivateCustomerCommand(Guid CustomerId) : ICommand<Result>;

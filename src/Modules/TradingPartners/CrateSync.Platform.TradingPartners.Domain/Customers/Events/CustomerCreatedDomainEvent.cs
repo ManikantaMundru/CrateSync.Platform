@@ -1,3 +1,10 @@
-﻿namespace CrateSync.Platform.TradingPartners.Domain.Customers.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record CustomerCreatedDomainEvent;
+namespace CrateSync.Platform.TradingPartners.Domain.Customers.Events;
+
+public sealed record CustomerCreatedDomainEvent(
+    CustomerId CustomerId,
+    Guid TenantId,
+    string Name,
+    DateTimeOffset OccurredOnUtc)
+    : DomainEvent(OccurredOnUtc);
