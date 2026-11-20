@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.DispatchOrder;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record DispatchSalesOrderCommand;
+namespace CrateSync.Platform.Sales.Application.Orders.DispatchOrder;
+
+public sealed record DispatchSalesOrderCommand(Guid SalesOrderId) : ICommand<Result>;

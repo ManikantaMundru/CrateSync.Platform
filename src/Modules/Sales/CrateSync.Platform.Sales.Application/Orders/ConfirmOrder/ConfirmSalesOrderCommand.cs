@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.ConfirmOrder;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record ConfirmSalesOrderCommand;
+namespace CrateSync.Platform.Sales.Application.Orders.ConfirmOrder;
+
+public sealed record ConfirmSalesOrderCommand(Guid SalesOrderId) : ICommand<Result>;

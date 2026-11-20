@@ -1,15 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
-    <ProjectReference Include="..\..\InboundLogistics\CrateSync.Platform.InboundLogistics.Contracts\CrateSync.Platform.InboundLogistics.Contracts.csproj" />
-    <ProjectReference Include="..\CrateSync.Platform.Inventory.Domain\CrateSync.Platform.Inventory.Domain.csproj" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
+		<ProjectReference Include="..\..\InboundLogistics\CrateSync.Platform.InboundLogistics.Contracts\CrateSync.Platform.InboundLogistics.Contracts.csproj" />
+		<ProjectReference Include="..\CrateSync.Platform.Inventory.Domain\CrateSync.Platform.Inventory.Domain.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\CrateSync.Platform.IntegrationContracts\CrateSync.Platform.IntegrationContracts.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<InternalsVisibleTo Include="CrateSync.Platform.Inventory.Tests" />
+	</ItemGroup>
 </Project>

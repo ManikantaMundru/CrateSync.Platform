@@ -8,6 +8,7 @@ namespace CrateSync.Platform.Inventory.Domain.Stock;
 public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
 {
     private readonly List<StockMovement> _movements = [];
+    private readonly List<StockReservation> _reservations = [];
 
     private InventoryBalance() { }
 
@@ -16,243 +17,163 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
-        DateTimeOffset occurredAtUtc)
+        DateTimeOffset createdAtUtc)
         : base(id)
     {
-        if (tenantId == Guid.Empty)
-            throw new ArgumentException("Tenant ID cannot be empty.", nameof(tenantId));
-
-        if (warehouseId == Guid.Empty)
-            throw new ArgumentException("Warehouse ID cannot be empty.", nameof(warehouseId));
-
-        if (productVarietyId == Guid.Empty)
-            throw new ArgumentException("Product variety ID cannot be empty.", nameof(productVarietyId));
-
         TenantId = tenantId;
         WarehouseId = warehouseId;
         ProductVarietyId = productVarietyId;
-
         OnHand = StockQuantity.Zero;
         Reserved = StockQuantity.Zero;
-
-        CreatedAtUtc = occurredAtUtc;
-        UpdatedAtUtc = occurredAtUtc;
+        CreatedAtUtc = createdAtUtc;
+        UpdatedAtUtc = createdAtUtc;
     }
 
     public Guid TenantId { get; private set; }
-
     public Guid WarehouseId { get; private set; }
-
     public Guid ProductVarietyId { get; private set; }
-
     public StockQuantity OnHand { get; private set; }
-
     public StockQuantity Reserved { get; private set; }
-
     public int Available => OnHand.Value - Reserved.Value;
-
     public DateTimeOffset CreatedAtUtc { get; private set; }
-
     public DateTimeOffset UpdatedAtUtc { get; private set; }
+    public IReadOnlyCollection<StockMovement> Movements => _movements.AsReadOnly();
+    public IReadOnlyCollection<StockReservation> Reservations => _reservations.AsReadOnly();
 
-    public IReadOnlyCollection<StockMovement> Movements =>
-        _movements.AsReadOnly();
-
-    public static InventoryBalance Create(
-        Guid tenantId,
-        Guid warehouseId,
-        Guid productVarietyId,
-        DateTimeOffset occurredAtUtc)
+    public static InventoryBalance Create(Guid tenantId, Guid warehouseId, Guid productVarietyId, DateTimeOffset createdAtUtc)
     {
-        return new InventoryBalance(
-            InventoryBalanceId.New(),
-            tenantId,
-            warehouseId,
-            productVarietyId,
-            occurredAtUtc);
+        if (tenantId == Guid.Empty) throw new ArgumentException("Tenant ID cannot be empty.", nameof(tenantId));
+        if (warehouseId == Guid.Empty) throw new ArgumentException("Warehouse ID cannot be empty.", nameof(warehouseId));
+        if (productVarietyId == Guid.Empty) throw new ArgumentException("Product variety ID cannot be empty.", nameof(productVarietyId));
+
+        return new InventoryBalance(InventoryBalanceId.New(), tenantId, warehouseId, productVarietyId, createdAtUtc);
     }
 
-    public void Receive(
-        CrateQuantity quantity,
-        StockReference reference,
-        DateTimeOffset occurredAtUtc)
+    public void Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc)
     {
-        var newOnHand = OnHand.Value + quantity.Value;
-
-        OnHand = new StockQuantity(newOnHand);
+        OnHand = new StockQuantity(OnHand.Value + quantity.Value);
         UpdatedAtUtc = occurredAtUtc;
 
-        AddMovement(
-            StockMovementType.Received,
-            quantity.Value,
-            0,
-            reference,
-            null,
-            occurredAtUtc);
+        AddMovement(StockMovementType.Received, quantity.Value, 0, reference, null, occurredAtUtc);
 
-        RaiseDomainEvent(
-            new StockReceivedDomainEvent(
-                Id,
-                TenantId,
-                WarehouseId,
-                ProductVarietyId,
-                quantity.Value,
-                reference.Id,
-                occurredAtUtc));
+        RaiseDomainEvent(new StockReceivedDomainEvent(
+            Id, TenantId, WarehouseId, ProductVarietyId, quantity.Value, reference.Id, occurredAtUtc));
     }
 
-    public void Reserve(
-        CrateQuantity quantity,
-        StockReference reference,
-        DateTimeOffset occurredAtUtc)
+    public bool ReserveForOrder(Guid salesOrderId, CrateQuantity quantity, DateTimeOffset occurredAtUtc)
     {
+        var existing = _reservations.SingleOrDefault(x => x.SalesOrderId == salesOrderId);
+
+        if (existing is not null)
+        {
+            if (existing.Status == StockReservationStatus.Active && existing.Quantity == quantity.Value)
+                return false;
+
+            throw new InvalidOperationException("A reservation already exists for this sales order.");
+        }
+
         if (quantity.Value > Available)
-            throw new InsufficientStockException(
-                Available,
-                quantity.Value);
+            throw new InsufficientStockException(Available, quantity.Value);
 
-        Reserved = new StockQuantity(
-            Reserved.Value + quantity.Value);
+        _reservations.Add(new StockReservation(
+            StockReservationId.New(), salesOrderId, quantity.Value, occurredAtUtc));
 
+        Reserved = new StockQuantity(Reserved.Value + quantity.Value);
         UpdatedAtUtc = occurredAtUtc;
 
         AddMovement(
             StockMovementType.Reserved,
             0,
             quantity.Value,
-            reference,
+            StockReference.SalesOrder(salesOrderId),
             null,
             occurredAtUtc);
 
-        RaiseDomainEvent(
-            new StockReservedDomainEvent(
-                Id,
-                TenantId,
-                WarehouseId,
-                ProductVarietyId,
-                quantity.Value,
-                reference.Id,
-                occurredAtUtc));
+        RaiseDomainEvent(new StockReservedDomainEvent(
+            Id, TenantId, WarehouseId, ProductVarietyId, quantity.Value, salesOrderId, occurredAtUtc));
+
+        return true;
     }
 
-    public void ReleaseReservation(
-        CrateQuantity quantity,
-        StockReference reference,
-        DateTimeOffset occurredAtUtc)
+    public bool ReleaseForOrder(Guid salesOrderId, DateTimeOffset occurredAtUtc)
     {
-        if (quantity.Value > Reserved.Value)
-            throw new InsufficientReservedStockException(
-                Reserved.Value,
-                quantity.Value);
+        var reservation = _reservations.SingleOrDefault(x => x.SalesOrderId == salesOrderId);
 
-        Reserved = new StockQuantity(
-            Reserved.Value - quantity.Value);
+        if (reservation is null || reservation.Status == StockReservationStatus.Released)
+            return false;
 
+        if (reservation.Status == StockReservationStatus.Dispatched)
+            throw new InvalidOperationException("A dispatched reservation cannot be released.");
+
+        reservation.Release(occurredAtUtc);
+        Reserved = new StockQuantity(Reserved.Value - reservation.Quantity);
         UpdatedAtUtc = occurredAtUtc;
 
         AddMovement(
             StockMovementType.ReservationReleased,
             0,
-            -quantity.Value,
-            reference,
+            -reservation.Quantity,
+            StockReference.SalesOrder(salesOrderId),
             null,
             occurredAtUtc);
 
-        RaiseDomainEvent(
-            new StockReservationReleasedDomainEvent(
-                Id,
-                TenantId,
-                WarehouseId,
-                ProductVarietyId,
-                quantity.Value,
-                reference.Id,
-                occurredAtUtc));
+        RaiseDomainEvent(new StockReservationReleasedDomainEvent(
+            Id, TenantId, WarehouseId, ProductVarietyId, reservation.Quantity, salesOrderId, occurredAtUtc));
+
+        return true;
     }
 
-    public void Dispatch(
-        CrateQuantity quantity,
-        StockReference reference,
-        DateTimeOffset occurredAtUtc)
+    public bool DispatchForOrder(Guid salesOrderId, DateTimeOffset occurredAtUtc)
     {
-        if (quantity.Value > Reserved.Value)
-            throw new InsufficientReservedStockException(
-                Reserved.Value,
-                quantity.Value);
+        var reservation = _reservations.SingleOrDefault(x => x.SalesOrderId == salesOrderId);
 
-        if (quantity.Value > OnHand.Value)
-            throw new InsufficientStockException(
-                OnHand.Value,
-                quantity.Value);
+        if (reservation is null) return false;
+        if (reservation.Status == StockReservationStatus.Dispatched) return false;
+        if (reservation.Status != StockReservationStatus.Active)
+            throw new InvalidOperationException("Only an active reservation can be dispatched.");
+        if (reservation.Quantity > OnHand.Value)
+            throw new InsufficientStockException(OnHand.Value, reservation.Quantity);
 
-        OnHand = new StockQuantity(
-            OnHand.Value - quantity.Value);
+        reservation.Dispatch(occurredAtUtc);
 
-        Reserved = new StockQuantity(
-            Reserved.Value - quantity.Value);
-
+        OnHand = new StockQuantity(OnHand.Value - reservation.Quantity);
+        Reserved = new StockQuantity(Reserved.Value - reservation.Quantity);
         UpdatedAtUtc = occurredAtUtc;
 
         AddMovement(
             StockMovementType.Dispatched,
-            -quantity.Value,
-            -quantity.Value,
-            reference,
+            -reservation.Quantity,
+            -reservation.Quantity,
+            StockReference.SalesOrder(salesOrderId),
             null,
             occurredAtUtc);
 
-        RaiseDomainEvent(
-            new StockDispatchedDomainEvent(
-                Id,
-                TenantId,
-                WarehouseId,
-                ProductVarietyId,
-                quantity.Value,
-                reference.Id,
-                occurredAtUtc));
+        RaiseDomainEvent(new StockDispatchedDomainEvent(
+            Id, TenantId, WarehouseId, ProductVarietyId, reservation.Quantity, salesOrderId, occurredAtUtc));
+
+        return true;
     }
 
-    public void Adjust(
-        int quantityChange,
-        AdjustmentReason reason,
-        StockReference reference,
-        DateTimeOffset occurredAtUtc)
+    public void Adjust(int quantityChange, AdjustmentReason reason, StockReference reference, DateTimeOffset occurredAtUtc)
     {
         if (quantityChange == 0)
-            throw new ArgumentException(
-                "Adjustment quantity cannot be zero.",
-                nameof(quantityChange));
+            throw new ArgumentException("Adjustment quantity cannot be zero.", nameof(quantityChange));
 
-        var newOnHand = OnHand.Value + quantityChange;
+        var resultingOnHand = OnHand.Value + quantityChange;
 
-        if (newOnHand < 0)
-            throw new InsufficientStockException(
-                OnHand.Value,
-                Math.Abs(quantityChange));
+        if (resultingOnHand < 0)
+            throw new InsufficientStockException(OnHand.Value, Math.Abs(quantityChange));
 
-        if (newOnHand < Reserved.Value)
-            throw new InvalidOperationException(
-                "Adjustment would reduce on-hand stock below reserved stock.");
+        if (resultingOnHand < Reserved.Value)
+            throw new InvalidOperationException("Adjustment would reduce on-hand stock below reserved stock.");
 
-        OnHand = new StockQuantity(newOnHand);
+        OnHand = new StockQuantity(resultingOnHand);
         UpdatedAtUtc = occurredAtUtc;
 
-        AddMovement(
-            StockMovementType.Adjusted,
-            quantityChange,
-            0,
-            reference,
-            reason.Value,
-            occurredAtUtc);
+        AddMovement(StockMovementType.Adjusted, quantityChange, 0, reference, reason.Value, occurredAtUtc);
 
-        RaiseDomainEvent(
-            new StockAdjustedDomainEvent(
-                Id,
-                TenantId,
-                WarehouseId,
-                ProductVarietyId,
-                quantityChange,
-                reason.Value,
-                occurredAtUtc));
+        RaiseDomainEvent(new StockAdjustedDomainEvent(
+            Id, TenantId, WarehouseId, ProductVarietyId, quantityChange, reason.Value, occurredAtUtc));
     }
 
     private void AddMovement(
@@ -263,7 +184,7 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         string? reason,
         DateTimeOffset occurredAtUtc)
     {
-        var movement = new StockMovement(
+        _movements.Add(new StockMovement(
             StockMovementId.New(),
             type,
             onHandChange,
@@ -272,8 +193,6 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
             Reserved.Value,
             reference,
             reason,
-            occurredAtUtc);
-
-        _movements.Add(movement);
+            occurredAtUtc));
     }
 }

@@ -1,5 +1,9 @@
-﻿namespace CrateSync.Platform.Sales.Infrastructure.Persistence;
+using CrateSync.Platform.Sales.Application.Abstractions;
 
-public sealed class SalesUnitOfWork
+namespace CrateSync.Platform.Sales.Infrastructure.Persistence;
+
+internal sealed class SalesUnitOfWork(SalesDbContext dbContext) : ISalesUnitOfWork
 {
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        dbContext.SaveChangesAsync(cancellationToken);
 }

@@ -1,3 +1,7 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.GetOrder;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record GetSalesOrderQuery;
+namespace CrateSync.Platform.Sales.Application.Orders.GetOrder;
+
+public sealed record GetSalesOrderQuery(Guid SalesOrderId)
+    : IQuery<Result<SalesOrderResponse>>;

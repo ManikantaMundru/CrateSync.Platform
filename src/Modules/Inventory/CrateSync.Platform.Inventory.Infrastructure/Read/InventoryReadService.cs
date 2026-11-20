@@ -7,9 +7,7 @@ using Dapper;
 
 namespace CrateSync.Platform.Inventory.Infrastructure.Read;
 
-internal sealed class InventoryReadService(
-    ISqlConnectionFactory connectionFactory)
-    : IInventoryReadService
+internal sealed class InventoryReadService(ISqlConnectionFactory connectionFactory) : IInventoryReadService
 {
     public async Task<StockResponse?> GetStockAsync(
         Guid tenantId,
@@ -17,8 +15,7 @@ internal sealed class InventoryReadService(
         Guid productVarietyId,
         CancellationToken cancellationToken = default)
     {
-        const string sql =
-            """
+        const string sql = """
             SELECT
                 Id,
                 WarehouseId,
@@ -33,18 +30,12 @@ internal sealed class InventoryReadService(
               AND ProductVarietyId = @ProductVarietyId;
             """;
 
-        await using var connection =
-            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
 
         return await connection.QuerySingleOrDefaultAsync<StockResponse>(
             new CommandDefinition(
                 sql,
-                new
-                {
-                    TenantId = tenantId,
-                    WarehouseId = warehouseId,
-                    ProductVarietyId = productVarietyId
-                },
+                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId },
                 cancellationToken: cancellationToken));
     }
 
@@ -54,8 +45,7 @@ internal sealed class InventoryReadService(
         Guid? productVarietyId,
         CancellationToken cancellationToken = default)
     {
-        const string sql =
-            """
+        const string sql = """
             SELECT
                 Id,
                 WarehouseId,
@@ -71,22 +61,15 @@ internal sealed class InventoryReadService(
             ORDER BY UpdatedAtUtc DESC;
             """;
 
-        await using var connection =
-            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        var results =
-            await connection.QueryAsync<StockSummaryResponse>(
-                new CommandDefinition(
-                    sql,
-                    new
-                    {
-                        TenantId = tenantId,
-                        WarehouseId = warehouseId,
-                        ProductVarietyId = productVarietyId
-                    },
-                    cancellationToken: cancellationToken));
+        var rows = await connection.QueryAsync<StockSummaryResponse>(
+            new CommandDefinition(
+                sql,
+                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId },
+                cancellationToken: cancellationToken));
 
-        return results.AsList();
+        return rows.AsList();
     }
 
     public async Task<IReadOnlyCollection<StockMovementResponse>> GetMovementsAsync(
@@ -95,8 +78,7 @@ internal sealed class InventoryReadService(
         Guid productVarietyId,
         CancellationToken cancellationToken = default)
     {
-        const string sql =
-            """
+        const string sql = """
             SELECT
                 m.Id,
                 CASE m.Type
@@ -115,29 +97,21 @@ internal sealed class InventoryReadService(
                 m.Reason,
                 m.OccurredAtUtc
             FROM inventory.StockMovements m
-            INNER JOIN inventory.InventoryBalances b
-                ON b.Id = m.InventoryBalanceId
+            INNER JOIN inventory.InventoryBalances b ON b.Id = m.InventoryBalanceId
             WHERE b.TenantId = @TenantId
               AND b.WarehouseId = @WarehouseId
               AND b.ProductVarietyId = @ProductVarietyId
             ORDER BY m.OccurredAtUtc DESC;
             """;
 
-        await using var connection =
-            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        var results =
-            await connection.QueryAsync<StockMovementResponse>(
-                new CommandDefinition(
-                    sql,
-                    new
-                    {
-                        TenantId = tenantId,
-                        WarehouseId = warehouseId,
-                        ProductVarietyId = productVarietyId
-                    },
-                    cancellationToken: cancellationToken));
+        var rows = await connection.QueryAsync<StockMovementResponse>(
+            new CommandDefinition(
+                sql,
+                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId },
+                cancellationToken: cancellationToken));
 
-        return results.AsList();
+        return rows.AsList();
     }
 }

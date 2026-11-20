@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.CancelOrder;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record CancelSalesOrderCommand;
+namespace CrateSync.Platform.Sales.Application.Orders.CancelOrder;
+
+public sealed record CancelSalesOrderCommand(Guid SalesOrderId) : ICommand<Result>;

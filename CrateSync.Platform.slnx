@@ -8,6 +8,7 @@
     <Project Path="src/BuildingBlocks/CrateSync.Platform.BuildingBlocks.Application/CrateSync.Platform.BuildingBlocks.Application.csproj" />
     <Project Path="src/BuildingBlocks/CrateSync.Platform.BuildingBlocks.Domain/CrateSync.Platform.BuildingBlocks.Domain.csproj" />
     <Project Path="src/BuildingBlocks/CrateSync.Platform.BuildingBlocks.Infrastructure/CrateSync.Platform.BuildingBlocks.Infrastructure.csproj" />
+    <Project Path="src/BuildingBlocks/CrateSync.Platform.IntegrationContracts/CrateSync.Platform.IntegrationContracts.csproj" />
   </Folder>
   <Folder Name="/src/Host/">
     <Project Path="src/Host/CrateSync.Platform.Api/CrateSync.Platform.Api.csproj" />

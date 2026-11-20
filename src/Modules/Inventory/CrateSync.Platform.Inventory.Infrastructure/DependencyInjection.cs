@@ -14,34 +14,17 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString =
-            configuration.GetConnectionString("Cratesync")
-            ?? throw new InvalidOperationException(
-                "Connection string 'Database' was not found.");
+        var connectionString = configuration.GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Connection string 'Database' was not found.");
 
         services.AddDbContext<InventoryDbContext>(options =>
-        {
             options.UseSqlServer(
                 connectionString,
-                sql =>
-                {
-                    sql.MigrationsHistoryTable(
-                        "__EFMigrationsHistory",
-                        "inventory");
-                });
-        });
+                sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "inventory")));
 
-        services.AddScoped<
-            IInventoryBalanceRepository,
-            InventoryBalanceRepository>();
-
-        services.AddScoped<
-            IInventoryUnitOfWork,
-            InventoryUnitOfWork>();
-
-        services.AddScoped<
-            IInventoryReadService,
-            InventoryReadService>();
+        services.AddScoped<IInventoryBalanceRepository, InventoryBalanceRepository>();
+        services.AddScoped<IInventoryUnitOfWork, InventoryUnitOfWork>();
+        services.AddScoped<IInventoryReadService, InventoryReadService>();
 
         return services;
     }

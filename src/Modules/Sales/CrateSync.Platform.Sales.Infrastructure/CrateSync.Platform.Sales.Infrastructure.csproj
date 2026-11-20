@@ -5,5 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+<ItemGroup>
+		<PackageReference Include="Dapper" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+	</ItemGroup>	
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Infrastructure\CrateSync.Platform.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\CrateSync.Platform.Sales.Application\CrateSync.Platform.Sales.Application.csproj" />
+    <ProjectReference Include="..\CrateSync.Platform.Sales.Domain\CrateSync.Platform.Sales.Domain.csproj" />
+  </ItemGroup>
 
 </Project>

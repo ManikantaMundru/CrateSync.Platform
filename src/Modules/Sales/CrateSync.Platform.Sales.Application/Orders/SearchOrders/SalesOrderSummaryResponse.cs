@@ -1,3 +1,15 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.SearchOrders;
+using CrateSync.Platform.Sales.Domain.Orders;
 
-public sealed record SalesOrderSummaryResponse;
+namespace CrateSync.Platform.Sales.Application.Orders.SearchOrders;
+
+public sealed record SalesOrderSummaryResponse(
+    Guid Id,
+    Guid CustomerId,
+    Guid WarehouseId,
+    string OrderNumber,
+    SalesOrderStatus Status,
+    decimal TotalAmount,
+    string? Currency,
+    string? ReservationFailureReason,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset UpdatedAtUtc);

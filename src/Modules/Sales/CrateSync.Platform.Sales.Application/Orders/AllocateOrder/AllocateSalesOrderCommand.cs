@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.AllocateOrder;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record AllocateSalesOrderCommand;
+namespace CrateSync.Platform.Sales.Application.Orders.AllocateOrder;
+
+public sealed record AllocateSalesOrderCommand(Guid SalesOrderId) : ICommand<Result>;

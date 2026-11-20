@@ -4,5 +4,4 @@ namespace CrateSync.Platform.Inventory.Application.Stock.SearchStock;
 
 public sealed record SearchStockQuery(
     Guid? WarehouseId,
-    Guid? ProductVarietyId)
-    : IQuery<IReadOnlyCollection<StockSummaryResponse>>;
+    Guid? ProductVarietyId) : IQuery<IReadOnlyCollection<StockSummaryResponse>>;

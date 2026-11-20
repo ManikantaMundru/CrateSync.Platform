@@ -1,6 +1,11 @@
-﻿namespace CrateSync.Platform.Sales.Domain.Orders;
+namespace CrateSync.Platform.Sales.Domain.Orders;
 
 public enum SalesOrderStatus
 {
-    Unknown = 0
+    Draft = 1,
+    Confirmed = 2,
+    Allocated = 3,
+    Dispatched = 4,
+    Fulfilled = 5,
+    Cancelled = 6
 }

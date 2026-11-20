@@ -2,13 +2,17 @@ using CrateSync.Platform.BuildingBlocks.Domain;
 
 namespace CrateSync.Platform.Inventory.Domain.Exceptions;
 
-public sealed class InsufficientStockException(
-    int availableQuantity,
-    int requestedQuantity) : DomainException(
-        "Inventory.InsufficientStock",
-        $"Insufficient available stock. Available quantity is {availableQuantity}, but {requestedQuantity} was requested.")
+public sealed class InsufficientStockException : DomainException
 {
-    public int AvailableQuantity { get; } = availableQuantity;
+    public InsufficientStockException(int availableQuantity, int requestedQuantity)
+        : base(
+            "Inventory.InsufficientStock",
+            $"Insufficient available stock. Available quantity is {availableQuantity}, but {requestedQuantity} was requested.")
+    {
+        AvailableQuantity = availableQuantity;
+        RequestedQuantity = requestedQuantity;
+    }
 
-    public int RequestedQuantity { get; } = requestedQuantity;
+    public int AvailableQuantity { get; }
+    public int RequestedQuantity { get; }
 }

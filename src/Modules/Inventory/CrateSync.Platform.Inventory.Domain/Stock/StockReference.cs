@@ -2,38 +2,19 @@ namespace CrateSync.Platform.Inventory.Domain.Stock;
 
 public sealed record StockReference
 {
-    private StockReference() { }
+    private StockReference() { Type = null!; }
 
-    public StockReference(string type, Guid id)
+    private StockReference(string type, Guid id)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(type);
-
-        if (id == Guid.Empty)
-            throw new ArgumentException(
-                "Reference ID cannot be empty.",
-                nameof(id));
-
-        var normalizedType = type.Trim();
-
-        if (normalizedType.Length > 50)
-            throw new ArgumentException(
-                "Reference type cannot exceed 50 characters.",
-                nameof(type));
-
-        Type = normalizedType;
+        if (id == Guid.Empty) throw new ArgumentException("Reference ID cannot be empty.", nameof(id));
+        Type = type;
         Id = id;
     }
 
-    public string Type { get; private set; } = string.Empty;
-
+    public string Type { get; private set; }
     public Guid Id { get; private set; }
 
-    public static StockReference Shipment(Guid shipmentId) =>
-        new("Shipment", shipmentId);
-
-    public static StockReference SalesOrder(Guid salesOrderId) =>
-        new("SalesOrder", salesOrderId);
-
-    public static StockReference Adjustment(Guid adjustmentId) =>
-        new("Adjustment", adjustmentId);
+    public static StockReference Shipment(Guid id) => new("Shipment", id);
+    public static StockReference SalesOrder(Guid id) => new("SalesOrder", id);
+    public static StockReference Adjustment(Guid id) => new("Adjustment", id);
 }

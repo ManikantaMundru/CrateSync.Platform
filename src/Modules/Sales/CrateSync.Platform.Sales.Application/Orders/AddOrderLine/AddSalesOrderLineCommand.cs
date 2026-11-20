@@ -1,3 +1,12 @@
-﻿namespace CrateSync.Platform.Sales.Application.Orders.AddOrderLine;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record AddSalesOrderLineCommand;
+namespace CrateSync.Platform.Sales.Application.Orders.AddOrderLine;
+
+public sealed record AddSalesOrderLineCommand(
+    Guid SalesOrderId,
+    Guid ProductVarietyId,
+    int Quantity,
+    decimal PackSize,
+    decimal UnitPrice,
+    string Currency) : ICommand<Result<Guid>>;

@@ -13,6 +13,8 @@ using CrateSync.Platform.InboundLogistics.Application;
 using CrateSync.Platform.InboundLogistics.Infrastructure;
 using CrateSync.Platform.Inventory.Application;
 using CrateSync.Platform.Inventory.Infrastructure;
+using CrateSync.Platform.Sales.Application;
+using CrateSync.Platform.Sales.Infrastructure;
 using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +39,9 @@ builder.Services.AddInboundLogisticsInfrastructure(builder.Configuration);
 
 builder.Services.AddInventoryApplication();
 builder.Services.AddInventoryInfrastructure(builder.Configuration);
+
+builder.Services.AddSalesApplication();
+builder.Services.AddSalesInfrastructure(builder.Configuration);
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 

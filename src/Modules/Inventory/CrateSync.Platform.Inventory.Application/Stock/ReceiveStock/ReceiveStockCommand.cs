@@ -4,6 +4,7 @@ using CrateSync.Platform.BuildingBlocks.Application.Common;
 namespace CrateSync.Platform.Inventory.Application.Stock.ReceiveStock;
 
 public sealed record ReceiveStockCommand(
+    Guid TenantId,
     Guid WarehouseId,
     Guid ProductVarietyId,
     int Quantity,
