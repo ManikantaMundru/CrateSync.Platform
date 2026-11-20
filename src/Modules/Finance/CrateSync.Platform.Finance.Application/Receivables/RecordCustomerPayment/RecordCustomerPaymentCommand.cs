@@ -1,3 +1,9 @@
-﻿namespace CrateSync.Platform.Finance.Application.Receivables.RecordCustomerPayment;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record RecordCustomerPaymentCommand;
+namespace CrateSync.Platform.Finance.Application.Receivables.RecordCustomerPayment;
+
+public sealed record RecordCustomerPaymentCommand(
+    Guid CustomerInvoiceId,
+    decimal Amount,
+    string Reference) : ICommand<Result<Guid>>;

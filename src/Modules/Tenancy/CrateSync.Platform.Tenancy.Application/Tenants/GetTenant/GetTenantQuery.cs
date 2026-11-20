@@ -1,3 +1,7 @@
-﻿namespace CrateSync.Platform.Tenancy.Application.Tenants.GetTenant;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record GetTenantQuery;
+namespace CrateSync.Platform.Tenancy.Application.Tenants.GetTenant;
+
+public sealed record GetTenantQuery(Guid TenantId)
+    : IQuery<Result<TenantResponse>>;

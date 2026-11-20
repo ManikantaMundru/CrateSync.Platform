@@ -1,3 +1,9 @@
-﻿namespace CrateSync.Platform.Finance.Application.Payables.SearchSupplierInvoices;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
+using CrateSync.Platform.Finance.Domain.Common;
 
-public sealed record SearchSupplierInvoicesQuery;
+namespace CrateSync.Platform.Finance.Application.Payables.SearchSupplierInvoices;
+
+public sealed record SearchSupplierInvoicesQuery(
+    InvoiceStatus? Status,
+    Guid? SupplierId)
+    : IQuery<IReadOnlyCollection<SupplierInvoiceSummaryResponse>>;

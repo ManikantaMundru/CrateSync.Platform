@@ -1,5 +1,49 @@
-﻿namespace CrateSync.Platform.Finance.Application.Payables.RecordSupplierPayment;
+using CrateSync.Platform.BuildingBlocks.Application;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
+using CrateSync.Platform.Finance.Application.Abstractions;
+using CrateSync.Platform.Finance.Application.Common;
+using CrateSync.Platform.Finance.Domain.Common;
 
-public sealed class RecordSupplierPaymentCommandHandler
+namespace CrateSync.Platform.Finance.Application.Payables.RecordSupplierPayment;
+
+internal sealed class RecordSupplierPaymentCommandHandler(
+    ISupplierInvoiceRepository repository,
+    IFinanceUnitOfWork unitOfWork,
+    ITenantContext tenantContext,
+    TimeProvider timeProvider)
+    : ICommandHandler<RecordSupplierPaymentCommand, Result<Guid>>
 {
+    public async Task<Result<Guid>> Handle(
+        RecordSupplierPaymentCommand request,
+        CancellationToken cancellationToken)
+    {
+        var invoice = await repository.GetByIdAsync(
+            SupplierInvoiceId.From(request.SupplierInvoiceId),
+            tenantContext.TenantId,
+            cancellationToken);
+
+        if (invoice is null)
+            return Result<Guid>.Failure(
+                FinanceErrors.SupplierInvoiceNotFound);
+
+        try
+        {
+            var payment = invoice.RecordPayment(
+                request.Amount,
+                request.Reference,
+                timeProvider.GetUtcNow());
+
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result<Guid>.Success(payment.Id.Value);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result<Guid>.Failure(
+                FinanceErrors.Conflict(
+                    "Finance.InvalidSupplierPayment",
+                    ex.Message));
+        }
+    }
 }

@@ -1,5 +1,12 @@
-﻿namespace CrateSync.Platform.Tenancy.Infrastructure.Persistence;
+using CrateSync.Platform.Tenancy.Application.Abstractions;
 
-public sealed class TenancyUnitOfWork
+namespace CrateSync.Platform.Tenancy.Infrastructure.Persistence;
+
+internal sealed class TenancyUnitOfWork(
+    TenancyDbContext dbContext)
+    : ITenancyUnitOfWork
 {
+    public Task<int> SaveChangesAsync(
+        CancellationToken cancellationToken = default) =>
+        dbContext.SaveChangesAsync(cancellationToken);
 }

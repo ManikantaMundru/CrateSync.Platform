@@ -1,20 +1,24 @@
 using CrateSync.Platform.Api.ExceptionHandling;
-using CrateSync.Platform.Api.Extensions;
+using CrateSync.Platform.Api.Tenancy;
 using CrateSync.Platform.BuildingBlocks.Application;
 using CrateSync.Platform.BuildingBlocks.Application.Behaviors;
 using CrateSync.Platform.BuildingBlocks.Infrastructure;
 using CrateSync.Platform.Catalog.Application;
 using CrateSync.Platform.Catalog.Infrastructure;
-using CrateSync.Platform.TradingPartners.Application;
-using CrateSync.Platform.TradingPartners.Infrastructure;
-using CrateSync.Platform.Warehousing.Application;
-using CrateSync.Platform.Warehousing.Infrastructure;
+using CrateSync.Platform.Finance.Application;
+using CrateSync.Platform.Finance.Infrastructure;
 using CrateSync.Platform.InboundLogistics.Application;
 using CrateSync.Platform.InboundLogistics.Infrastructure;
 using CrateSync.Platform.Inventory.Application;
 using CrateSync.Platform.Inventory.Infrastructure;
 using CrateSync.Platform.Sales.Application;
 using CrateSync.Platform.Sales.Infrastructure;
+using CrateSync.Platform.Tenancy.Application;
+using CrateSync.Platform.Tenancy.Infrastructure;
+using CrateSync.Platform.TradingPartners.Application;
+using CrateSync.Platform.TradingPartners.Infrastructure;
+using CrateSync.Platform.Warehousing.Application;
+using CrateSync.Platform.Warehousing.Infrastructure;
 using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<ITenantContext, HttpContextExtension>();
+builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 
 builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
 builder.Services.AddCatalogApplication();
@@ -42,6 +46,12 @@ builder.Services.AddInventoryInfrastructure(builder.Configuration);
 
 builder.Services.AddSalesApplication();
 builder.Services.AddSalesInfrastructure(builder.Configuration);
+
+builder.Services.AddFinanceApplication();
+builder.Services.AddFinanceInfrastructure(builder.Configuration);
+
+builder.Services.AddTenancyApplication();
+builder.Services.AddTenancyInfrastructure(builder.Configuration);
 
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
@@ -71,7 +81,7 @@ app.MapGet("/health", () =>
         Status = "Healthy"
     });
 });
-
+app.UseMiddleware<TenantValidationMiddleware>();
 app.MapControllers();
 
 app.Run();

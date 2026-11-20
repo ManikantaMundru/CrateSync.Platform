@@ -1,6 +1,7 @@
-﻿namespace CrateSync.Platform.Tenancy.Domain.Tenants;
+namespace CrateSync.Platform.Tenancy.Domain.Tenants;
 
 public enum TenantStatus
 {
-    Unknown = 0
+    Active = 1,
+    Inactive = 2
 }

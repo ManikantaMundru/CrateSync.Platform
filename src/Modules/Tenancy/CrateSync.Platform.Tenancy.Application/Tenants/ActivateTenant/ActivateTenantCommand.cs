@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Tenancy.Application.Tenants.ActivateTenant;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record ActivateTenantCommand;
+namespace CrateSync.Platform.Tenancy.Application.Tenants.ActivateTenant;
+
+public sealed record ActivateTenantCommand(Guid TenantId) : ICommand<Result>;

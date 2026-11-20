@@ -1,3 +1,9 @@
-﻿namespace CrateSync.Platform.Tenancy.Domain.Tenants.Events;
+using CrateSync.Platform.BuildingBlocks.Domain;
 
-public sealed record TenantCreatedDomainEvent;
+namespace CrateSync.Platform.Tenancy.Domain.Tenants.Events;
+
+public sealed record TenantCreatedDomainEvent(
+    TenantId TenantId,
+    string Name,
+    DateTimeOffset OccurredAtUtc)
+    : DomainEvent(OccurredAtUtc);

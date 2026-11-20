@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Tenancy.Application.Tenants.SearchTenants;
+using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
-public sealed record SearchTenantsQuery;
+namespace CrateSync.Platform.Tenancy.Application.Tenants.SearchTenants;
+
+public sealed record SearchTenantsQuery(bool? IsActive)
+    : IQuery<IReadOnlyCollection<TenantSummaryResponse>>;

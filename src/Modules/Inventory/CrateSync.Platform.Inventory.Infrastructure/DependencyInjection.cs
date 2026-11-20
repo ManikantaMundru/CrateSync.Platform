@@ -14,7 +14,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Database")
+        var connectionString = configuration.GetConnectionString("CrateSync")
             ?? throw new InvalidOperationException("Connection string 'Database' was not found.");
 
         services.AddDbContext<InventoryDbContext>(options =>

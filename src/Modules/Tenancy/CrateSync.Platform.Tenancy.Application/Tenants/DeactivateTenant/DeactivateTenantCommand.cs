@@ -1,3 +1,6 @@
-﻿namespace CrateSync.Platform.Tenancy.Application.Tenants.DeactivateTenant;
+using CrateSync.Platform.BuildingBlocks.Application.Commands;
+using CrateSync.Platform.BuildingBlocks.Application.Common;
 
-public sealed record DeactivateTenantCommand;
+namespace CrateSync.Platform.Tenancy.Application.Tenants.DeactivateTenant;
+
+public sealed record DeactivateTenantCommand(Guid TenantId) : ICommand<Result>;

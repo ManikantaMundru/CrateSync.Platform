@@ -1,3 +1,15 @@
-﻿namespace CrateSync.Platform.Finance.Application.Receivables.SearchCustomerInvoices;
+using CrateSync.Platform.Finance.Domain.Common;
 
-public sealed record CustomerInvoiceSummaryResponse;
+namespace CrateSync.Platform.Finance.Application.Receivables.SearchCustomerInvoices;
+
+public sealed record CustomerInvoiceSummaryResponse(
+    Guid Id,
+    Guid CustomerId,
+    Guid SalesOrderId,
+    string InvoiceNumber,
+    string Currency,
+    InvoiceStatus Status,
+    decimal TotalAmount,
+    decimal AmountPaid,
+    decimal OutstandingAmount,
+    DateTimeOffset InvoiceDateUtc);
