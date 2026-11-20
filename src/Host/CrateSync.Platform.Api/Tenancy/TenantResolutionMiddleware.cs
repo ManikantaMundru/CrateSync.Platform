@@ -4,7 +4,8 @@ using CrateSync.Platform.Tenancy.Application.Abstractions;
 namespace CrateSync.Platform.Api.Tenancy;
 
 public sealed class TenantValidationMiddleware(
-    RequestDelegate next)
+    RequestDelegate next,
+    IHostEnvironment hostEnvironment)
 {
     public async Task InvokeAsync(
         HttpContext context,
@@ -12,6 +13,12 @@ public sealed class TenantValidationMiddleware(
         ITenantReadService tenantReadService)
     {
         var path = context.Request.Path;
+
+        if (hostEnvironment.IsDevelopment())
+        {
+            await next(context);
+            return;
+        }
 
         // Tenant administration may need to work without
         // an existing tenant context.

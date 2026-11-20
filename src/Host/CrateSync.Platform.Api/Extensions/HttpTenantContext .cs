@@ -3,17 +3,15 @@ using CrateSync.Platform.BuildingBlocks.Application;
 
 namespace CrateSync.Platform.Api.Tenancy;
 
-internal sealed class HttpTenantContext : ITenantContext
+internal sealed class HttpTenantContext(
+    IHttpContextAccessor httpContextAccessor,
+    IHostEnvironment hostEnvironment) : ITenantContext
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+    private readonly IHostEnvironment _hostEnvironment = hostEnvironment;
 
-    public HttpTenantContext(
-        IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
-
-    public bool HasTenant => TryGetTenantId(out _);
+    public bool HasTenant =>
+        TryGetTenantId(out _) || _hostEnvironment.IsDevelopment();
 
     public Guid TenantId
     {
@@ -22,6 +20,11 @@ internal sealed class HttpTenantContext : ITenantContext
             if (TryGetTenantId(out var tenantId))
             {
                 return tenantId;
+            }
+
+            if (_hostEnvironment.IsDevelopment())
+            {
+                return Guid.Empty;
             }
 
             throw new UnauthorizedAccessException(
