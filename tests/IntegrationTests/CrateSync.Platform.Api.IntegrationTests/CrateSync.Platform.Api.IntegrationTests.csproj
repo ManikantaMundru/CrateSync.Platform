@@ -1,9 +1,32 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Domain\CrateSync.Platform.BuildingBlocks.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Infrastructure\CrateSync.Platform.BuildingBlocks.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Host\CrateSync.Platform.Api\CrateSync.Platform.Api.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Catalog\CrateSync.Platform.Catalog.Infrastructure\CrateSync.Platform.Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Finance\CrateSync.Platform.Finance.Infrastructure\CrateSync.Platform.Finance.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Infrastructure\CrateSync.Platform.InboundLogistics.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Inventory\CrateSync.Platform.Inventory.Infrastructure\CrateSync.Platform.Inventory.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Sales\CrateSync.Platform.Sales.Infrastructure\CrateSync.Platform.Sales.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Tenancy\CrateSync.Platform.Tenancy.Application\CrateSync.Platform.Tenancy.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Tenancy\CrateSync.Platform.Tenancy.Infrastructure\CrateSync.Platform.Tenancy.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\TradingPartners\CrateSync.Platform.TradingPartners.Infrastructure\CrateSync.Platform.TradingPartners.Infrastructure.csproj" />
+  </ItemGroup>
 
 </Project>
