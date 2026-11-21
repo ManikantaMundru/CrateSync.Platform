@@ -18,7 +18,7 @@ function readPreference(): ThemePreference {
     stored === 'dark' ||
     stored === 'system'
     ? stored
-    : 'system'
+    : 'light'
 }
 
 function resolveTheme(

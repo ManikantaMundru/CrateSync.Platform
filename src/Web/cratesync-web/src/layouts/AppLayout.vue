@@ -289,7 +289,7 @@ function changeTheme(
             class="theme-control"
             title="Theme"
           >
-            <span class="visually-hidden">
+            <span class="theme-label">
               Theme
             </span>
             <select
@@ -298,14 +298,14 @@ function changeTheme(
               aria-label="Theme"
               @change="changeTheme"
             >
-              <option value="system">
-                System
-              </option>
               <option value="light">
                 Light
               </option>
               <option value="dark">
                 Dark
+              </option>
+              <option value="system">
+                System
               </option>
             </select>
           </label>
