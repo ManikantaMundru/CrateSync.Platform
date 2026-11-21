@@ -25,12 +25,13 @@ public sealed record TenantUserProvisionResult(
 {
     public static TenantUserProvisionResult Success(
         Guid userId,
-        bool createdNewIdentity) =>
+        bool createdNewIdentity,
+        bool requiresActivation) =>
         new(
             true,
             userId,
             createdNewIdentity,
-            createdNewIdentity,
+            requiresActivation,
             Array.Empty<string>());
 
     public static TenantUserProvisionResult Failure(
@@ -214,9 +215,14 @@ public sealed class TenantUserManagementService(
         await dbContext.SaveChangesAsync(
             cancellationToken);
 
+        var requiresActivation =
+            !user.EmailConfirmed ||
+            !await userManager.HasPasswordAsync(user);
+
         return TenantUserProvisionResult.Success(
             user.Id,
-            createdNewIdentity);
+            createdNewIdentity,
+            requiresActivation);
     }
 
     public async Task<bool> UpdateAccessAsync(
