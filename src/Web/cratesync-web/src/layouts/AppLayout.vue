@@ -27,22 +27,23 @@ const initials = computed(() => {
     .join('') || 'CS'
 })
 
-const tenantId = computed(
-  () => auth.me?.currentTenantId ?? null,
+const currentTenant = computed(
+  () => auth.me?.currentTenant ?? null,
 )
 
-const currentMembership = computed(
-  () =>
-    auth.me?.tenants.find(
-      (tenant) =>
-        tenant.tenantId === tenantId.value,
-    ) ?? null,
+const tenantId = computed(
+  () => currentTenant.value?.tenantId ?? null,
+)
+
+const hasTenantSession = computed(
+  () => auth.me?.currentTenantId != null,
 )
 
 const canManageTenant = computed(
   () =>
-    auth.me?.actingAsPlatformAdmin === true ||
-    currentMembership.value?.roles.includes(
+    currentTenant.value?.accessMode ===
+      'PlatformAdmin' ||
+    currentTenant.value?.roles.includes(
       'TenantAdmin',
     ) === true,
 )
@@ -131,7 +132,7 @@ function isActive(path: string) {
 
         <template v-if="tenantId">
           <div class="nav-section-label">
-            Current tenant
+            {{ currentTenant?.name }}
           </div>
 
           <RouterLink
@@ -191,8 +192,8 @@ function isActive(path: string) {
 
         <div class="header-title">
           <strong>CrateSync</strong>
-          <span v-if="tenantId">
-            Tenant workspace
+          <span v-if="currentTenant">
+            {{ currentTenant.name }}
           </span>
           <span v-else>
             Platform workspace
@@ -202,7 +203,8 @@ function isActive(path: string) {
         <div class="header-actions">
           <CBadge
             v-if="
-              auth.me?.actingAsPlatformAdmin
+              currentTenant?.accessMode ===
+              'PlatformAdmin'
             "
             color="warning"
           >
@@ -210,7 +212,7 @@ function isActive(path: string) {
           </CBadge>
 
           <CButton
-            v-if="tenantId"
+            v-if="hasTenantSession"
             color="secondary"
             variant="outline"
             size="sm"
@@ -223,7 +225,8 @@ function isActive(path: string) {
 
       <div
         v-if="
-          auth.me?.actingAsPlatformAdmin
+          currentTenant?.accessMode ===
+          'PlatformAdmin'
         "
         class="platform-admin-banner"
       >
@@ -231,7 +234,8 @@ function isActive(path: string) {
           Platform administrator mode
         </strong>
         <span>
-          You are operating inside a tenant
+          You are operating inside
+          <strong>{{ currentTenant?.name }}</strong>
           using SuperAdmin access.
         </span>
       </div>

@@ -109,8 +109,8 @@ router.beforeEach(async (to) => {
       String(to.params.tenantId ?? '')
 
     if (
-      !auth.me?.currentTenantId ||
-      auth.me.currentTenantId !==
+      !auth.me?.currentTenant ||
+      auth.me.currentTenant.tenantId !==
         requestedTenantId
     ) {
       return { name: 'home' }
