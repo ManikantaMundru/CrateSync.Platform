@@ -14,7 +14,8 @@ public sealed class ExitTenantModel(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     SessionClaimBuilder sessionClaimBuilder,
-    IIdentityServerInteractionService interaction)
+    IIdentityServerInteractionService interaction,
+    WebClientReturnUrlService webClientReturnUrlService)
     : PageModel
 {
     [BindProperty(SupportsGet = true)]
@@ -60,6 +61,12 @@ public sealed class ExitTenantModel(
             Url.IsLocalUrl(returnUrl))
         {
             return LocalRedirect(returnUrl);
+        }
+
+        if (webClientReturnUrlService.IsAllowed(
+                returnUrl))
+        {
+            return Redirect(returnUrl!);
         }
 
         return Redirect("/");

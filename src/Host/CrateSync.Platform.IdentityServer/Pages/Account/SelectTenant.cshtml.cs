@@ -19,7 +19,8 @@ public sealed class SelectTenantModel(
     UserTenantMembershipStore membershipStore,
     SessionClaimBuilder sessionClaimBuilder,
     ITenantReadService tenantReadService,
-    IIdentityServerInteractionService interaction)
+    IIdentityServerInteractionService interaction,
+    WebClientReturnUrlService webClientReturnUrlService)
     : PageModel
 {
     [BindProperty(SupportsGet = true)]
@@ -164,6 +165,12 @@ public sealed class SelectTenantModel(
             Url.IsLocalUrl(returnUrl))
         {
             return LocalRedirect(returnUrl);
+        }
+
+        if (webClientReturnUrlService.IsAllowed(
+                returnUrl))
+        {
+            return Redirect(returnUrl!);
         }
 
         return Redirect("/");
