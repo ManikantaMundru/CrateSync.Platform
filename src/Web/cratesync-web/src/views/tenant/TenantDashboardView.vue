@@ -12,6 +12,12 @@ const auth = useAuthStore()
 const currentTenant = computed(
   () => auth.me?.currentTenant ?? null,
 )
+
+function displayRole(role: string) {
+  return role === 'TenantAdmin'
+    ? 'Administrator'
+    : role
+}
 </script>
 
 <template>
@@ -49,7 +55,7 @@ const currentTenant = computed(
           :key="role"
           color="info"
         >
-          {{ role }}
+          {{ displayRole(role) }}
         </CBadge>
       </div>
     </div>
