@@ -1,3 +1,4 @@
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.Identity.Infrastructure.Persistence;
 using CrateSync.Platform.IdentityServer.Services;
@@ -43,6 +44,16 @@ public sealed class SelectTenantModel(
 
         if (Memberships.Count == 0)
         {
+            if (user.PlatformRole == PlatformRole.SuperAdmin)
+            {
+                return RedirectToPage(
+                    "/Account/EnterTenant",
+                    new
+                    {
+                        returnUrl = ReturnUrl
+                    });
+            }
+
             await signInManager.SignOutAsync();
             return RedirectToPage(
                 "/Account/Login",
