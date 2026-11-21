@@ -142,6 +142,15 @@ function showActivationLink(
   }
 }
 
+function selectActivationLink(
+  event: FocusEvent,
+) {
+  const target =
+    event.target as HTMLTextAreaElement
+
+  target.select()
+}
+
 async function copyActivationLink() {
   if (!activationUrl.value)
     return
@@ -818,10 +827,7 @@ function enterTenant(
             :value="activationUrl"
             readonly
             rows="4"
-            @focus="
-              ($event.target as HTMLTextAreaElement)
-                .select()
-            "
+            @focus="selectActivationLink"
           />
         </label>
       </CModalBody>
