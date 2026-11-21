@@ -605,6 +605,27 @@ a {
   margin-bottom: 0;
 }
 
+
+.user-role-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #d7dde5;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.user-role-pill.administrator {
+  color: #4338ca;
+  background: #eef2ff;
+  border-color: #d8ddff;
+}
+
 .warehouse-list-compact {
   min-width: 180px;
   display: grid;
@@ -769,6 +790,18 @@ a {
   color: #9caca7;
 }
 
+
+[data-coreui-theme="dark"] .user-role-pill {
+  color: #cbd5e1;
+  background: #202b28;
+  border-color: #3a4945;
+}
+
+[data-coreui-theme="dark"] .user-role-pill.administrator {
+  color: #c7d2fe;
+  background: #24264a;
+  border-color: #414579;
+}
 
 [data-coreui-theme="dark"] .user-list-avatar {
   background: #24332f;
