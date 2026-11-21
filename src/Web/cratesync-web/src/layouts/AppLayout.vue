@@ -35,6 +35,10 @@ const tenantId = computed(
   () => currentTenant.value?.tenantId ?? null,
 )
 
+const hasTenantSession = computed(
+  () => auth.me?.currentTenantId != null,
+)
+
 const canManageTenant = computed(
   () =>
     currentTenant.value?.accessMode ===
@@ -199,7 +203,8 @@ function isActive(path: string) {
         <div class="header-actions">
           <CBadge
             v-if="
-              auth.me?.actingAsPlatformAdmin
+              currentTenant?.accessMode ===
+              'PlatformAdmin'
             "
             color="warning"
           >
@@ -207,7 +212,7 @@ function isActive(path: string) {
           </CBadge>
 
           <CButton
-            v-if="tenantId"
+            v-if="hasTenantSession"
             color="secondary"
             variant="outline"
             size="sm"
@@ -220,7 +225,8 @@ function isActive(path: string) {
 
       <div
         v-if="
-          auth.me?.actingAsPlatformAdmin
+          currentTenant?.accessMode ===
+          'PlatformAdmin'
         "
         class="platform-admin-banner"
       >
