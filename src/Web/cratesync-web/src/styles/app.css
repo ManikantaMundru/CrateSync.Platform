@@ -495,6 +495,108 @@ a {
   gap: 1rem;
 }
 
+
+.user-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.user-card {
+  min-height: 260px;
+}
+
+.user-card-heading {
+  min-width: 0;
+}
+
+.user-card-heading small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: #71817c;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-badges {
+  margin-top: 0.85rem;
+}
+
+.warehouse-access-list {
+  width: 100%;
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  color: #667671;
+  font-size: 0.8rem;
+}
+
+.warehouse-access-list > strong {
+  color: #42514d;
+  font-size: 0.76rem;
+}
+
+.access-editor {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border: 1px solid #e0e8e5;
+  border-radius: 12px;
+  background: #f8faf9;
+}
+
+.access-editor > strong {
+  font-size: 0.86rem;
+}
+
+.access-editor > p {
+  margin: 0;
+  color: #71817c;
+  font-size: 0.8rem;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #42514d;
+  font-size: 0.86rem;
+}
+
+.warehouse-role-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(180px, 220px);
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid #e8eeec;
+}
+
+.warehouse-role-row:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.warehouse-role-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.warehouse-role-row strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-role-row small {
+  color: #81908c;
+}
+
 .modal-help {
   margin: 0 0 1rem;
   color: #71817c;
@@ -657,7 +759,8 @@ a {
 @media (max-width: 1199.98px) {
   .workspace-grid,
   .metric-grid,
-  .tenant-grid {
+  .tenant-grid,
+  .user-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
   }
@@ -736,9 +839,15 @@ a {
   .workspace-grid,
   .metric-grid,
   .tenant-grid,
+  .user-grid,
   .admin-form,
   .inline-admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .warehouse-role-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 
   .tenant-toolbar {
@@ -917,4 +1026,26 @@ a {
 
 [data-coreui-theme="dark"] .sidebar-backdrop {
   background: rgba(0, 0, 0, 0.62);
+}
+
+
+[data-coreui-theme="dark"] .user-card-heading small,
+[data-coreui-theme="dark"] .warehouse-access-list,
+[data-coreui-theme="dark"] .access-editor > p,
+[data-coreui-theme="dark"] .warehouse-role-row small {
+  color: #9caca7;
+}
+
+[data-coreui-theme="dark"] .warehouse-access-list > strong,
+[data-coreui-theme="dark"] .check-row {
+  color: #c4cfcc;
+}
+
+[data-coreui-theme="dark"] .access-editor {
+  background: #111b18;
+  border-color: #2b3b37;
+}
+
+[data-coreui-theme="dark"] .warehouse-role-row {
+  border-top-color: #2b3b37;
 }
