@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Suppliers;
 using CrateSync.Platform.Api.Responses.Suppliers;
@@ -7,6 +8,7 @@ using CrateSync.Platform.TradingPartners.Application.Suppliers.GetSupplier;
 using CrateSync.Platform.TradingPartners.Application.Suppliers.SearchSuppliers;
 using CrateSync.Platform.TradingPartners.Application.Suppliers.UpdateSupplier;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +21,7 @@ namespace CrateSync.Platform.Api.Controllers
         private readonly ISender _sender = sender;
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType<CreateSupplierResponse>(StatusCodes.Status201Created)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -50,6 +53,7 @@ namespace CrateSync.Platform.Api.Controllers
         }
 
         [HttpPut("{supplierId:guid}")]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -111,6 +115,7 @@ namespace CrateSync.Platform.Api.Controllers
         }
 
         [HttpPatch("{supplierId:guid}/deactivate")]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Deactivate(
