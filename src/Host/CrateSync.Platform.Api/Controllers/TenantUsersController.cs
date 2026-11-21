@@ -1,12 +1,16 @@
+using System.Text;
 using System.Security.Claims;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Requests.Identity;
 using CrateSync.Platform.BuildingBlocks.Application;
 using CrateSync.Platform.Identity.Domain.Authorization;
+using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.Identity.Infrastructure.Persistence;
 using CrateSync.Platform.Warehousing.Application.Warehouses.GetWarehouse;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrateSync.Platform.Api.Controllers;
@@ -17,6 +21,8 @@ namespace CrateSync.Platform.Api.Controllers;
 public sealed class TenantUsersController(
     ITenantContext tenantContext,
     TenantUserManagementService tenantUserManagementService,
+    UserManager<ApplicationUser> userManager,
+    IConfiguration configuration,
     ISender sender)
     : ControllerBase
 {
@@ -80,11 +86,65 @@ public sealed class TenantUsersController(
                     result.CreatedNewIdentity,
                 requiresActivation =
                     result.RequiresActivation,
+                activationUrl =
+                    result.RequiresActivation &&
+                    result.UserId.HasValue
+                        ? await BuildActivationUrlAsync(
+                            result.UserId.Value)
+                        : null,
                 detail =
                     result.RequiresActivation
-                        ? "The user was created without a password. Password activation will be completed through the IdentityServer activation flow."
-                        : "The existing CrateSync identity was added to this tenant."
+                        ? "The user requires activation before first login."
+                        : "The existing CrateSync identity was added to this organisation."
             });
+    }
+
+    [HttpPost("{userId:guid}/activation-link")]
+    public async Task<IActionResult> CreateActivationLink(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var canManage =
+            await tenantUserManagementService
+                .CanManageUserAsync(
+                    tenantContext.TenantId,
+                    userId,
+                    cancellationToken);
+
+        if (!canManage)
+            return NotFound();
+
+        var user =
+            await userManager.FindByIdAsync(
+                userId.ToString());
+
+        if (user is null ||
+            !user.IsActive)
+        {
+            return NotFound();
+        }
+
+        var requiresActivation =
+            !user.EmailConfirmed ||
+            !await userManager.HasPasswordAsync(user);
+
+        if (!requiresActivation)
+        {
+            return Conflict(new
+            {
+                title = "Account is already activated",
+                detail =
+                    "This user already has an active password and does not require an activation link."
+            });
+        }
+
+        var activationUrl =
+            await BuildActivationUrlAsync(userId);
+
+        return Ok(new
+        {
+            activationUrl
+        });
     }
 
     [HttpPut("{userId:guid}/access")]
@@ -250,6 +310,35 @@ public sealed class TenantUsersController(
         return null;
     }
 
+    private async Task<string?> BuildActivationUrlAsync(
+        Guid userId)
+    {
+        var user =
+            await userManager.FindByIdAsync(
+                userId.ToString());
+
+        if (user is null)
+            return null;
+
+        var token =
+            await userManager
+                .GeneratePasswordResetTokenAsync(
+                    user);
+
+        var encodedToken =
+            WebEncoders.Base64UrlEncode(
+                Encoding.UTF8.GetBytes(token));
+
+        var authority =
+            configuration["Identity:Authority"]
+            ?? "https://localhost:7201";
+
+        return
+            $"{authority.TrimEnd('/')}/Account/Activate" +
+            $"?userId={user.Id:D}" +
+            $"&token={encodedToken}";
+    }
+
     private bool IsCurrentUser(Guid userId)
     {
         var subject =
@@ -275,6 +364,8 @@ public sealed class TenantUsersController(
             firstName = user.FirstName,
             lastName = user.LastName,
             isActive = user.IsMembershipActive,
+            requiresActivation =
+                user.RequiresActivation,
             roles = user.Roles
                 .Select(x => x.ToString())
                 .ToArray(),
