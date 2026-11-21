@@ -48,7 +48,8 @@ const isSuperAdminSession = computed(
 const canSwitchOrganisation = computed(
   () =>
     !isSuperAdminSession.value &&
-    organisationCount.value > 1,
+    organisationCount.value > 1 &&
+    route.path !== '/',
 )
 
 const canManageTenant = computed(
