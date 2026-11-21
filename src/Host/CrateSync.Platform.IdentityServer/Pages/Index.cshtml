@@ -14,6 +14,24 @@
     {
         <p>You are signed in as <strong>@User.Identity.Name</strong>.</p>
 
+        <p>
+            <a href="/Account/SelectTenant">Select organisation</a>
+        </p>
+
+        @if (User.HasClaim("platform_role", "SuperAdmin"))
+        {
+            <p>
+                <a href="/Account/EnterTenant">Enter tenant as SuperAdmin</a>
+            </p>
+        }
+
+        @if (User.HasClaim(c => c.Type == "tenant_id"))
+        {
+            <p>
+                <a href="/Account/ExitTenant">Exit current tenant</a>
+            </p>
+        }
+
         <form method="get" action="/Account/Logout">
             <button type="submit">Sign out</button>
         </form>
