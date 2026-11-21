@@ -173,6 +173,11 @@ public sealed class TenantUserManagementService(
             return TenantUserProvisionResult.Failure(
                 "The existing identity is disabled at platform level.");
         }
+        else if (user.PlatformRole != PlatformRole.None)
+        {
+            return TenantUserProvisionResult.Failure(
+                "Platform administrator identities can only be assigned through platform administration.");
+        }
 
         var membership =
             await dbContext.UserTenantMemberships
@@ -221,6 +226,19 @@ public sealed class TenantUserManagementService(
         IReadOnlyCollection<WarehouseAccessInput> warehouses,
         CancellationToken cancellationToken = default)
     {
+        var user =
+            await dbContext.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    x => x.Id == userId,
+                    cancellationToken);
+
+        if (user is null ||
+            user.PlatformRole != PlatformRole.None)
+        {
+            return false;
+        }
+
         var membership =
             await dbContext.UserTenantMemberships
                 .Include(x => x.Roles)
@@ -252,6 +270,19 @@ public sealed class TenantUserManagementService(
         bool isActive,
         CancellationToken cancellationToken = default)
     {
+        var user =
+            await dbContext.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    x => x.Id == userId,
+                    cancellationToken);
+
+        if (user is null ||
+            user.PlatformRole != PlatformRole.None)
+        {
+            return false;
+        }
+
         var membership =
             await dbContext.UserTenantMemberships
                 .SingleOrDefaultAsync(
