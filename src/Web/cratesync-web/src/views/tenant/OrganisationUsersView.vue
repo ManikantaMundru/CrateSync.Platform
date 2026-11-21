@@ -583,135 +583,211 @@ async function copyActivationLink() {
 
     <div
       v-else
-      class="user-grid"
+      class="user-table-shell"
     >
-      <CCard
-        v-for="user in filteredUsers"
-        :key="user.userId"
-        class="workspace-card user-card"
-      >
-        <CCardBody>
-          <div class="card-topline">
-            <div class="user-card-heading">
-              <p class="eyebrow">User</p>
-              <h3>
-                {{ user.firstName }}
-                {{ user.lastName }}
-              </h3>
-              <small>
-                {{ user.email ?? user.userName }}
-              </small>
-            </div>
+      <div class="table-responsive">
+        <table class="user-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Organisation role</th>
+              <th>Warehouse access</th>
+              <th>Activation</th>
+              <th>Status</th>
+              <th class="user-actions-column">
+                Actions
+              </th>
+            </tr>
+          </thead>
 
-            <CBadge
-              :color="
-                user.isActive
-                  ? 'success'
-                  : 'secondary'
-              "
+          <tbody>
+            <tr
+              v-for="user in filteredUsers"
+              :key="user.userId"
             >
-              {{
-                user.isActive
-                  ? 'Active'
-                  : 'Inactive'
-              }}
-            </CBadge>
-          </div>
+              <td data-label="User">
+                <div class="user-list-identity">
+                  <strong>
+                    {{ user.firstName }}
+                    {{ user.lastName }}
+                  </strong>
+                  <small>
+                    {{
+                      user.email ??
+                      user.userName
+                    }}
+                  </small>
+                </div>
+              </td>
 
-          <div class="badge-row user-badges">
-            <CBadge
-              v-for="role in user.roles"
-              :key="role"
-              color="info"
-            >
-              {{ displayRole(role) }}
-            </CBadge>
+              <td data-label="Organisation role">
+                <div class="badge-row compact-badges">
+                  <CBadge
+                    v-for="role in user.roles"
+                    :key="role"
+                    color="info"
+                  >
+                    {{ displayRole(role) }}
+                  </CBadge>
 
-            <CBadge
-              v-if="user.requiresActivation"
-              color="warning"
-            >
-              Activation required
-            </CBadge>
-          </div>
+                  <span
+                    v-if="user.roles.length === 0"
+                    class="muted-value"
+                  >
+                    —
+                  </span>
+                </div>
+              </td>
 
-          <div
-            v-if="user.warehouses.length"
-            class="warehouse-access-list"
-          >
-            <strong>Warehouse access</strong>
+              <td data-label="Warehouse access">
+                <div
+                  v-if="user.warehouses.length"
+                  class="warehouse-list-compact"
+                >
+                  <span
+                    v-for="access in user.warehouses"
+                    :key="access.warehouseId"
+                  >
+                    {{
+                      warehouseName(
+                        access.warehouseId,
+                      )
+                    }}
+                    ·
+                    {{
+                      displayRole(access.role)
+                    }}
+                  </span>
+                </div>
 
-            <span
-              v-for="access in user.warehouses"
-              :key="access.warehouseId"
-            >
-              {{ warehouseName(access.warehouseId) }}
-              ·
-              {{ displayRole(access.role) }}
-            </span>
-          </div>
+                <span
+                  v-else
+                  class="muted-value"
+                >
+                  —
+                </span>
+              </td>
 
-          <div class="tenant-actions">
-            <CButton
-              color="primary"
-              variant="outline"
-              size="sm"
-              @click="openEditModal(user)"
-            >
-              <i
-                class="button-icon cil-pencil"
-                aria-hidden="true"
-              />
-              Edit access
-            </CButton>
+              <td data-label="Activation">
+                <CBadge
+                  v-if="user.requiresActivation"
+                  color="warning"
+                >
+                  Required
+                </CBadge>
 
-            <CButton
-              v-if="user.requiresActivation"
-              color="warning"
-              variant="outline"
-              size="sm"
-              @click="generateActivationLink(user)"
-            >
-              <i
-                class="button-icon cil-link"
-                aria-hidden="true"
-              />
-              Activation link
-            </CButton>
+                <CBadge
+                  v-else
+                  color="success"
+                  variant="outline"
+                >
+                  Complete
+                </CBadge>
+              </td>
 
-            <CButton
-              v-if="
-                user.isActive &&
-                user.userId !== currentUserId
-              "
-              color="danger"
-              variant="outline"
-              size="sm"
-              @click="setUserActive(user, false)"
-            >
-              <i
-                class="button-icon cil-ban"
-                aria-hidden="true"
-              />
-              Deactivate
-            </CButton>
+              <td data-label="Status">
+                <CBadge
+                  :color="
+                    user.isActive
+                      ? 'success'
+                      : 'secondary'
+                  "
+                >
+                  {{
+                    user.isActive
+                      ? 'Active'
+                      : 'Inactive'
+                  }}
+                </CBadge>
+              </td>
 
-            <CButton
-              v-else-if="!user.isActive"
-              color="success"
-              variant="outline"
-              size="sm"
-              @click="setUserActive(user, true)"
-            >
-              <i
-                class="button-icon cil-check-circle"
-                aria-hidden="true"
-              />
-              Activate
-            </CButton>
-          </div>
-        </CCardBody>
-      </CCard>
+              <td
+                data-label="Actions"
+                class="user-actions-cell"
+              >
+                <div class="user-row-actions">
+                  <CButton
+                    color="primary"
+                    variant="outline"
+                    size="sm"
+                    title="Edit access"
+                    @click="openEditModal(user)"
+                  >
+                    <i
+                      class="button-icon cil-pencil"
+                      aria-hidden="true"
+                    />
+                    Edit
+                  </CButton>
+
+                  <CButton
+                    v-if="user.requiresActivation"
+                    color="warning"
+                    variant="outline"
+                    size="sm"
+                    title="Generate activation link"
+                    @click="
+                      generateActivationLink(
+                        user,
+                      )
+                    "
+                  >
+                    <i
+                      class="button-icon cil-link"
+                      aria-hidden="true"
+                    />
+                    Activation
+                  </CButton>
+
+                  <CButton
+                    v-if="
+                      user.isActive &&
+                      user.userId !==
+                        currentUserId
+                    "
+                    color="danger"
+                    variant="outline"
+                    size="sm"
+                    title="Deactivate user"
+                    @click="
+                      setUserActive(
+                        user,
+                        false,
+                      )
+                    "
+                  >
+                    <i
+                      class="button-icon cil-ban"
+                      aria-hidden="true"
+                    />
+                    Deactivate
+                  </CButton>
+
+                  <CButton
+                    v-else-if="!user.isActive"
+                    color="success"
+                    variant="outline"
+                    size="sm"
+                    title="Activate user"
+                    @click="
+                      setUserActive(
+                        user,
+                        true,
+                      )
+                    "
+                  >
+                    <i
+                      class="button-icon cil-check-circle"
+                      aria-hidden="true"
+                    />
+                    Activate
+                  </CButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <CModal
