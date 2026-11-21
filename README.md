@@ -194,7 +194,7 @@ PATCH /api/tenant/users/{userId}/deactivate
 
 The tenant ID is always taken from the authenticated `tenant_id` claim. A TenantAdmin cannot manage users in another tenant and cannot assign platform roles.
 
-Creating a brand-new identity currently creates the Identity record and tenant membership **without a password** and returns `requiresActivation: true`. Existing CrateSync identities can be added to another tenant immediately. Password activation/email delivery is deliberately deferred to the IdentityServer onboarding flow rather than issuing temporary passwords from the operational API.
+Creating a brand-new identity creates the Identity record and tenant membership **without a password**. When activation is required, the SuperAdmin tenant-management flow returns a one-time IdentityServer activation URL. CrateSync does not send activation email at this stage: the SuperAdmin copies the URL and sends it manually to the user. The activation page lets the user set a password and confirms the account, after which normal OIDC login applies. Existing activated CrateSync identities can be added to another tenant immediately.
 
 ## Endpoint reference
 
@@ -278,3 +278,10 @@ $testExitCode = $LASTEXITCODE
 Remove-Item Env:ConnectionStrings__CrateSync
 if ($testExitCode -ne 0) { throw "API integration tests failed" }
 ```
+
+
+### Identity activation token protection
+
+Activation links use ASP.NET Identity password-reset tokens. The API generates the token and IdentityServer validates it, so both hosts use the same Data Protection application name (`CrateSync.Platform.Identity`).
+
+For local development both processes run under the same user profile and share the default ASP.NET Core key repository. When API and IdentityServer are deployed to separate machines or containers, configure a persistent shared Data Protection key ring before using manual activation links in that environment.
