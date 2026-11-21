@@ -142,3 +142,19 @@ The tenant management screen supports:
 TenantAdmin remains tenant-scoped and cannot create or manage other tenant organisations.
 
 The application header contains Sign out and, when a tenant session exists, Exit tenant. The sidebar footer is identity-only so narrow layouts do not wrap the sign-out action.
+
+
+## Manual account activation
+
+CrateSync currently does not send onboarding email.
+
+When SuperAdmin creates a new TenantAdmin whose account requires activation:
+
+1. the API generates a one-time IdentityServer activation link
+2. the web portal displays the link in an activation modal
+3. SuperAdmin copies the link and sends it manually
+4. the user opens the link and sets a password
+5. IdentityServer confirms the account
+6. the user continues to the CrateSync web app and signs in normally
+
+The tenant management screen is browse-first: **New tenant** and **Add TenantAdmin** open modal forms, while the main page contains a searchable tenant grid with tenant actions.

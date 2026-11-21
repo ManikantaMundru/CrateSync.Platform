@@ -102,3 +102,16 @@ button {
 .field-validation-error {
     color: #b91c1c;
 }
+
+
+.button-link {
+    display: block;
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 8px;
+    background: #111827;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 700;
+}

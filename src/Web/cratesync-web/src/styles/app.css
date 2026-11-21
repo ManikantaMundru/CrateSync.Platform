@@ -402,6 +402,54 @@ a {
   white-space: nowrap;
 }
 
+.tenant-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tenant-toolbar h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.tenant-toolbar p {
+  margin: 0.25rem 0 0;
+  color: #71817c;
+  font-size: 0.82rem;
+}
+
+.tenant-search {
+  width: min(100%, 360px);
+}
+
+.tenant-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.modal-help {
+  margin: 0 0 1rem;
+  color: #71817c;
+}
+
+.admin-form-single {
+  grid-template-columns: 1fr;
+}
+
+.activation-link {
+  min-height: 96px;
+  resize: vertical;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
 .management-card {
   border: 1px solid #e0e8e5;
   border-radius: 16px;
@@ -544,7 +592,8 @@ a {
 
 @media (max-width: 1199.98px) {
   .workspace-grid,
-  .metric-grid {
+  .metric-grid,
+  .tenant-grid {
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
   }
@@ -616,9 +665,19 @@ a {
 
   .workspace-grid,
   .metric-grid,
+  .tenant-grid,
   .admin-form,
   .inline-admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tenant-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tenant-search {
+    width: 100%;
   }
 
   .form-field-wide {

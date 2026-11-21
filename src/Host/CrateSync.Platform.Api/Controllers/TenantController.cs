@@ -2,7 +2,11 @@ using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Tenancy;
 using CrateSync.Platform.Identity.Domain.Authorization;
+using System.Text;
+using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.Identity.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using CrateSync.Platform.Tenancy.Application.Tenants.ActivateTenant;
 using CrateSync.Platform.Tenancy.Application.Tenants.CreateTenant;
 using CrateSync.Platform.Tenancy.Application.Tenants.DeactivateTenant;
@@ -20,7 +24,9 @@ namespace CrateSync.Platform.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.SuperAdmin)]
 public sealed class TenantController(
     ISender sender,
-    TenantUserManagementService tenantUserManagementService)
+    TenantUserManagementService tenantUserManagementService,
+    UserManager<ApplicationUser> userManager,
+    IConfiguration configuration)
     : ControllerBase
 {
     [HttpPost]
@@ -86,6 +92,16 @@ public sealed class TenantController(
             });
         }
 
+        string? activationUrl = null;
+
+        if (result.RequiresActivation &&
+            result.UserId.HasValue)
+        {
+            activationUrl =
+                await BuildActivationUrlAsync(
+                    result.UserId.Value);
+        }
+
         return StatusCode(
             StatusCodes.Status201Created,
             new
@@ -94,8 +110,38 @@ public sealed class TenantController(
                 createdNewIdentity =
                     result.CreatedNewIdentity,
                 requiresActivation =
-                    result.RequiresActivation
+                    result.RequiresActivation,
+                activationUrl
             });
+    }
+
+    private async Task<string?> BuildActivationUrlAsync(
+        Guid userId)
+    {
+        var user =
+            await userManager.FindByIdAsync(
+                userId.ToString());
+
+        if (user is null)
+            return null;
+
+        var token =
+            await userManager
+                .GeneratePasswordResetTokenAsync(
+                    user);
+
+        var encodedToken =
+            WebEncoders.Base64UrlEncode(
+                Encoding.UTF8.GetBytes(token));
+
+        var authority =
+            configuration["Identity:Authority"]
+            ?? "https://localhost:7201";
+
+        return
+            $"{authority.TrimEnd('/')}/Account/Activate" +
+            $"?userId={user.Id:D}" +
+            $"&token={encodedToken}";
     }
 
     [HttpPut("{id:guid}")]

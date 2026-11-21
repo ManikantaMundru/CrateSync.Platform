@@ -1,5 +1,6 @@
 using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.Identity.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -103,6 +104,11 @@ public static class DependencyInjection
         IServiceCollection services,
         IConfiguration configuration)
     {
+        services
+            .AddDataProtection()
+            .SetApplicationName(
+                "CrateSync.Platform.Identity");
+
         var connectionString =
             configuration.GetConnectionString(
                 "CrateSync")

@@ -1,0 +1,60 @@
+@page
+@model CrateSync.Platform.IdentityServer.Pages.Account.ActivateModel
+@{
+    ViewData["Title"] = "Activate account";
+}
+
+<div class="card">
+    <h1>Activate your CrateSync account</h1>
+
+    @if (Model.Completed)
+    {
+        <p class="help">
+            Your account is active. You can now sign in.
+        </p>
+
+        <a class="button-link"
+           href="@Model.WebBaseUrl">
+            Continue to CrateSync
+        </a>
+    }
+    else
+    {
+        <p class="help">
+            Set a password to complete account activation.
+        </p>
+
+        <form method="post">
+            <input type="hidden"
+                   asp-for="UserId" />
+            <input type="hidden"
+                   asp-for="Token" />
+
+            <div asp-validation-summary="ModelOnly"></div>
+
+            <div class="field">
+                <label asp-for="Input.Password">
+                    Password
+                </label>
+                <input asp-for="Input.Password"
+                       type="password"
+                       autocomplete="new-password" />
+                <span asp-validation-for="Input.Password"></span>
+            </div>
+
+            <div class="field">
+                <label asp-for="Input.ConfirmPassword">
+                    Confirm password
+                </label>
+                <input asp-for="Input.ConfirmPassword"
+                       type="password"
+                       autocomplete="new-password" />
+                <span asp-validation-for="Input.ConfirmPassword"></span>
+            </div>
+
+            <button type="submit">
+                Activate account
+            </button>
+        </form>
+    }
+</div>
