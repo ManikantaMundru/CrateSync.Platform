@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Tenancy;
 using CrateSync.Platform.Tenancy.Application.Tenants.ActivateTenant;
@@ -7,12 +8,14 @@ using CrateSync.Platform.Tenancy.Application.Tenants.GetTenant;
 using CrateSync.Platform.Tenancy.Application.Tenants.RenameTenant;
 using CrateSync.Platform.Tenancy.Application.Tenants.SearchTenants;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/tenants")]
+[Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
 public sealed class TenantController(
     ISender sender)
     : ControllerBase
