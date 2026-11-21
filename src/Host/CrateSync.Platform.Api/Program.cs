@@ -105,24 +105,13 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         AuthorizationPolicies.TenantAdmin,
         policy =>
-            policy.RequireAssertion(context =>
-                context.User.Claims.Any(
-                    claim =>
-                        claim.Type ==
-                            CrateSyncClaimTypes.TenantId &&
-                        Guid.TryParse(
-                            claim.Value,
-                            out _)) &&
-                (context.User.HasClaim(
-                     CrateSyncClaimTypes.Role,
-                     "TenantAdmin") ||
-                 context.User.HasClaim(
-                     CrateSyncClaimTypes.PlatformRole,
-                     "SuperAdmin"))));
+            policy.AddRequirements(
+                new TenantAdminRequirement()));
 });
 
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddScoped<ICurrentTenantAccessService, CurrentTenantAccessService>();
+builder.Services.AddScoped<IAuthorizationHandler, TenantAdminAuthorizationHandler>();
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
