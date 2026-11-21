@@ -125,7 +125,7 @@ public sealed class MeController(
                             ?? Array.Empty<string>(),
                         warehouses =
                             currentMembership?.Warehouses
-                                .Select(x => new
+                                .Select(x => (object)new
                                 {
                                     warehouseId = x.WarehouseId,
                                     role = x.Role.ToString()
