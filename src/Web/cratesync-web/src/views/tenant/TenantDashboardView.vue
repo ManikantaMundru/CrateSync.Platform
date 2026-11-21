@@ -9,18 +9,8 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 
-const membership = computed(() =>
-  auth.me?.tenants.find(
-    (tenant) =>
-      tenant.tenantId ===
-      auth.me?.currentTenantId,
-  ),
-)
-
-const tenantName = computed(
-  () =>
-    membership.value?.name ??
-    'Tenant workspace',
+const currentTenant = computed(
+  () => auth.me?.currentTenant ?? null,
 )
 </script>
 
@@ -32,7 +22,10 @@ const tenantName = computed(
           Tenant workspace
         </p>
         <h1>
-          {{ tenantName }}
+          {{
+            currentTenant?.name ??
+            'Tenant workspace'
+          }}
         </h1>
         <p>
           Your operational dashboard will
@@ -43,7 +36,8 @@ const tenantName = computed(
       <div class="badge-row">
         <CBadge
           v-if="
-            auth.me?.actingAsPlatformAdmin
+            currentTenant?.accessMode ===
+            'PlatformAdmin'
           "
           color="warning"
         >
@@ -51,7 +45,7 @@ const tenantName = computed(
         </CBadge>
 
         <CBadge
-          v-for="role in membership?.roles ?? []"
+          v-for="role in currentTenant?.roles ?? []"
           :key="role"
           color="info"
         >
