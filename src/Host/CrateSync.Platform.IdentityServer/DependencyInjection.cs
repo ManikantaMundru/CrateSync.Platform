@@ -1,3 +1,4 @@
+using CrateSync.Platform.BuildingBlocks.Infrastructure;
 using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.IdentityServer.Configuration;
 using CrateSync.Platform.IdentityServer.Services;
@@ -23,7 +24,7 @@ public static class DependencyInjection
         services.AddRazorPages();
         services.AddAuthorization();
 
-        services.AddSingleton(TimeProvider.System);
+        services.AddBuildingBlocksInfrastructure(configuration);
 
         services.AddScoped<CrateSyncProfileService>();
         services.AddScoped<BootstrapSuperAdminSeeder>();
