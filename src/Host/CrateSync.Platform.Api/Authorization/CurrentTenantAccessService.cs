@@ -14,6 +14,16 @@ public sealed class CurrentTenantAccessService(
     private IdentityAccessSnapshot? _snapshot;
     private bool _loaded;
 
+    public async Task<bool> HasTenantAccessAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (IsSuperAdmin())
+            return tenantContext.HasTenant;
+
+        return await GetCurrentMembershipAsync(
+                   cancellationToken) is not null;
+    }
+
     public async Task<bool> IsTenantAdminAsync(
         CancellationToken cancellationToken = default)
     {
