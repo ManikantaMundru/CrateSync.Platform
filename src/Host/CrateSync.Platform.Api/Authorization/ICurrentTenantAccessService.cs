@@ -2,6 +2,9 @@ namespace CrateSync.Platform.Api.Authorization;
 
 public interface ICurrentTenantAccessService
 {
+    Task<bool> HasTenantAccessAsync(
+        CancellationToken cancellationToken = default);
+
     Task<bool> IsTenantAdminAsync(
         CancellationToken cancellationToken = default);
 
