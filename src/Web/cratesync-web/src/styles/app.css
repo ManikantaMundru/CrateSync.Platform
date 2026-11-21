@@ -46,11 +46,11 @@ a {
   width: 280px;
   display: flex;
   flex-direction: column;
-  background: #153c35;
+  background: #0f172a;
   color: #fff;
   transform: translateX(0);
   transition: transform 180ms ease;
-  box-shadow: 10px 0 40px rgba(12, 34, 30, 0.08);
+  box-shadow: 10px 0 40px rgba(15, 23, 42, 0.18);
 }
 
 .brand-block {
@@ -69,7 +69,7 @@ a {
   place-items: center;
   border-radius: 13px;
   background: #fff;
-  color: #153c35;
+  color: #0f172a;
   font-size: 1.2rem;
   font-weight: 800;
 }
@@ -82,7 +82,7 @@ a {
 
 .brand-subtitle {
   margin-top: 0.05rem;
-  color: rgba(255, 255, 255, 0.58);
+  color: #94a3b8;
   font-size: 0.76rem;
 }
 
@@ -99,7 +99,7 @@ a {
   margin: 0.15rem 0;
   padding: 0.65rem 0.8rem;
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.76);
+  color: #cbd5e1;
   font-size: 0.92rem;
   font-weight: 600;
   transition:
@@ -110,8 +110,15 @@ a {
 .nav-icon {
   width: 1.1rem;
   flex: 0 0 1.1rem;
+  color: currentColor !important;
   font-size: 1rem;
   text-align: center;
+  opacity: 1;
+}
+
+.nav-icon::before {
+  color: currentColor !important;
+  opacity: 1;
 }
 
 .button-icon {
@@ -140,18 +147,18 @@ a {
 }
 
 .nav-entry:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  background: #1e293b;
 }
 
 .nav-entry.active {
-  color: #153c35;
-  background: #fff;
+  color: #0f172a;
+  background: #f8fafc;
 }
 
 .nav-section-label {
   margin: 1.4rem 0.8rem 0.55rem;
-  color: rgba(255, 255, 255, 0.42);
+  color: #94a3b8;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -200,7 +207,7 @@ a {
 }
 
 .user-copy small {
-  color: rgba(255, 255, 255, 0.56);
+  color: #94a3b8;
   font-size: 0.72rem;
 }
 
@@ -275,6 +282,13 @@ a {
 .theme-control {
   display: flex;
   align-items: center;
+  gap: 0.45rem;
+}
+
+.theme-label {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .theme-select {
@@ -786,14 +800,18 @@ a {
 }
 
 [data-coreui-theme="dark"] .app-sidebar {
-  background: #102d28;
+  background: #020617;
   box-shadow:
-    10px 0 40px rgba(0, 0, 0, 0.24);
+    10px 0 40px rgba(0, 0, 0, 0.28);
+}
+
+[data-coreui-theme="dark"] .theme-label {
+  color: #94a3b8;
 }
 
 [data-coreui-theme="dark"] .brand-mark {
   background: #e8eeec;
-  color: #102d28;
+  color: #020617;
 }
 
 [data-coreui-theme="dark"] .app-header {
@@ -893,7 +911,7 @@ a {
 }
 
 [data-coreui-theme="dark"] .nav-entry.active {
-  color: #102d28;
+  color: #020617;
   background: #e8eeec;
 }
 
