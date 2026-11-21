@@ -153,6 +153,16 @@ Run the Identity unit tests with:
 dotnet run --project .\tests\UnitTests\CrateSync.Platform.Identity.Tests\CrateSync.Platform.Identity.Tests.csproj
 ```
 
+## Apply later Identity migrations
+
+The initial Identity migration may already be applied on an existing development database. After pulling newer Identity model changes, apply all pending migrations with:
+
+```powershell
+dotnet ef database update --project .\src\Modules\Identity\CrateSync.Platform.Identity.Infrastructure\CrateSync.Platform.Identity.Infrastructure.csproj --startup-project .\src\Host\CrateSync.Platform.IdentityServer\CrateSync.Platform.IdentityServer.csproj --context CrateSyncIdentityDbContext -- --environment Development
+```
+
+The warehouse-access phase adds `identity.UserWarehouseAssignments`. Warehouse access is deliberately stored separately from tenant-wide roles so a user can be scoped to one or more warehouses without gaining tenant-wide administration.
+
 When clients request the `cratesync.api` scope, the resulting access token is issued for the `cratesync.api` audience.
 
 The development discovery endpoint is `https://localhost:7201/.well-known/openid-configuration`. The preconfigured `cratesync.web` client uses Authorization Code with PKCE and defaults to `http://localhost:5173/auth/callback` for its redirect URI.
