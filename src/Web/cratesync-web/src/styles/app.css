@@ -488,6 +488,27 @@ a {
   width: min(100%, 360px);
 }
 
+
+.users-toolbar {
+  align-items: flex-end;
+}
+
+.users-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+
+.user-role-filter {
+  width: 150px;
+}
+
+.users-add-button {
+  white-space: nowrap;
+}
+
 .tenant-grid {
   display: grid;
   grid-template-columns:
@@ -541,19 +562,43 @@ a {
 }
 
 .user-list-identity {
-  min-width: 180px;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-list-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   display: grid;
-  gap: 0.2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.user-list-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
 }
 
 .user-list-identity strong {
-  font-size: 0.88rem;
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-list-identity small,
-.muted-value {
+.muted-value,
+.warehouse-summary {
   color: #7d8c87;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
 }
 
 .compact-badges {
@@ -577,14 +622,126 @@ a {
 }
 
 .user-row-actions {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .user-row-actions .btn {
   white-space: nowrap;
+}
+
+.user-actions-menu {
+  position: relative;
+}
+
+.user-actions-menu summary {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cfd8d5;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  list-style: none;
+}
+
+.user-actions-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.user-actions-menu[open] summary {
+  color: #334155;
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.user-actions-popover {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 20;
+  min-width: 190px;
+  overflow: hidden;
+  padding: 0.35rem;
+  border: 1px solid #d9e1de;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+}
+
+.user-actions-popover button {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #334155;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.user-actions-popover button:hover {
+  background: #f1f5f9;
+}
+
+.user-actions-popover button.danger {
+  color: #b42318;
+}
+
+.user-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 28px;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+}
+
+.user-status-pill.active {
+  color: #237a46;
+  background: #eaf8ef;
+  border-color: #c9ead5;
+}
+
+.user-status-pill.active .status-dot {
+  background: #36a269;
+}
+
+.user-status-pill.pending {
+  color: #946200;
+  background: #fff5d8;
+  border-color: #f2dfa3;
+}
+
+.user-status-pill.pending .status-dot {
+  background: #d49a21;
+}
+
+.user-status-pill.inactive {
+  color: #667085;
+  background: #f2f4f7;
+  border-color: #e4e7ec;
+}
+
+.user-status-pill.inactive .status-dot {
+  background: #98a2b3;
 }
 
 [data-coreui-theme="dark"] .user-table-shell {
@@ -610,6 +767,64 @@ a {
 [data-coreui-theme="dark"] .muted-value,
 [data-coreui-theme="dark"] .warehouse-list-compact {
   color: #9caca7;
+}
+
+
+[data-coreui-theme="dark"] .user-list-avatar {
+  background: #24332f;
+  color: #dce7e3;
+}
+
+[data-coreui-theme="dark"] .warehouse-summary {
+  color: #9caca7;
+}
+
+[data-coreui-theme="dark"] .user-actions-menu summary {
+  color: #b7c5c0;
+  background: #111b18;
+  border-color: #344641;
+}
+
+[data-coreui-theme="dark"] .user-actions-menu[open] summary {
+  color: #e8eeec;
+  background: #1b2824;
+  border-color: #50645e;
+}
+
+[data-coreui-theme="dark"] .user-actions-popover {
+  background: #17221f;
+  border-color: #344641;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+}
+
+[data-coreui-theme="dark"] .user-actions-popover button {
+  color: #dbe6e2;
+}
+
+[data-coreui-theme="dark"] .user-actions-popover button:hover {
+  background: #22302c;
+}
+
+[data-coreui-theme="dark"] .user-actions-popover button.danger {
+  color: #ffb4ab;
+}
+
+[data-coreui-theme="dark"] .user-status-pill.active {
+  color: #a9dfbb;
+  background: #173326;
+  border-color: #2f6248;
+}
+
+[data-coreui-theme="dark"] .user-status-pill.pending {
+  color: #f4d98d;
+  background: #3a3113;
+  border-color: #5b4d1f;
+}
+
+[data-coreui-theme="dark"] .user-status-pill.inactive {
+  color: #c4cfcc;
+  background: #222d2a;
+  border-color: #3a4945;
 }
 
 .modal-help {
@@ -925,9 +1140,25 @@ a {
     flex-direction: column;
   }
 
+  .users-toolbar-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
   .tenant-search,
   .search-field {
     width: 100%;
+  }
+
+  .user-role-filter {
+    width: min(100%, 180px);
+  }
+
+  .users-add-button {
+    width: auto;
   }
 
   .form-field-wide {
