@@ -597,6 +597,10 @@ a {
   color: #81908c;
 }
 
+.modal-status-message {
+  margin-bottom: 1rem;
+}
+
 .modal-help {
   margin: 0 0 1rem;
   color: #71817c;
