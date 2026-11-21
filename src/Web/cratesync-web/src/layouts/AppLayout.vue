@@ -31,11 +31,27 @@ const tenantId = computed(
   () => auth.me?.currentTenantId ?? null,
 )
 
+const currentMembership = computed(
+  () =>
+    auth.me?.tenants.find(
+      (tenant) =>
+        tenant.tenantId === tenantId.value,
+    ) ?? null,
+)
+
+const canManageTenant = computed(
+  () =>
+    auth.me?.actingAsPlatformAdmin === true ||
+    currentMembership.value?.roles.includes(
+      'TenantAdmin',
+    ) === true,
+)
+
 const tenantLinks = computed(() => {
   if (!tenantId.value)
     return []
 
-  return [
+  const links = [
     ['Dashboard', ''],
     ['Sales', '/sales'],
     ['Inbound Shipments', '/shipments'],
@@ -44,8 +60,13 @@ const tenantLinks = computed(() => {
     ['Suppliers', '/suppliers'],
     ['Finance', '/finance'],
     ['Warehouses', '/warehouses'],
-    ['Users', '/users'],
-  ].map(([label, suffix]) => ({
+  ]
+
+  if (canManageTenant.value) {
+    links.push(['Users', '/users'])
+  }
+
+  return links.map(([label, suffix]) => ({
     label,
     to: `/tenant/${tenantId.value}${suffix}`,
   }))
