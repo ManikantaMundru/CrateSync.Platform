@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.InboundShipments;
 using CrateSync.Platform.Api.Responses.InboundShipments;
@@ -17,15 +18,11 @@ namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class InboundShipmentController : ControllerBase
+public sealed class InboundShipmentController(
+    ISender sender,
+    ICurrentTenantAccessService accessService)
+    : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public InboundShipmentController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpPost]
     [ProducesResponseType<CreateInboundShipmentResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -34,6 +31,13 @@ public sealed class InboundShipmentController : ControllerBase
         [FromBody] CreateInboundShipmentRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.CanOperateWarehouseAsync(
+                request.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var command = new CreateShipmentCommand(
             request.SupplierId,
             request.WarehouseId,
@@ -41,7 +45,9 @@ public sealed class InboundShipmentController : ControllerBase
             request.OriginCountry,
             request.ExpectedArrivalAtUtc);
 
-        var result = await _sender.Send(command, cancellationToken);
+        var result = await sender.Send(
+            command,
+            cancellationToken);
 
         if (result.IsFailure)
             return this.ToProblem(result.Error);
@@ -49,7 +55,8 @@ public sealed class InboundShipmentController : ControllerBase
         return CreatedAtAction(
             nameof(GetById),
             new { shipmentId = result.Value },
-            new CreateInboundShipmentResponse(result.Value));
+            new CreateInboundShipmentResponse(
+                result.Value));
     }
 
     [HttpPost("{shipmentId:guid}/lines")]
@@ -61,6 +68,14 @@ public sealed class InboundShipmentController : ControllerBase
         [FromBody] AddShipmentLineRequest request,
         CancellationToken cancellationToken)
     {
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
         var command = new AddShipmentLineCommand(
             shipmentId,
             request.ProductId,
@@ -71,7 +86,9 @@ public sealed class InboundShipmentController : ControllerBase
             request.UnitCost,
             request.Currency);
 
-        var result = await _sender.Send(command, cancellationToken);
+        var result = await sender.Send(
+            command,
+            cancellationToken);
 
         if (result.IsFailure)
             return this.ToProblem(result.Error);
@@ -82,97 +99,125 @@ public sealed class InboundShipmentController : ControllerBase
     }
 
     [HttpPatch("{shipmentId:guid}/ship")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkShipped(
         Guid shipmentId,
         CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
-            new MarkShipmentShippedCommand(shipmentId),
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
+        var result = await sender.Send(
+            new MarkShipmentShippedCommand(
+                shipmentId),
             cancellationToken);
 
-        if (result.IsFailure)
-            return this.ToProblem(result.Error);
-
-        return NoContent();
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpPatch("{shipmentId:guid}/arrive")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> MarkArrived(
         Guid shipmentId,
         CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
-            new MarkShipmentArrivedCommand(shipmentId),
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
+        var result = await sender.Send(
+            new MarkShipmentArrivedCommand(
+                shipmentId),
             cancellationToken);
 
-        if (result.IsFailure)
-            return this.ToProblem(result.Error);
-
-        return NoContent();
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpPost("{shipmentId:guid}/receive")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Receive(
         Guid shipmentId,
         [FromBody] ReceiveShipmentRequest request,
         CancellationToken cancellationToken)
     {
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
         var command = new ReceiveShipmentCommand(
             shipmentId,
             request.ShipmentLineId,
             request.Quantity);
 
-        var result = await _sender.Send(command, cancellationToken);
+        var result = await sender.Send(
+            command,
+            cancellationToken);
 
-        if (result.IsFailure)
-            return this.ToProblem(result.Error);
-
-        return NoContent();
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpPatch("{shipmentId:guid}/cancel")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cancel(
         Guid shipmentId,
         CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
-            new CancelShipmentCommand(shipmentId),
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
+        var result = await sender.Send(
+            new CancelShipmentCommand(
+                shipmentId),
             cancellationToken);
 
-        if (result.IsFailure)
-            return this.ToProblem(result.Error);
-
-        return NoContent();
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpGet("{shipmentId:guid}")]
-    [ProducesResponseType<ShipmentResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(
         Guid shipmentId,
         CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
+        var result = await sender.Send(
             new GetShipmentQuery(shipmentId),
             cancellationToken);
 
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
+        if (!await accessService.CanReadWarehouseAsync(
+                result.Value.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         return Ok(result.Value);
     }
 
     [HttpGet]
-    [ProducesResponseType<IReadOnlyCollection<ShipmentSummaryResponse>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Search(
         [FromQuery] string? searchTerm,
         [FromQuery] ShipmentStatus? status,
@@ -180,7 +225,15 @@ public sealed class InboundShipmentController : ControllerBase
         [FromQuery] Guid? warehouseId,
         CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
+        if (warehouseId.HasValue &&
+            !await accessService.CanReadWarehouseAsync(
+                warehouseId.Value,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await sender.Send(
             new SearchShipmentsQuery(
                 searchTerm,
                 status,
@@ -188,6 +241,43 @@ public sealed class InboundShipmentController : ControllerBase
                 warehouseId),
             cancellationToken);
 
-        return Ok(result);
+        if (warehouseId.HasValue ||
+            await accessService.HasTenantWideReadAsync(
+                cancellationToken))
+        {
+            return Ok(result);
+        }
+
+        var assignedWarehouseIds =
+            await accessService.GetAssignedWarehouseIdsAsync(
+                cancellationToken);
+
+        return Ok(
+            result.Where(
+                x =>
+                    assignedWarehouseIds.Contains(
+                        x.WarehouseId)));
+    }
+
+    private async Task<IActionResult?>
+        EnsureShipmentOperationAccessAsync(
+            Guid shipmentId,
+            CancellationToken cancellationToken)
+    {
+        var shipment =
+            await sender.Send(
+                new GetShipmentQuery(
+                    shipmentId),
+                cancellationToken);
+
+        if (shipment.IsFailure)
+            return this.ToProblem(
+                shipment.Error);
+
+        return await accessService.CanOperateWarehouseAsync(
+                shipment.Value.WarehouseId,
+                cancellationToken)
+            ? null
+            : Forbid();
     }
 }
