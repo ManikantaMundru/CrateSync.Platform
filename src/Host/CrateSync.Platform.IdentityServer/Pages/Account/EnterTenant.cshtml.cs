@@ -17,10 +17,11 @@ public sealed class EnterTenantModel(
     SignInManager<ApplicationUser> signInManager,
     SessionClaimBuilder sessionClaimBuilder,
     ITenantReadService tenantReadService,
-    IIdentityServerInteractionService interaction)
+    IIdentityServerInteractionService interaction,
+    WebClientReturnUrlService webClientReturnUrlService)
     : PageModel
 {
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public Guid SelectedTenantId { get; set; }
 
     [BindProperty(SupportsGet = true)]
@@ -114,6 +115,12 @@ public sealed class EnterTenantModel(
             Url.IsLocalUrl(returnUrl))
         {
             return LocalRedirect(returnUrl);
+        }
+
+        if (webClientReturnUrlService.IsAllowed(
+                returnUrl))
+        {
+            return Redirect(returnUrl!);
         }
 
         return Redirect("/");
