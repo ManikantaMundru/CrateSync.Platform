@@ -19,12 +19,12 @@ const currentTenant = computed(
     <div class="page-heading">
       <div>
         <p class="eyebrow">
-          Tenant workspace
+          Organisation workspace
         </p>
         <h1>
           {{
             currentTenant?.name ??
-            'Tenant workspace'
+            'Organisation workspace'
           }}
         </h1>
         <p>
