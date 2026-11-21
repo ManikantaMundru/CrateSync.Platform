@@ -5,6 +5,9 @@ import '@/styles/app.css'
 import App from '@/App.vue'
 import { router } from '@/router'
 import { pinia } from '@/stores'
+import { themeService } from '@/services/theme'
+
+themeService.initialize()
 
 createApp(App)
   .use(pinia)
