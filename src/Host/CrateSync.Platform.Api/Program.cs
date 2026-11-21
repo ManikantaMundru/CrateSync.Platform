@@ -123,9 +123,10 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddScoped<ICurrentTenantAccessService, CurrentTenantAccessService>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
-builder.Services.AddCrateSyncIdentityReadInfrastructure(builder.Configuration);
+builder.Services.AddCrateSyncIdentityApiInfrastructure(builder.Configuration);
 builder.Services.AddCatalogApplication();
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
 
