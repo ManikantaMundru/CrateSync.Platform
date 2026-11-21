@@ -1099,14 +1099,11 @@ a {
 }
 
 
-[data-coreui-theme="dark"] .user-card-heading small,
-[data-coreui-theme="dark"] .warehouse-access-list,
 [data-coreui-theme="dark"] .access-editor > p,
 [data-coreui-theme="dark"] .warehouse-role-row small {
   color: #9caca7;
 }
 
-[data-coreui-theme="dark"] .warehouse-access-list > strong,
 [data-coreui-theme="dark"] .check-row {
   color: #c4cfcc;
 }
