@@ -59,6 +59,7 @@ const warehouses = ref<WarehouseSummary[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const search = ref('')
+const roleFilter = ref('')
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
 const addModalError = ref<string | null>(null)
@@ -89,20 +90,23 @@ const editForm = reactive({
 const filteredUsers = computed(() => {
   const term = search.value.trim().toLowerCase()
 
-  if (!term)
-    return users.value
-
   return users.value.filter((user) => {
     const fullName =
       `${user.firstName} ${user.lastName}`
         .toLowerCase()
 
-    return (
+    const matchesSearch =
+      !term ||
       fullName.includes(term) ||
       user.userName.toLowerCase().includes(term) ||
       user.email?.toLowerCase().includes(term) === true ||
       displayRoles(user).toLowerCase().includes(term)
-    )
+
+    const matchesRole =
+      !roleFilter.value ||
+      user.roles.includes(roleFilter.value)
+
+    return matchesSearch && matchesRole
   })
 })
 
@@ -172,6 +176,27 @@ function warehouseName(id: string) {
   return warehouse
     ? `${warehouse.name} (${warehouse.code})`
     : id
+}
+
+function userInitials(user: OrganisationUser) {
+  return [user.firstName, user.lastName]
+    .filter(Boolean)
+    .map((part) => part.trim().charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function warehouseAccessLabel(
+  user: OrganisationUser,
+) {
+  if (user.roles.includes('TenantAdmin'))
+    return 'All warehouses'
+
+  if (user.warehouses.length === 0)
+    return 'None assigned'
+
+  return null
 }
 
 function resetWarehouseRoles(
@@ -499,16 +524,6 @@ async function copyActivationLink() {
         </p>
       </div>
 
-      <CButton
-        color="primary"
-        @click="openAddModal"
-      >
-        <i
-          class="button-icon cil-user-plus"
-          aria-hidden="true"
-        />
-        Add user
-      </CButton>
     </div>
 
     <div
@@ -525,7 +540,7 @@ async function copyActivationLink() {
       {{ success }}
     </div>
 
-    <div class="tenant-toolbar">
+    <div class="tenant-toolbar users-toolbar">
       <div>
         <h2>Organisation users</h2>
         <p>
@@ -536,18 +551,48 @@ async function copyActivationLink() {
         </p>
       </div>
 
-      <div class="search-field">
-        <i
-          class="cil-search"
-          aria-hidden="true"
-        />
-        <input
-          v-model="search"
-          class="form-control tenant-search"
-          type="search"
-          placeholder="Search users..."
-          aria-label="Search users"
+      <div class="users-toolbar-actions">
+        <div class="search-field">
+          <i
+            class="cil-search"
+            aria-hidden="true"
+          />
+          <input
+            v-model="search"
+            class="form-control tenant-search"
+            type="search"
+            placeholder="Search users..."
+            aria-label="Search users"
+          >
+        </div>
+
+        <select
+          v-model="roleFilter"
+          class="form-select user-role-filter"
+          aria-label="Filter by role"
         >
+          <option value="">
+            All roles
+          </option>
+          <option value="TenantAdmin">
+            Administrator
+          </option>
+          <option value="Viewer">
+            Viewer
+          </option>
+        </select>
+
+        <CButton
+          color="primary"
+          class="users-add-button"
+          @click="openAddModal"
+        >
+          <i
+            class="button-icon cil-plus"
+            aria-hidden="true"
+          />
+          Add user
+        </CButton>
       </div>
     </div>
 
@@ -566,15 +611,15 @@ async function copyActivationLink() {
       <CCardBody>
         <h3>
           {{
-            search
+            search || roleFilter
               ? 'No matching users'
               : 'No users yet'
           }}
         </h3>
         <p>
           {{
-            search
-              ? 'Try another name, email or role.'
+            search || roleFilter
+              ? 'Try another name, email or role filter.'
               : 'Add the first organisation user.'
           }}
         </p>
@@ -592,7 +637,6 @@ async function copyActivationLink() {
               <th>User</th>
               <th>Organisation role</th>
               <th>Warehouse access</th>
-              <th>Activation</th>
               <th>Status</th>
               <th class="user-actions-column">
                 Actions
@@ -607,28 +651,38 @@ async function copyActivationLink() {
             >
               <td data-label="User">
                 <div class="user-list-identity">
-                  <strong>
-                    {{ user.firstName }}
-                    {{ user.lastName }}
-                  </strong>
-                  <small>
-                    {{
-                      user.email ??
-                      user.userName
-                    }}
-                  </small>
+                  <div class="user-list-avatar">
+                    {{ userInitials(user) }}
+                  </div>
+
+                  <div class="user-list-copy">
+                    <strong>
+                      {{ user.firstName }}
+                      {{ user.lastName }}
+                    </strong>
+                    <small>
+                      {{
+                        user.email ??
+                        user.userName
+                      }}
+                    </small>
+                  </div>
                 </div>
               </td>
 
               <td data-label="Organisation role">
                 <div class="badge-row compact-badges">
-                  <CBadge
+                  <span
                     v-for="role in user.roles"
                     :key="role"
-                    color="info"
+                    class="user-role-pill"
+                    :class="{
+                      administrator:
+                        role === 'TenantAdmin',
+                    }"
                   >
                     {{ displayRole(role) }}
-                  </CBadge>
+                  </span>
 
                   <span
                     v-if="user.roles.length === 0"
@@ -640,8 +694,15 @@ async function copyActivationLink() {
               </td>
 
               <td data-label="Warehouse access">
+                <span
+                  v-if="warehouseAccessLabel(user)"
+                  class="warehouse-summary"
+                >
+                  {{ warehouseAccessLabel(user) }}
+                </span>
+
                 <div
-                  v-if="user.warehouses.length"
+                  v-else
                   class="warehouse-list-compact"
                 >
                   <span
@@ -659,46 +720,32 @@ async function copyActivationLink() {
                     }}
                   </span>
                 </div>
-
-                <span
-                  v-else
-                  class="muted-value"
-                >
-                  —
-                </span>
-              </td>
-
-              <td data-label="Activation">
-                <CBadge
-                  v-if="user.requiresActivation"
-                  color="warning"
-                >
-                  Required
-                </CBadge>
-
-                <CBadge
-                  v-else
-                  color="success"
-                  variant="outline"
-                >
-                  Complete
-                </CBadge>
               </td>
 
               <td data-label="Status">
-                <CBadge
-                  :color="
-                    user.isActive
-                      ? 'success'
-                      : 'secondary'
-                  "
+                <span
+                  v-if="!user.isActive"
+                  class="user-status-pill inactive"
                 >
-                  {{
-                    user.isActive
-                      ? 'Active'
-                      : 'Inactive'
-                  }}
-                </CBadge>
+                  <span class="status-dot" />
+                  Inactive
+                </span>
+
+                <span
+                  v-else-if="user.requiresActivation"
+                  class="user-status-pill pending"
+                >
+                  <span class="status-dot" />
+                  Pending activation
+                </span>
+
+                <span
+                  v-else
+                  class="user-status-pill active"
+                >
+                  <span class="status-dot" />
+                  Inactive
+                </span>
               </td>
 
               <td
@@ -707,7 +754,7 @@ async function copyActivationLink() {
               >
                 <div class="user-row-actions">
                   <CButton
-                    color="primary"
+                    color="secondary"
                     variant="outline"
                     size="sm"
                     title="Edit access"
@@ -720,68 +767,60 @@ async function copyActivationLink() {
                     Edit
                   </CButton>
 
-                  <CButton
-                    v-if="user.requiresActivation"
-                    color="warning"
-                    variant="outline"
-                    size="sm"
-                    title="Generate activation link"
-                    @click="
-                      generateActivationLink(
-                        user,
-                      )
-                    "
-                  >
-                    <i
-                      class="button-icon cil-link"
-                      aria-hidden="true"
-                    />
-                    Activation
-                  </CButton>
-
-                  <CButton
+                  <details
                     v-if="
-                      user.isActive &&
-                      user.userId !==
-                        currentUserId
+                      user.requiresActivation ||
+                      user.userId !== currentUserId ||
+                      !user.isActive
                     "
-                    color="danger"
-                    variant="outline"
-                    size="sm"
-                    title="Deactivate user"
-                    @click="
-                      setUserActive(
-                        user,
-                        false,
-                      )
-                    "
+                    class="user-actions-menu"
                   >
-                    <i
-                      class="button-icon cil-ban"
-                      aria-hidden="true"
-                    />
-                    Deactivate
-                  </CButton>
+                    <summary
+                      title="More actions"
+                      aria-label="More actions"
+                    >
+                      <i
+                        class="cil-options"
+                        aria-hidden="true"
+                      />
+                    </summary>
 
-                  <CButton
-                    v-else-if="!user.isActive"
-                    color="success"
-                    variant="outline"
-                    size="sm"
-                    title="Activate user"
-                    @click="
-                      setUserActive(
-                        user,
-                        true,
-                      )
-                    "
-                  >
-                    <i
-                      class="button-icon cil-check-circle"
-                      aria-hidden="true"
-                    />
-                    Activate
-                  </CButton>
+                    <div class="user-actions-popover">
+                      <button
+                        v-if="user.requiresActivation"
+                        type="button"
+                        @click="
+                          generateActivationLink(user)
+                        "
+                      >
+                        Generate activation link
+                      </button>
+
+                      <button
+                        v-if="
+                          user.isActive &&
+                          user.userId !== currentUserId
+                        "
+                        type="button"
+                        class="danger"
+                        @click="
+                          setUserActive(user, false)
+                        "
+                      >
+                        Deactivate
+                      </button>
+
+                      <button
+                        v-else-if="!user.isActive"
+                        type="button"
+                        @click="
+                          setUserActive(user, true)
+                        "
+                      >
+                        Activate
+                      </button>
+                    </div>
+                  </details>
                 </div>
               </td>
             </tr>
