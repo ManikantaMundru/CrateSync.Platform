@@ -193,6 +193,31 @@ public sealed class TenantUsersController(
             });
         }
 
+        if (roles.Any(
+                role =>
+                    role is not TenantRole.TenantAdmin
+                        and not TenantRole.Viewer))
+        {
+            return BadRequest(new
+            {
+                title = "Invalid tenant role",
+                detail =
+                    "Tenant roles are limited to TenantAdmin and Viewer."
+            });
+        }
+
+        if (warehouses.Any(
+                warehouse =>
+                    warehouse.WarehouseId == Guid.Empty ||
+                    warehouse.Role is not WarehouseAccessRole.WarehouseAdmin
+                        and not WarehouseAccessRole.WarehouseUser))
+        {
+            return BadRequest(new
+            {
+                title = "Invalid warehouse access assignment"
+            });
+        }
+
         if (warehouses
             .GroupBy(x => x.WarehouseId)
             .Any(x => x.Count() > 1))
