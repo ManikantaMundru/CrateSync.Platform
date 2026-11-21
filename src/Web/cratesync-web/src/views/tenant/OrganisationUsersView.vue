@@ -61,6 +61,9 @@ const saving = ref(false)
 const search = ref('')
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
+const addModalError = ref<string | null>(null)
+const editModalError = ref<string | null>(null)
+const activationModalError = ref<string | null>(null)
 const addModalVisible = ref(false)
 const editModalVisible = ref(false)
 const activationModalVisible = ref(false)
@@ -182,6 +185,7 @@ function resetWarehouseRoles(
 }
 
 function openAddModal() {
+  addModalError.value = null
   addForm.firstName = ''
   addForm.lastName = ''
   addForm.email = ''
@@ -193,11 +197,14 @@ function openAddModal() {
 }
 
 function closeAddModal() {
-  if (!saving.value)
+  if (!saving.value) {
+    addModalError.value = null
     addModalVisible.value = false
+  }
 }
 
 function openEditModal(user: OrganisationUser) {
+  editModalError.value = null
   selectedUser.value = user
   editForm.tenantAdmin =
     user.roles.includes('TenantAdmin')
@@ -215,6 +222,7 @@ function openEditModal(user: OrganisationUser) {
 
 function closeEditModal() {
   if (!saving.value) {
+    editModalError.value = null
     editModalVisible.value = false
     selectedUser.value = null
   }
@@ -266,6 +274,7 @@ function showActivation(
     result.requiresActivation &&
     result.activationUrl
   ) {
+    activationModalError.value = null
     activationUrl.value =
       result.activationUrl
     activationModalVisible.value = true
@@ -280,12 +289,13 @@ async function createUser() {
       addForm.warehouseRoles,
     )
   ) {
-    error.value =
+    addModalError.value =
       'Assign at least one organisation role or warehouse.'
     return
   }
 
   saving.value = true
+  addModalError.value = null
   error.value = null
   success.value = null
 
@@ -321,7 +331,7 @@ async function createUser() {
     showActivation(result)
     await load()
   } catch (exception) {
-    error.value =
+    addModalError.value =
       exception instanceof Error
         ? exception.message
         : 'Unable to add user.'
@@ -341,12 +351,13 @@ async function updateAccess() {
       editForm.warehouseRoles,
     )
   ) {
-    error.value =
+    editModalError.value =
       'Assign at least one organisation role or warehouse.'
     return
   }
 
   saving.value = true
+  editModalError.value = null
   error.value = null
   success.value = null
 
@@ -377,7 +388,7 @@ async function updateAccess() {
       'User access updated successfully.'
     await load()
   } catch (exception) {
-    error.value =
+    editModalError.value =
       exception instanceof Error
         ? exception.message
         : 'Unable to update user access.'
@@ -463,7 +474,7 @@ async function copyActivationLink() {
     success.value =
       'Activation link copied to clipboard.'
   } catch {
-    error.value =
+    activationModalError.value =
       'Unable to copy automatically. Select and copy the link manually.'
   }
 }
@@ -709,6 +720,13 @@ async function copyActivationLink() {
       </CModalHeader>
 
       <CModalBody>
+        <div
+          v-if="addModalError"
+          class="status-message status-error modal-status-message"
+        >
+          {{ addModalError }}
+        </div>
+
         <form
           id="add-user-form"
           class="admin-form"
@@ -853,6 +871,13 @@ async function copyActivationLink() {
       </CModalHeader>
 
       <CModalBody>
+        <div
+          v-if="editModalError"
+          class="status-message status-error modal-status-message"
+        >
+          {{ editModalError }}
+        </div>
+
         <p
           v-if="selectedUser"
           class="modal-help"
@@ -962,6 +987,7 @@ async function copyActivationLink() {
       :visible="activationModalVisible"
       alignment="center"
       @close="
+        activationModalError = null
         activationModalVisible = false
       "
     >
@@ -972,6 +998,13 @@ async function copyActivationLink() {
       </CModalHeader>
 
       <CModalBody>
+        <div
+          v-if="activationModalError"
+          class="status-message status-error modal-status-message"
+        >
+          {{ activationModalError }}
+        </div>
+
         <p class="modal-help">
           Send this link manually to the user.
           They can use it to set their password
