@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  computed,
   onMounted,
   reactive,
   ref,
@@ -9,6 +10,11 @@ import {
   CButton,
   CCard,
   CCardBody,
+  CModal,
+  CModalBody,
+  CModalFooter,
+  CModalHeader,
+  CModalTitle,
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
@@ -21,17 +27,29 @@ interface TenantSummary {
   updatedAtUtc: string
 }
 
+interface AdministratorProvisionResult {
+  userId: string
+  createdNewIdentity: boolean
+  requiresActivation: boolean
+  activationUrl: string | null
+}
+
 const auth = useAuthStore()
 const tenants = ref<TenantSummary[]>([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
+const search = ref('')
+const createModalVisible = ref(false)
+const adminModalVisible = ref(false)
+const activationModalVisible = ref(false)
+const selectedTenant = ref<TenantSummary | null>(null)
 const editingTenantId = ref<string | null>(null)
-const provisioningTenantId = ref<string | null>(null)
 const renameValue = ref('')
+const activationUrl = ref('')
 
-const form = reactive({
+const createForm = reactive({
   tenantName: '',
   firstName: '',
   lastName: '',
@@ -44,6 +62,19 @@ const adminForm = reactive({
   lastName: '',
   email: '',
   userName: '',
+})
+
+const filteredTenants = computed(() => {
+  const term = search.value.trim().toLowerCase()
+
+  if (!term)
+    return tenants.value
+
+  return tenants.value.filter((tenant) =>
+    tenant.name.toLowerCase().includes(term) ||
+    tenant.id.toLowerCase().includes(term) ||
+    tenant.status.toLowerCase().includes(term),
+  )
 })
 
 async function loadTenants() {
@@ -66,6 +97,67 @@ async function loadTenants() {
 
 onMounted(loadTenants)
 
+function openCreateModal() {
+  createForm.tenantName = ''
+  createForm.firstName = ''
+  createForm.lastName = ''
+  createForm.email = ''
+  createForm.userName = ''
+  createModalVisible.value = true
+}
+
+function closeCreateModal() {
+  if (!saving.value)
+    createModalVisible.value = false
+}
+
+function openAdminModal(
+  tenant: TenantSummary,
+) {
+  selectedTenant.value = tenant
+  adminForm.firstName = ''
+  adminForm.lastName = ''
+  adminForm.email = ''
+  adminForm.userName = ''
+  adminModalVisible.value = true
+}
+
+function closeAdminModal() {
+  if (!saving.value) {
+    adminModalVisible.value = false
+    selectedTenant.value = null
+  }
+}
+
+function showActivationLink(
+  result: AdministratorProvisionResult,
+) {
+  if (
+    result.requiresActivation &&
+    result.activationUrl
+  ) {
+    activationUrl.value =
+      result.activationUrl
+    activationModalVisible.value = true
+  }
+}
+
+async function copyActivationLink() {
+  if (!activationUrl.value)
+    return
+
+  try {
+    await navigator.clipboard.writeText(
+      activationUrl.value,
+    )
+    success.value =
+      'Activation link copied to clipboard.'
+  } catch {
+    error.value =
+      'Unable to copy automatically. Select and copy the activation link manually.'
+  }
+}
+
 async function createTenant() {
   error.value = null
   success.value = null
@@ -84,43 +176,36 @@ async function createTenant() {
               'application/json',
           },
           body: JSON.stringify({
-            name: form.tenantName,
+            name: createForm.tenantName,
           }),
         },
       )
 
     const administrator =
-      await apiFetch<{
-        requiresActivation: boolean
-      }>(
-      `/api/tenants/${tenantId}/administrators`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json',
+      await apiFetch<AdministratorProvisionResult>(
+        `/api/tenants/${tenantId}/administrators`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            email: createForm.email,
+            userName:
+              createForm.userName.trim() ||
+              null,
+            firstName: createForm.firstName,
+            lastName: createForm.lastName,
+          }),
         },
-        body: JSON.stringify({
-          email: form.email,
-          userName:
-            form.userName.trim() || null,
-          firstName: form.firstName,
-          lastName: form.lastName,
-        }),
-      },
-    )
+      )
 
+    createModalVisible.value = false
     success.value =
-      administrator.requiresActivation
-        ? 'Tenant and initial TenantAdmin created. The administrator must complete account activation before first login.'
-        : 'Tenant and initial TenantAdmin created successfully.'
+      'Tenant and initial TenantAdmin created.'
 
-    form.tenantName = ''
-    form.firstName = ''
-    form.lastName = ''
-    form.email = ''
-    form.userName = ''
-
+    showActivationLink(administrator)
     await loadTenants()
   } catch (exception) {
     const message =
@@ -140,32 +225,18 @@ async function createTenant() {
   }
 }
 
-function startAdministrator(
-  tenant: TenantSummary,
-) {
-  provisioningTenantId.value = tenant.id
-  adminForm.firstName = ''
-  adminForm.lastName = ''
-  adminForm.email = ''
-  adminForm.userName = ''
-}
+async function provisionAdministrator() {
+  if (!selectedTenant.value)
+    return
 
-function cancelAdministrator() {
-  provisioningTenantId.value = null
-}
-
-async function provisionAdministrator(
-  tenant: TenantSummary,
-) {
   error.value = null
   success.value = null
+  saving.value = true
 
   try {
     const result =
-      await apiFetch<{
-        requiresActivation: boolean
-      }>(
-        `/api/tenants/${tenant.id}/administrators`,
+      await apiFetch<AdministratorProvisionResult>(
+        `/api/tenants/${selectedTenant.value.id}/administrators`,
         {
           method: 'POST',
           headers: {
@@ -175,28 +246,33 @@ async function provisionAdministrator(
           body: JSON.stringify({
             email: adminForm.email,
             userName:
-              adminForm.userName.trim() || null,
+              adminForm.userName.trim() ||
+              null,
             firstName: adminForm.firstName,
             lastName: adminForm.lastName,
           }),
         },
       )
 
+    adminModalVisible.value = false
+    selectedTenant.value = null
     success.value =
-      result.requiresActivation
-        ? 'TenantAdmin added. Account activation is required before first login.'
-        : 'TenantAdmin added successfully.'
+      'TenantAdmin added successfully.'
 
-    cancelAdministrator()
+    showActivationLink(result)
   } catch (exception) {
     error.value =
       exception instanceof Error
         ? exception.message
         : 'Unable to add TenantAdmin.'
+  } finally {
+    saving.value = false
   }
 }
 
-function startRename(tenant: TenantSummary) {
+function startRename(
+  tenant: TenantSummary,
+) {
   editingTenantId.value = tenant.id
   renameValue.value = tenant.name
 }
@@ -299,10 +375,17 @@ function enterTenant(
           Tenant management
         </h1>
         <p>
-          Create and manage CrateSync tenant
+          Find and manage CrateSync tenant
           organisations.
         </p>
       </div>
+
+      <CButton
+        color="primary"
+        @click="openCreateModal"
+      >
+        + New tenant
+      </CButton>
     </div>
 
     <div
@@ -319,96 +402,27 @@ function enterTenant(
       {{ success }}
     </div>
 
-    <CCard class="management-card">
-      <CCardBody>
-        <div class="section-heading">
-          <h2>Onboard a new tenant</h2>
+    <section class="section-block">
+      <div class="tenant-toolbar">
+        <div>
+          <h2>Tenants</h2>
           <p>
-            Create the organisation and its
-            first TenantAdmin.
+            {{
+              filteredTenants.length
+            }}
+            of
+            {{ tenants.length }}
+            tenants
           </p>
         </div>
 
-        <form
-          class="admin-form"
-          @submit.prevent="createTenant"
+        <input
+          v-model="search"
+          class="form-control tenant-search"
+          type="search"
+          placeholder="Search tenants..."
+          aria-label="Search tenants"
         >
-          <label class="form-field form-field-wide">
-            <span>Business name</span>
-            <input
-              v-model.trim="form.tenantName"
-              class="form-control"
-              required
-              maxlength="200"
-              placeholder="FruitVibe India"
-            >
-          </label>
-
-          <label class="form-field">
-            <span>Admin first name</span>
-            <input
-              v-model.trim="form.firstName"
-              class="form-control"
-              required
-              maxlength="100"
-            >
-          </label>
-
-          <label class="form-field">
-            <span>Admin last name</span>
-            <input
-              v-model.trim="form.lastName"
-              class="form-control"
-              required
-              maxlength="100"
-            >
-          </label>
-
-          <label class="form-field">
-            <span>Admin email</span>
-            <input
-              v-model.trim="form.email"
-              class="form-control"
-              type="email"
-              required
-              maxlength="256"
-            >
-          </label>
-
-          <label class="form-field">
-            <span>Username (optional)</span>
-            <input
-              v-model.trim="form.userName"
-              class="form-control"
-              maxlength="256"
-              placeholder="Defaults to email"
-            >
-          </label>
-
-          <div class="form-actions form-field-wide">
-            <CButton
-              color="primary"
-              type="submit"
-              :disabled="saving"
-            >
-              {{
-                saving
-                  ? 'Creating…'
-                  : 'Create tenant'
-              }}
-            </CButton>
-          </div>
-        </form>
-      </CCardBody>
-    </CCard>
-
-    <section class="section-block">
-      <div class="section-heading">
-        <h2>Tenants</h2>
-        <p>
-          Enter, rename, activate or deactivate
-          tenant organisations.
-        </p>
       </div>
 
       <div
@@ -420,23 +434,33 @@ function enterTenant(
       </div>
 
       <CCard
-        v-else-if="tenants.length === 0"
+        v-else-if="filteredTenants.length === 0"
         class="empty-state"
       >
         <CCardBody>
-          <h3>No tenants yet</h3>
+          <h3>
+            {{
+              search
+                ? 'No matching tenants'
+                : 'No tenants yet'
+            }}
+          </h3>
           <p>
-            Create the first tenant above.
+            {{
+              search
+                ? 'Try another tenant name, ID or status.'
+                : 'Create the first tenant to get started.'
+            }}
           </p>
         </CCardBody>
       </CCard>
 
       <div
         v-else
-        class="workspace-grid"
+        class="tenant-grid"
       >
         <CCard
-          v-for="tenant in tenants"
+          v-for="tenant in filteredTenants"
           :key="tenant.id"
           class="workspace-card tenant-card"
         >
@@ -507,28 +531,21 @@ function enterTenant(
                 </CButton>
               </template>
 
-              <template
-                v-else-if="
-                  provisioningTenantId !==
-                  tenant.id
-                "
-              >
+              <template v-else>
                 <CButton
                   v-if="tenant.status === 'Active'"
                   color="warning"
                   size="sm"
                   @click="enterTenant(tenant)"
                 >
-                  Enter tenant
+                  Enter
                 </CButton>
 
                 <CButton
                   color="primary"
                   variant="outline"
                   size="sm"
-                  @click="
-                    startAdministrator(tenant)
-                  "
+                  @click="openAdminModal(tenant)"
                 >
                   Add TenantAdmin
                 </CButton>
@@ -573,80 +590,260 @@ function enterTenant(
                 </CButton>
               </template>
             </div>
-
-            <form
-              v-if="
-                provisioningTenantId ===
-                tenant.id
-              "
-              class="inline-admin-form"
-              @submit.prevent="
-                provisionAdministrator(tenant)
-              "
-            >
-              <strong>Add TenantAdmin</strong>
-
-              <div class="inline-admin-grid">
-                <input
-                  v-model.trim="adminForm.firstName"
-                  class="form-control"
-                  required
-                  maxlength="100"
-                  placeholder="First name"
-                  aria-label="First name"
-                >
-
-                <input
-                  v-model.trim="adminForm.lastName"
-                  class="form-control"
-                  required
-                  maxlength="100"
-                  placeholder="Last name"
-                  aria-label="Last name"
-                >
-
-                <input
-                  v-model.trim="adminForm.email"
-                  class="form-control"
-                  type="email"
-                  required
-                  maxlength="256"
-                  placeholder="Email"
-                  aria-label="Email"
-                >
-
-                <input
-                  v-model.trim="adminForm.userName"
-                  class="form-control"
-                  maxlength="256"
-                  placeholder="Username (optional)"
-                  aria-label="Username"
-                >
-              </div>
-
-              <div class="tenant-actions">
-                <CButton
-                  color="primary"
-                  size="sm"
-                  type="submit"
-                >
-                  Add administrator
-                </CButton>
-
-                <CButton
-                  color="secondary"
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  @click="cancelAdministrator"
-                >
-                  Cancel
-                </CButton>
-              </div>
-            </form>
           </CCardBody>
         </CCard>
       </div>
     </section>
+
+    <CModal
+      :visible="createModalVisible"
+      alignment="center"
+      size="lg"
+      @close="closeCreateModal"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          New tenant
+        </CModalTitle>
+      </CModalHeader>
+
+      <CModalBody>
+        <p class="modal-help">
+          Create the organisation and its
+          first TenantAdmin.
+        </p>
+
+        <form
+          id="create-tenant-form"
+          class="admin-form"
+          @submit.prevent="createTenant"
+        >
+          <label class="form-field form-field-wide">
+            <span>Business name</span>
+            <input
+              v-model.trim="createForm.tenantName"
+              class="form-control"
+              required
+              maxlength="200"
+              placeholder="FruitVibe India"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Admin first name</span>
+            <input
+              v-model.trim="createForm.firstName"
+              class="form-control"
+              required
+              maxlength="100"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Admin last name</span>
+            <input
+              v-model.trim="createForm.lastName"
+              class="form-control"
+              required
+              maxlength="100"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Admin email</span>
+            <input
+              v-model.trim="createForm.email"
+              class="form-control"
+              type="email"
+              required
+              maxlength="256"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Username (optional)</span>
+            <input
+              v-model.trim="createForm.userName"
+              class="form-control"
+              maxlength="256"
+              placeholder="Defaults to email"
+            >
+          </label>
+        </form>
+      </CModalBody>
+
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="closeCreateModal"
+        >
+          Cancel
+        </CButton>
+
+        <CButton
+          color="primary"
+          type="submit"
+          form="create-tenant-form"
+          :disabled="saving"
+        >
+          {{
+            saving
+              ? 'Creating…'
+              : 'Create tenant'
+          }}
+        </CButton>
+      </CModalFooter>
+    </CModal>
+
+    <CModal
+      :visible="adminModalVisible"
+      alignment="center"
+      @close="closeAdminModal"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          Add TenantAdmin
+        </CModalTitle>
+      </CModalHeader>
+
+      <CModalBody>
+        <p class="modal-help">
+          {{
+            selectedTenant
+              ? `Add an administrator to ${selectedTenant.name}.`
+              : 'Add a tenant administrator.'
+          }}
+        </p>
+
+        <form
+          id="add-admin-form"
+          class="admin-form admin-form-single"
+          @submit.prevent="provisionAdministrator"
+        >
+          <label class="form-field">
+            <span>First name</span>
+            <input
+              v-model.trim="adminForm.firstName"
+              class="form-control"
+              required
+              maxlength="100"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Last name</span>
+            <input
+              v-model.trim="adminForm.lastName"
+              class="form-control"
+              required
+              maxlength="100"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Email</span>
+            <input
+              v-model.trim="adminForm.email"
+              class="form-control"
+              type="email"
+              required
+              maxlength="256"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Username (optional)</span>
+            <input
+              v-model.trim="adminForm.userName"
+              class="form-control"
+              maxlength="256"
+              placeholder="Defaults to email"
+            >
+          </label>
+        </form>
+      </CModalBody>
+
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="closeAdminModal"
+        >
+          Cancel
+        </CButton>
+
+        <CButton
+          color="primary"
+          type="submit"
+          form="add-admin-form"
+          :disabled="saving"
+        >
+          {{
+            saving
+              ? 'Adding…'
+              : 'Add TenantAdmin'
+          }}
+        </CButton>
+      </CModalFooter>
+    </CModal>
+
+    <CModal
+      :visible="activationModalVisible"
+      alignment="center"
+      @close="
+        activationModalVisible = false
+      "
+    >
+      <CModalHeader>
+        <CModalTitle>
+          Activation link
+        </CModalTitle>
+      </CModalHeader>
+
+      <CModalBody>
+        <p class="modal-help">
+          Send this link manually to the new
+          TenantAdmin. They will use it to set
+          their password and activate the
+          account.
+        </p>
+
+        <label class="form-field">
+          <span>Activation URL</span>
+          <textarea
+            class="form-control activation-link"
+            :value="activationUrl"
+            readonly
+            rows="4"
+            @focus="
+              ($event.target as HTMLTextAreaElement)
+                .select()
+            "
+          />
+        </label>
+      </CModalBody>
+
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          @click="
+            activationModalVisible = false
+          "
+        >
+          Close
+        </CButton>
+
+        <CButton
+          color="primary"
+          @click="copyActivationLink"
+        >
+          Copy activation link
+        </CButton>
+      </CModalFooter>
+    </CModal>
   </section>
 </template>
