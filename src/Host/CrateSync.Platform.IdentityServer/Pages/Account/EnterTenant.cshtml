@@ -1,0 +1,38 @@
+@page
+@model CrateSync.Platform.IdentityServer.Pages.Account.EnterTenantModel
+@{
+    ViewData["Title"] = "Enter tenant";
+}
+
+<div class="card">
+    <h1>Enter tenant</h1>
+
+    <p class="help">
+        Platform administrator mode. Select the tenant you want to enter.
+    </p>
+
+    <form method="post">
+        <input type="hidden" asp-for="ReturnUrl" />
+
+        <div asp-validation-summary="ModelOnly"></div>
+
+        @foreach (var tenant in Model.Tenants)
+        {
+            <label class="tenant">
+                <input type="radio"
+                       name="SelectedTenantId"
+                       value="@tenant.TenantId"
+                       required />
+                <span>
+                    <strong>@tenant.Name</strong>
+                    <br />
+                    <small>@tenant.TenantId</small>
+                </span>
+            </label>
+        }
+
+        <button type="submit">
+            Enter tenant
+        </button>
+    </form>
+</div>
