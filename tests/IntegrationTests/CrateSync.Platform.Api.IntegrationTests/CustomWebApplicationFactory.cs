@@ -4,6 +4,7 @@ using CrateSync.Platform.InboundLogistics.Infrastructure.Persistence;
 using CrateSync.Platform.Inventory.Infrastructure.Persistence;
 using CrateSync.Platform.Sales.Infrastructure.Persistence;
 using CrateSync.Platform.Tenancy.Application.Abstractions;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
@@ -57,6 +58,8 @@ public sealed class CustomWebApplicationFactory
                     new Dictionary<string, string?>
                     {
                         ["ConnectionStrings:Database"] =
+                            ConnectionString,
+                        ["ConnectionStrings:CrateSync"] =
                             ConnectionString
                     });
             });
@@ -65,6 +68,20 @@ public sealed class CustomWebApplicationFactory
         {
             services.RemoveAll<ITenantContext>();
             services.RemoveAll<ITenantReadService>();
+
+            services
+                .AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme =
+                        TestAuthHandler.SchemeName;
+                    options.DefaultChallengeScheme =
+                        TestAuthHandler.SchemeName;
+                })
+                .AddScheme<
+                    AuthenticationSchemeOptions,
+                    TestAuthHandler>(
+                    TestAuthHandler.SchemeName,
+                    _ => { });
 
             services.AddSingleton<ITenantContext>(
                 new TestTenantContext(TenantId));
