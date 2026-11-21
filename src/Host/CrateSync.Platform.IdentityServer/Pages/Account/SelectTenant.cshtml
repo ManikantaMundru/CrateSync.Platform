@@ -1,0 +1,43 @@
+@page
+@model CrateSync.Platform.IdentityServer.Pages.Account.SelectTenantModel
+@{
+    ViewData["Title"] = "Select organisation";
+}
+
+<div class="card">
+    <h1>Select organisation</h1>
+
+    <p class="help">
+        Your account belongs to more than one tenant.
+        Select the tenant you want to work in.
+    </p>
+
+    <form method="post">
+        <input type="hidden"
+               asp-for="ReturnUrl" />
+
+        <div asp-validation-summary="ModelOnly"></div>
+
+        @foreach (var membership in Model.Memberships)
+        {
+            <label class="tenant">
+                <input type="radio"
+                       name="SelectedTenantId"
+                       value="@membership.TenantId"
+                       required />
+                <span>
+                    Tenant
+                    <strong>@membership.TenantId</strong>
+                    <br />
+                    <small>
+                        @string.Join(", ", membership.Roles)
+                    </small>
+                </span>
+            </label>
+        }
+
+        <button type="submit">
+            Continue
+        </button>
+    </form>
+</div>

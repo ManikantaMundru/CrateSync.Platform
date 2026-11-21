@@ -92,3 +92,7 @@ dotnet ef migrations list --project .\src\Modules\Catalog\CrateSync.Platform.Cat
 ```powershell
 dotnet ef migrations remove --project .\src\Modules\Catalog\CrateSync.Platform.Catalog.Infrastructure\CrateSync.Platform.Catalog.Infrastructure.csproj --startup-project .\src\Host\CrateSync.Platform.Api\CrateSync.Platform.Api.csproj --context CatalogDbContext
 ```
+
+## IdentityServer
+
+See the [IdentityServer setup](src/Host/CrateSync.Platform.IdentityServer/README.md) for database initialization and local startup.

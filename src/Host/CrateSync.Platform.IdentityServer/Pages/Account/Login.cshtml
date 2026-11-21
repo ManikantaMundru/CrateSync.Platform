@@ -1,0 +1,49 @@
+@page
+@model CrateSync.Platform.IdentityServer.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<div class="card">
+    <h1>Sign in</h1>
+
+    <p class="help">
+        Use your username or email address.
+    </p>
+
+    <form method="post">
+        <input type="hidden"
+               asp-for="ReturnUrl" />
+
+        <div asp-validation-summary="ModelOnly"></div>
+
+        <div class="field">
+            <label asp-for="Input.Login">
+                Username or email
+            </label>
+            <input asp-for="Input.Login"
+                   autocomplete="username" />
+            <span asp-validation-for="Input.Login"></span>
+        </div>
+
+        <div class="field">
+            <label asp-for="Input.Password">
+                Password
+            </label>
+            <input asp-for="Input.Password"
+                   type="password"
+                   autocomplete="current-password" />
+            <span asp-validation-for="Input.Password"></span>
+        </div>
+
+        <div class="field">
+            <label>
+                <input asp-for="Input.RememberLogin"
+                       type="checkbox" />
+                Keep me signed in
+            </label>
+        </div>
+
+        <button type="submit">Sign in</button>
+    </form>
+</div>
