@@ -1,6 +1,8 @@
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Tenancy;
+using CrateSync.Platform.Identity.Domain.Authorization;
+using CrateSync.Platform.Identity.Infrastructure.Persistence;
 using CrateSync.Platform.Tenancy.Application.Tenants.ActivateTenant;
 using CrateSync.Platform.Tenancy.Application.Tenants.CreateTenant;
 using CrateSync.Platform.Tenancy.Application.Tenants.DeactivateTenant;
@@ -15,9 +17,10 @@ namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/tenants")]
-[Authorize(Policy = AuthorizationPolicies.PlatformAdmin)]
+[Authorize(Policy = AuthorizationPolicies.SuperAdmin)]
 public sealed class TenantController(
-    ISender sender)
+    ISender sender,
+    TenantUserManagementService tenantUserManagementService)
     : ControllerBase
 {
     [HttpPost]
@@ -36,6 +39,52 @@ public sealed class TenantController(
             nameof(Get),
             new { id = result.Value },
             result.Value);
+    }
+
+    [HttpPost("{id:guid}/administrators")]
+    public async Task<IActionResult> CreateInitialAdministrator(
+        Guid id,
+        CreateInitialTenantAdminRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tenant =
+            await sender.Send(
+                new GetTenantQuery(id),
+                cancellationToken);
+
+        if (tenant.IsFailure)
+            return this.ToProblem(tenant.Error);
+
+        var result =
+            await tenantUserManagementService.CreateOrAddAsync(
+                id,
+                request.Email,
+                request.UserName,
+                request.FirstName,
+                request.LastName,
+                [TenantRole.TenantAdmin],
+                Array.Empty<WarehouseAccessInput>(),
+                cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            return BadRequest(new
+            {
+                title = "Unable to create tenant administrator",
+                errors = result.Errors
+            });
+        }
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            new
+            {
+                userId = result.UserId,
+                createdNewIdentity =
+                    result.CreatedNewIdentity,
+                requiresActivation =
+                    result.RequiresActivation
+            });
     }
 
     [HttpPut("{id:guid}")]
