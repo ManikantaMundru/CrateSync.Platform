@@ -462,6 +462,11 @@ async function generateActivationLink(
   }
 }
 
+function closeActivationModal() {
+  activationModalError.value = null
+  activationModalVisible.value = false
+}
+
 async function copyActivationLink() {
   if (!activationUrl.value)
     return
@@ -986,10 +991,7 @@ async function copyActivationLink() {
     <CModal
       :visible="activationModalVisible"
       alignment="center"
-      @close="
-        activationModalError = null
-        activationModalVisible = false
-      "
+      @close="closeActivationModal"
     >
       <CModalHeader>
         <CModalTitle>
@@ -1023,9 +1025,7 @@ async function copyActivationLink() {
         <CButton
           color="secondary"
           variant="outline"
-          @click="
-            activationModalVisible = false
-          "
+          @click="closeActivationModal"
         >
           Close
         </CButton>
