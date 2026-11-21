@@ -273,7 +273,7 @@ async function provisionAdministrator() {
     error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to add TenantAdmin.'
+        : 'Unable to add administrator.'
   } finally {
     saving.value = false
   }
