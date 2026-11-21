@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Warehouse;
 using CrateSync.Platform.Api.Responses.Warehouse;
@@ -8,17 +9,22 @@ using CrateSync.Platform.Warehousing.Application.Warehouses.GetWarehouse;
 using CrateSync.Platform.Warehousing.Application.Warehouses.SearchWarehouses;
 using CrateSync.Platform.Warehousing.Application.Warehouses.UpdateWarehouse;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class WarehouseController(ISender sender) : ControllerBase
+public sealed class WarehouseController(
+    ISender sender,
+    ICurrentTenantAccessService accessService)
+    : ControllerBase
 {
     private readonly ISender _sender = sender;
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType<CreateWarehouseResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -47,6 +53,7 @@ public sealed class WarehouseController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{warehouseId:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -81,6 +88,13 @@ public sealed class WarehouseController(ISender sender) : ControllerBase
         Guid warehouseId,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.CanReadWarehouseAsync(
+                warehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await _sender.Send(
             new GetWarehouseQuery(warehouseId),
             cancellationToken);
@@ -101,10 +115,23 @@ public sealed class WarehouseController(ISender sender) : ControllerBase
             new SearchWarehousesQuery(search, isActive),
             cancellationToken);
 
-        return Ok(result);
+        if (await accessService.HasTenantWideReadAsync(
+                cancellationToken))
+        {
+            return Ok(result);
+        }
+
+        var assignedWarehouseIds =
+            await accessService.GetAssignedWarehouseIdsAsync(
+                cancellationToken);
+
+        return Ok(
+            result.Where(
+                x => assignedWarehouseIds.Contains(x.Id)));
     }
 
     [HttpPatch("{warehouseId:guid}/activate")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Activate(
@@ -121,6 +148,7 @@ public sealed class WarehouseController(ISender sender) : ControllerBase
     }
 
     [HttpPatch("{warehouseId:guid}/deactivate")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(
