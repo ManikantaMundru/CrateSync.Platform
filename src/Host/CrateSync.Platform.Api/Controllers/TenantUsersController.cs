@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Requests.Identity;
 using CrateSync.Platform.BuildingBlocks.Application;
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Identity.Infrastructure.Persistence;
 using CrateSync.Platform.Warehousing.Application.Warehouses.GetWarehouse;
 using MediatR;
@@ -94,7 +95,7 @@ public sealed class TenantUsersController(
     {
         if (IsCurrentUser(userId) &&
             !request.Roles.Contains(
-                Identity.Domain.Authorization.TenantRole.TenantAdmin))
+                TenantRole.TenantAdmin))
         {
             return Conflict(new
             {
@@ -179,7 +180,7 @@ public sealed class TenantUsersController(
 
     private async Task<IActionResult?> ValidateAccessAsync(
         IReadOnlyCollection<
-            Identity.Domain.Authorization.TenantRole> roles,
+            TenantRole> roles,
         IReadOnlyCollection<WarehouseAccessRequest> warehouses,
         CancellationToken cancellationToken)
     {
