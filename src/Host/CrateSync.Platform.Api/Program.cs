@@ -122,6 +122,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+builder.Services.AddScoped<ICurrentTenantAccessService, CurrentTenantAccessService>();
 
 builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
 builder.Services.AddCrateSyncIdentityReadInfrastructure(builder.Configuration);
