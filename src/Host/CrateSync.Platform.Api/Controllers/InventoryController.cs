@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Inventory;
 using CrateSync.Platform.Inventory.Application.Stock.AdjustStock;
@@ -11,7 +12,10 @@ namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/inventory")]
-public sealed class InventoryController(ISender sender) : ControllerBase
+public sealed class InventoryController(
+    ISender sender,
+    ICurrentTenantAccessService accessService)
+    : ControllerBase
 {
     [HttpGet("stock")]
     public async Task<IActionResult> GetStock(
@@ -19,8 +23,17 @@ public sealed class InventoryController(ISender sender) : ControllerBase
         [FromQuery] Guid productVarietyId,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.CanReadWarehouseAsync(
+                warehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await sender.Send(
-            new GetStockQuery(warehouseId, productVarietyId),
+            new GetStockQuery(
+                warehouseId,
+                productVarietyId),
             cancellationToken);
 
         return result.IsFailure
@@ -34,11 +47,36 @@ public sealed class InventoryController(ISender sender) : ControllerBase
         [FromQuery] Guid? productVarietyId,
         CancellationToken cancellationToken)
     {
+        if (warehouseId.HasValue &&
+            !await accessService.CanReadWarehouseAsync(
+                warehouseId.Value,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await sender.Send(
-            new SearchStockQuery(warehouseId, productVarietyId),
+            new SearchStockQuery(
+                warehouseId,
+                productVarietyId),
             cancellationToken);
 
-        return Ok(result);
+        if (warehouseId.HasValue ||
+            await accessService.HasTenantWideReadAsync(
+                cancellationToken))
+        {
+            return Ok(result);
+        }
+
+        var assignedWarehouseIds =
+            await accessService.GetAssignedWarehouseIdsAsync(
+                cancellationToken);
+
+        return Ok(
+            result.Where(
+                x =>
+                    assignedWarehouseIds.Contains(
+                        x.WarehouseId)));
     }
 
     [HttpGet("movements")]
@@ -47,8 +85,17 @@ public sealed class InventoryController(ISender sender) : ControllerBase
         [FromQuery] Guid productVarietyId,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.CanReadWarehouseAsync(
+                warehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await sender.Send(
-            new GetStockMovementsQuery(warehouseId, productVarietyId),
+            new GetStockMovementsQuery(
+                warehouseId,
+                productVarietyId),
             cancellationToken);
 
         return Ok(result);
@@ -59,6 +106,13 @@ public sealed class InventoryController(ISender sender) : ControllerBase
         [FromBody] AdjustStockRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.CanAdminWarehouseAsync(
+                request.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await sender.Send(
             new AdjustStockCommand(
                 request.WarehouseId,
