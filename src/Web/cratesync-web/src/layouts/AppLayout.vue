@@ -35,17 +35,35 @@ const tenantId = computed(
   () => currentTenant.value?.tenantId ?? null,
 )
 
-const hasTenantSession = computed(
-  () => auth.me?.currentTenantId != null,
+const organisationCount = computed(
+  () => auth.me?.tenants.length ?? 0,
+)
+
+const isSuperAdminSession = computed(
+  () =>
+    currentTenant.value?.accessMode ===
+    'SuperAdmin',
+)
+
+const canSwitchOrganisation = computed(
+  () =>
+    !isSuperAdminSession.value &&
+    organisationCount.value > 1,
 )
 
 const canManageTenant = computed(
   () =>
-    currentTenant.value?.accessMode ===
-      'SuperAdmin' ||
+    isSuperAdminSession.value ||
     currentTenant.value?.roles.includes(
       'TenantAdmin',
     ) === true,
+)
+
+const showHome = computed(
+  () =>
+    !currentTenant.value ||
+    auth.isSuperAdmin ||
+    organisationCount.value > 1,
 )
 
 const tenantLinks = computed(() => {
@@ -53,23 +71,60 @@ const tenantLinks = computed(() => {
     return []
 
   const links = [
-    ['Dashboard', ''],
-    ['Sales', '/sales'],
-    ['Inbound Shipments', '/shipments'],
-    ['Inventory', '/inventory'],
-    ['Customers', '/customers'],
-    ['Suppliers', '/suppliers'],
-    ['Finance', '/finance'],
-    ['Warehouses', '/warehouses'],
+    {
+      label: 'Dashboard',
+      suffix: '',
+      icon: 'cil-speedometer',
+    },
+    {
+      label: 'Sales',
+      suffix: '/sales',
+      icon: 'cil-cart',
+    },
+    {
+      label: 'Inbound Shipments',
+      suffix: '/shipments',
+      icon: 'cil-truck',
+    },
+    {
+      label: 'Inventory',
+      suffix: '/inventory',
+      icon: 'cil-storage',
+    },
+    {
+      label: 'Customers',
+      suffix: '/customers',
+      icon: 'cil-people',
+    },
+    {
+      label: 'Suppliers',
+      suffix: '/suppliers',
+      icon: 'cil-user',
+    },
+    {
+      label: 'Finance',
+      suffix: '/finance',
+      icon: 'cil-money',
+    },
+    {
+      label: 'Warehouses',
+      suffix: '/warehouses',
+      icon: 'cil-industry',
+    },
   ]
 
   if (canManageTenant.value) {
-    links.push(['Users', '/users'])
+    links.push({
+      label: 'Users',
+      suffix: '/users',
+      icon: 'cil-people',
+    })
   }
 
-  return links.map(([label, suffix]) => ({
-    label,
-    to: `/tenant/${tenantId.value}${suffix}`,
+  return links.map((link) => ({
+    ...link,
+    to:
+      `/tenant/${tenantId.value}${link.suffix}`,
   }))
 })
 
@@ -79,6 +134,10 @@ function closeSidebar() {
 
 function isActive(path: string) {
   return route.path === path
+}
+
+function leaveOrganisation() {
+  auth.exitTenant('/')
 }
 </script>
 
@@ -106,12 +165,17 @@ function isActive(path: string) {
 
       <nav class="sidebar-nav">
         <RouterLink
+          v-if="showHome"
           class="nav-entry"
           :class="{ active: isActive('/') }"
           to="/"
           @click="closeSidebar"
         >
-          Home
+          <i
+            class="nav-icon cil-home"
+            aria-hidden="true"
+          />
+          <span>Home</span>
         </RouterLink>
 
         <RouterLink
@@ -127,7 +191,11 @@ function isActive(path: string) {
           to="/admin"
           @click="closeSidebar"
         >
-          Platform Administration
+          <i
+            class="nav-icon cil-settings"
+            aria-hidden="true"
+          />
+          <span>Platform Administration</span>
         </RouterLink>
 
         <template v-if="tenantId">
@@ -146,7 +214,12 @@ function isActive(path: string) {
             :to="link.to"
             @click="closeSidebar"
           >
-            {{ link.label }}
+            <i
+              class="nav-icon"
+              :class="link.icon"
+              aria-hidden="true"
+            />
+            <span>{{ link.label }}</span>
           </RouterLink>
         </template>
       </nav>
@@ -194,23 +267,38 @@ function isActive(path: string) {
 
         <div class="header-actions">
           <CBadge
-            v-if="
-              currentTenant?.accessMode ===
-              'SuperAdmin'
-            "
+            v-if="isSuperAdminSession"
             color="warning"
           >
             Platform admin mode
           </CBadge>
 
           <CButton
-            v-if="hasTenantSession"
+            v-if="isSuperAdminSession"
             color="secondary"
             variant="outline"
             size="sm"
-            @click="auth.exitTenant()"
+            @click="leaveOrganisation"
           >
-            Exit tenant
+            <i
+              class="button-icon cil-arrow-left"
+              aria-hidden="true"
+            />
+            Return to platform
+          </CButton>
+
+          <CButton
+            v-else-if="canSwitchOrganisation"
+            color="secondary"
+            variant="outline"
+            size="sm"
+            @click="leaveOrganisation"
+          >
+            <i
+              class="button-icon cil-swap-horizontal"
+              aria-hidden="true"
+            />
+            Switch organisation
           </CButton>
 
           <CButton
@@ -219,16 +307,17 @@ function isActive(path: string) {
             size="sm"
             @click="auth.logout()"
           >
+            <i
+              class="button-icon cil-account-logout"
+              aria-hidden="true"
+            />
             Sign out
           </CButton>
         </div>
       </header>
 
       <div
-        v-if="
-          currentTenant?.accessMode ===
-          'SuperAdmin'
-        "
+        v-if="isSuperAdminSession"
         class="platform-admin-banner"
       >
         <strong>
