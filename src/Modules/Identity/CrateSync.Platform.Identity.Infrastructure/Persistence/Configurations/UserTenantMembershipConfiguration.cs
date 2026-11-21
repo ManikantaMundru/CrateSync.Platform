@@ -57,7 +57,16 @@ internal sealed class UserTenantMembershipConfiguration
             .HasForeignKey(x => x.MembershipId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasMany(x => x.WarehouseAssignments)
+            .WithOne()
+            .HasForeignKey(x => x.MembershipId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Navigation(x => x.Roles)
+            .UsePropertyAccessMode(
+                PropertyAccessMode.Field);
+
+        builder.Navigation(x => x.WarehouseAssignments)
             .UsePropertyAccessMode(
                 PropertyAccessMode.Field);
     }
