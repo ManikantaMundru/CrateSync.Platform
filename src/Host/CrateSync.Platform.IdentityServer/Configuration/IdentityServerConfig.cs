@@ -22,7 +22,8 @@ public static class IdentityServerConfig
                 [
                     CrateSyncClaimTypes.PlatformRole,
                     CrateSyncClaimTypes.TenantId,
-                    CrateSyncClaimTypes.Role
+                    CrateSyncClaimTypes.Role,
+                    CrateSyncClaimTypes.ActingAsPlatformAdmin
                 ])
         ];
     }
@@ -38,6 +39,7 @@ public static class IdentityServerConfig
                     CrateSyncClaimTypes.PlatformRole,
                     CrateSyncClaimTypes.TenantId,
                     CrateSyncClaimTypes.Role,
+                    CrateSyncClaimTypes.ActingAsPlatformAdmin,
                     "name",
                     "email"
                 ])
