@@ -47,6 +47,17 @@ public sealed class TenantController(
         CreateInitialTenantAdminRequest request,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.FirstName) ||
+            string.IsNullOrWhiteSpace(request.LastName))
+        {
+            return BadRequest(new
+            {
+                title = "Administrator details are required",
+                detail = "Email, first name and last name are required."
+            });
+        }
+
         var tenant =
             await sender.Send(
                 new GetTenantQuery(id),
