@@ -116,13 +116,39 @@ dotnet ef migrations script --idempotent --output catalog-migrations.sql --proje
 dotnet ef migrations remove --project $catalog --startup-project $api --context CatalogDbContext -- --environment Development
 ```
 
-## Authentication and local tenant context
+## Authentication and tenant context
 
-**API authentication is work in progress.** The operational host does not register JWT bearer authentication or consume IdentityServer tokens yet. An `Authorization` header, an `X-Tenant-Id` header, or a tenant ID in a request body does not select a tenant.
+The operational API now validates bearer tokens issued by the standalone IdentityServer.
 
-- In `Development`, tenant validation is bypassed and the API falls back to `Guid.Empty` when there is no `tenant_id` claim. Health, Swagger, and tenant administration are available locally. Tenant-scoped reads query that empty tenant ID. Tenant-scoped creates reject the empty ID, so creating a tenant through `/api/tenants` does not unlock the operational write endpoints.
-- Outside `Development`, tenant middleware requires a valid `tenant_id` claim for operational requests and checks that the tenant is active. Missing context returns `401`, and an inactive or unknown tenant returns `403`. The middleware exempts `/api/tenants`, `/swagger`, and `/health`.
-- Use the API locally while authentication is in progress. The integration-test host supplies its own tenant context to exercise the shipment and sales workflows.
+Development defaults:
+
+- IdentityServer authority: `https://localhost:7201`
+- API audience: `cratesync.api`
+- Vue origin: `http://localhost:5173`
+
+The API keeps tenant selection claim-based. A valid `tenant_id` claim is required for tenant-scoped operational endpoints. The API does not accept an `X-Tenant-Id` header or an arbitrary tenant ID in a request body as a replacement for the authenticated tenant context.
+
+`GET /api/me` is authenticated but does not require a selected tenant. It returns the current user's display information, platform role, tenant memberships, tenant roles, and warehouse assignments. This is the bootstrap endpoint for the CrateSync Vue portal.
+
+Platform administration remains separate from tenant operations:
+
+- `PlatformRole.Admin` and `PlatformRole.SuperAdmin` can access platform administration endpoints.
+- `/api/tenants` is currently protected by the `PlatformAdmin` policy.
+- A platform-only SuperAdmin token does not automatically bypass tenant isolation on operational endpoints. The later **Enter Tenant** flow will establish an explicit tenant context.
+
+Initial tenant access is intentionally simple:
+
+- `TenantAdmin` is tenant-wide and can eventually manage all operational areas plus tenant users.
+- `Viewer` is tenant-wide read-only access reserved for later endpoint policy rollout.
+- `WarehouseAdmin` and `WarehouseUser` are stored as warehouse-scoped assignments rather than tenant-wide roles.
+
+After pulling the warehouse-access change, apply the checked-in Identity migration:
+
+```powershell
+dotnet ef database update --project .\src\Modules\Identity\CrateSync.Platform.Identity.Infrastructure\CrateSync.Platform.Identity.Infrastructure.csproj --startup-project .\src\Host\CrateSync.Platform.IdentityServer\CrateSync.Platform.IdentityServer.csproj --context CrateSyncIdentityDbContext -- --environment Development
+```
+
+Authentication is now enforced globally for controllers. The host root, health endpoint, and Swagger middleware remain available for local diagnostics.
 
 ## Endpoint reference
 

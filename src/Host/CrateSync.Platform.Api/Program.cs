@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.ExceptionHandling;
 using CrateSync.Platform.Api.Tenancy;
 using CrateSync.Platform.BuildingBlocks.Application;
@@ -7,6 +8,7 @@ using CrateSync.Platform.Catalog.Application;
 using CrateSync.Platform.Catalog.Infrastructure;
 using CrateSync.Platform.Finance.Application;
 using CrateSync.Platform.Finance.Infrastructure;
+using CrateSync.Platform.Identity.Infrastructure;
 using CrateSync.Platform.InboundLogistics.Application;
 using CrateSync.Platform.InboundLogistics.Infrastructure;
 using CrateSync.Platform.Inventory.Application;
@@ -20,6 +22,9 @@ using CrateSync.Platform.TradingPartners.Infrastructure;
 using CrateSync.Platform.Warehousing.Application;
 using CrateSync.Platform.Warehousing.Infrastructure;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,9 +33,98 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 
+var webBaseUrl =
+    builder.Configuration["Web:BaseUrl"]
+    ?? "http://localhost:5173";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "CrateSyncWeb",
+        policy =>
+            policy
+                .WithOrigins(webBaseUrl)
+                .AllowAnyHeader()
+                .AllowAnyMethod());
+});
+
+builder.Services
+    .AddAuthentication(
+        JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(
+        JwtBearerDefaults.AuthenticationScheme,
+        options =>
+        {
+            options.Authority =
+                builder.Configuration[
+                    "Identity:Authority"]
+                ?? "https://localhost:7201";
+
+            options.Audience =
+                builder.Configuration[
+                    "Identity:Audience"]
+                ?? "cratesync.api";
+
+            options.RequireHttpsMetadata = true;
+            options.MapInboundClaims = false;
+
+            options.TokenValidationParameters =
+                new TokenValidationParameters
+                {
+                    NameClaimType = "name",
+                    RoleClaimType =
+                        CrateSyncClaimTypes.Role
+                };
+        });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy =
+        new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
+
+    options.AddPolicy(
+        AuthorizationPolicies.PlatformAdmin,
+        policy =>
+            policy.RequireAssertion(context =>
+                context.User.HasClaim(
+                    CrateSyncClaimTypes.PlatformRole,
+                    "Admin") ||
+                context.User.HasClaim(
+                    CrateSyncClaimTypes.PlatformRole,
+                    "SuperAdmin")));
+
+    options.AddPolicy(
+        AuthorizationPolicies.SuperAdmin,
+        policy =>
+            policy.RequireClaim(
+                CrateSyncClaimTypes.PlatformRole,
+                "SuperAdmin"));
+
+    options.AddPolicy(
+        AuthorizationPolicies.TenantAdmin,
+        policy =>
+            policy.RequireAssertion(context =>
+                context.User.Claims.Any(
+                    claim =>
+                        claim.Type ==
+                            CrateSyncClaimTypes.TenantId &&
+                        Guid.TryParse(
+                            claim.Value,
+                            out _)) &&
+                (context.User.HasClaim(
+                     CrateSyncClaimTypes.Role,
+                     "TenantAdmin") ||
+                 context.User.HasClaim(
+                     CrateSyncClaimTypes.PlatformRole,
+                     "SuperAdmin"))));
+});
+
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 
 builder.Services.AddBuildingBlocksInfrastructure(builder.Configuration);
+builder.Services.AddCrateSyncIdentityReadInfrastructure(builder.Configuration);
 builder.Services.AddCatalogApplication();
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
 
@@ -55,8 +149,9 @@ builder.Services.AddFinanceInfrastructure(builder.Configuration);
 builder.Services.AddTenancyApplication();
 builder.Services.AddTenancyInfrastructure(builder.Configuration);
 
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-
+builder.Services.AddTransient(
+    typeof(IPipelineBehavior<,>),
+    typeof(ValidationBehavior<,>));
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -69,6 +164,11 @@ app.UseHttpsRedirection();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseCors("CrateSyncWeb");
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet("/", () =>
 {
     return Results.Ok(new
@@ -76,7 +176,7 @@ app.MapGet("/", () =>
         Application = "CrateSync.Platform",
         Status = "Running"
     });
-});
+}).AllowAnonymous();
 
 app.MapGet("/health", () =>
 {
@@ -84,8 +184,10 @@ app.MapGet("/health", () =>
     {
         Status = "Healthy"
     });
-});
+}).AllowAnonymous();
+
 app.UseMiddleware<TenantValidationMiddleware>();
+
 app.MapControllers();
 
 app.Run();

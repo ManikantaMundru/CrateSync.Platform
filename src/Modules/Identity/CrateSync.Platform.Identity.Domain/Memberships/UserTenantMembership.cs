@@ -5,6 +5,7 @@ namespace CrateSync.Platform.Identity.Domain.Memberships;
 public sealed class UserTenantMembership
 {
     private readonly List<UserTenantRole> _roles = [];
+    private readonly List<UserWarehouseAssignment> _warehouseAssignments = [];
 
     private UserTenantMembership()
     {
@@ -41,6 +42,8 @@ public sealed class UserTenantMembership
     public DateTimeOffset UpdatedAtUtc { get; private set; }
 
     public IReadOnlyCollection<UserTenantRole> Roles => _roles.AsReadOnly();
+    public IReadOnlyCollection<UserWarehouseAssignment> WarehouseAssignments =>
+        _warehouseAssignments.AsReadOnly();
 
     public static UserTenantMembership Create(
         Guid userId,
@@ -82,6 +85,52 @@ public sealed class UserTenantMembership
             return false;
 
         _roles.Remove(existing);
+        UpdatedAtUtc = occurredAtUtc;
+        return true;
+    }
+
+    public bool AssignWarehouse(
+        Guid warehouseId,
+        WarehouseAccessRole role,
+        DateTimeOffset occurredAtUtc)
+    {
+        var existing =
+            _warehouseAssignments.SingleOrDefault(
+                x => x.WarehouseId == warehouseId);
+
+        if (existing is not null)
+        {
+            if (existing.Role == role)
+                return false;
+
+            existing.ChangeRole(role, occurredAtUtc);
+            UpdatedAtUtc = occurredAtUtc;
+            return true;
+        }
+
+        _warehouseAssignments.Add(
+            UserWarehouseAssignment.Create(
+                Id,
+                warehouseId,
+                role,
+                occurredAtUtc));
+
+        UpdatedAtUtc = occurredAtUtc;
+        return true;
+    }
+
+    public bool RemoveWarehouse(
+        Guid warehouseId,
+        DateTimeOffset occurredAtUtc)
+    {
+        var existing =
+            _warehouseAssignments.SingleOrDefault(
+                x => x.WarehouseId == warehouseId);
+
+        if (existing is null)
+            return false;
+
+        _warehouseAssignments.Remove(existing);
         UpdatedAtUtc = occurredAtUtc;
         return true;
     }

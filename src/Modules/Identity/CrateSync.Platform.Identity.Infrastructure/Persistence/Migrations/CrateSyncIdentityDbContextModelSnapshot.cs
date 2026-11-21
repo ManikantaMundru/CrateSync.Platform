@@ -77,6 +77,37 @@ namespace CrateSync.Platform.Identity.Infrastructure.Persistence.Migrations
                     b.ToTable("UserTenantRoles", "identity");
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.Identity.Domain.Memberships.UserWarehouseAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("MembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.HasIndex("MembershipId", "WarehouseId")
+                        .IsUnique();
+
+                    b.ToTable("UserWarehouseAssignments", "identity");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.Identity.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -195,6 +226,15 @@ namespace CrateSync.Platform.Identity.Infrastructure.Persistence.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("Roles", "identity");
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.Identity.Domain.Memberships.UserWarehouseAssignment", b =>
+                {
+                    b.HasOne("CrateSync.Platform.Identity.Domain.Memberships.UserTenantMembership", null)
+                        .WithMany("WarehouseAssignments")
+                        .HasForeignKey("MembershipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -372,6 +412,8 @@ namespace CrateSync.Platform.Identity.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CrateSync.Platform.Identity.Domain.Memberships.UserTenantMembership", b =>
                 {
                     b.Navigation("Roles");
+
+                    b.Navigation("WarehouseAssignments");
                 });
 #pragma warning restore 612, 618
         }

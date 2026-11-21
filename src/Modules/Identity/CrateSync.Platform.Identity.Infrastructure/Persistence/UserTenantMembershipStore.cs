@@ -13,6 +13,7 @@ public sealed class UserTenantMembershipStore(
     {
         return dbContext.UserTenantMemberships
             .Include(x => x.Roles)
+            .Include(x => x.WarehouseAssignments)
             .Where(
                 x =>
                     x.UserId == userId &&
@@ -29,6 +30,7 @@ public sealed class UserTenantMembershipStore(
     {
         return dbContext.UserTenantMemberships
             .Include(x => x.Roles)
+            .Include(x => x.WarehouseAssignments)
             .SingleOrDefaultAsync(
                 x =>
                     x.UserId == userId &&

@@ -21,6 +21,9 @@ public sealed class CrateSyncIdentityDbContext
     public DbSet<UserTenantRole> UserTenantRoles =>
         Set<UserTenantRole>();
 
+    public DbSet<UserWarehouseAssignment> UserWarehouseAssignments =>
+        Set<UserWarehouseAssignment>();
+
     protected override void OnModelCreating(
         ModelBuilder builder)
     {
