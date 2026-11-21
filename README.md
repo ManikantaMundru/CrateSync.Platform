@@ -150,6 +150,35 @@ dotnet ef database update --project .\src\Modules\Identity\CrateSync.Platform.Id
 
 Authentication is now enforced globally for controllers. The host root, health endpoint, and Swagger middleware remain available for local diagnostics.
 
+### Tenant access model
+
+Tenant authorization is intentionally simple at this stage:
+
+| Access | Scope | Read | Normal operations | Sensitive warehouse operations | Tenant administration |
+| --- | --- | --- | --- | --- | --- |
+| `TenantAdmin` | Entire tenant | Yes | Yes | Yes | Yes |
+| `Viewer` | Entire tenant | Yes | No | No | No |
+| `WarehouseAdmin` | Assigned warehouse(s) | Yes | Yes | Yes | No |
+| `WarehouseUser` | Assigned warehouse(s) | Yes | Yes | No | No |
+
+Normal warehouse operations include sales-order work, shipment work, receiving, dispatch, and normal inventory reads. Sensitive warehouse operations currently include manual stock adjustments, customer payment recording, supplier invoice/payment management, and invoice voiding.
+
+Tenant-wide master-data mutations such as products, customers, suppliers, and warehouse configuration require `TenantAdmin`. Warehouse users can still read that reference data so they can perform warehouse operations.
+
+Tenant administrators can manage users in their current tenant through:
+
+```text
+GET   /api/tenant/users
+POST  /api/tenant/users
+PUT   /api/tenant/users/{userId}/access
+PATCH /api/tenant/users/{userId}/activate
+PATCH /api/tenant/users/{userId}/deactivate
+```
+
+The tenant ID is always taken from the authenticated `tenant_id` claim. A TenantAdmin cannot manage users in another tenant and cannot assign platform roles.
+
+Creating a brand-new identity currently creates the Identity record and tenant membership **without a password** and returns `requiresActivation: true`. Existing CrateSync identities can be added to another tenant immediately. Password activation/email delivery is deliberately deferred to the IdentityServer onboarding flow rather than issuing temporary passwords from the operational API.
+
 ## Endpoint reference
 
 Paths use the casing shown in Swagger. Values in braces are GUIDs. Send JSON with `Content-Type: application/json` for requests with a body. For payload fields, expand the operation in Swagger or see the [request DTOs](src/Host/CrateSync.Platform.Api/Requests). Successful reads return `200`. Creates return `201` unless indicated. Updates and lifecycle actions typically return `204`. Common failure codes are `400` for validation, `404` for missing records, and `409` for conflicts or invalid business state.
@@ -159,6 +188,7 @@ Paths use the casing shown in Swagger. Values in braces are GUIDs. Send JSON wit
 | Area | Base path | Operations relative to the base path | List filters |
 | --- | --- | --- | --- |
 | Host | `/` | `GET /` and `GET /health` | |
+| Tenant users | `/api/tenant/users` | `GET` list, `POST` create/add user, `PUT /{userId}/access`, `PATCH /{userId}/activate`, `PATCH /{userId}/deactivate` | TenantAdmin only |
 | Tenancy | `/api/tenants` | `GET` list, `POST` create, `GET /{id}`, `PUT /{id}` rename, `PATCH /{id}/activate`, `PATCH /{id}/deactivate` | `isActive` |
 | Catalog | `/api/catalog/products` | `GET` list, `POST` create product, `GET /{productId}`, `POST /{productId}/varieties`, `PATCH /{productId}/deactivate` | `search`, `isActive` |
 | Customers | `/api/Customer` | `GET` list, `POST` create, `GET /{customerId}`, `PUT /{customerId}`, `PATCH /{customerId}/deactivate` | `search`, `isActive` |

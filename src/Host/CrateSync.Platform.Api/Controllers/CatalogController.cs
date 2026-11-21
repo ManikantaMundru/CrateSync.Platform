@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Catalaog;
 using CrateSync.Platform.Api.Responses.Catalog;
@@ -7,6 +8,7 @@ using CrateSync.Platform.Catalog.Application.Products.DeactivateProduct;
 using CrateSync.Platform.Catalog.Application.Products.GetProduct;
 using CrateSync.Platform.Catalog.Application.Products.SearchProducts;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrateSync.Platform.Api.Controllers;
@@ -16,6 +18,7 @@ namespace CrateSync.Platform.Api.Controllers;
 public sealed class ProductsController(ISender sender) : ControllerBase
 {
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType<CreateProductResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -30,6 +33,7 @@ public sealed class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPost("{productId:guid}/varieties")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType<AddProductVarietyResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -68,6 +72,7 @@ public sealed class ProductsController(ISender sender) : ControllerBase
     }
 
     [HttpPatch("{productId:guid}/deactivate")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deactivate(Guid productId, CancellationToken cancellationToken)

@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.IntegrationTests.Infrastructure;
 using CrateSync.Platform.BuildingBlocks.Application;
 using CrateSync.Platform.InboundLogistics.Infrastructure.Persistence;
@@ -68,6 +69,7 @@ public sealed class CustomWebApplicationFactory
         {
             services.RemoveAll<ITenantContext>();
             services.RemoveAll<ITenantReadService>();
+            services.RemoveAll<ICurrentTenantAccessService>();
 
             services
                 .AddAuthentication(options =>
@@ -89,6 +91,10 @@ public sealed class CustomWebApplicationFactory
             services.AddSingleton<
                 ITenantReadService,
                 AlwaysActiveTenantReadService>();
+
+            services.AddSingleton<
+                ICurrentTenantAccessService,
+                TestCurrentTenantAccessService>();
         });
     }
 

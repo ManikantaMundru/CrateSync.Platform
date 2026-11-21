@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Customers;
 using CrateSync.Platform.Api.Responses.Customers;
@@ -6,6 +7,7 @@ using CrateSync.Platform.TradingPartners.Application.Customers.DeactivateCustome
 using CrateSync.Platform.TradingPartners.Application.Customers.GetCustomer;
 using CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +20,7 @@ namespace CrateSync.Platform.Api.Controllers
         private readonly ISender _sender = sender;
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType<CreateCustomerResponse>(StatusCodes.Status201Created)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -49,6 +52,7 @@ namespace CrateSync.Platform.Api.Controllers
         }
 
         [HttpPut("{customerId:guid}")]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -110,6 +114,7 @@ namespace CrateSync.Platform.Api.Controllers
         }
 
         [HttpPatch("{customerId:guid}/deactivate")]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Deactivate(

@@ -17,23 +17,7 @@ public static class DependencyInjection
 
         services
             .AddIdentity<ApplicationUser, IdentityRole<Guid>>(
-                options =>
-                {
-                    options.User.RequireUniqueEmail = true;
-
-                    options.SignIn.RequireConfirmedEmail = true;
-
-                    options.Password.RequiredLength = 10;
-                    options.Password.RequireDigit = true;
-                    options.Password.RequireLowercase = true;
-                    options.Password.RequireUppercase = true;
-                    options.Password.RequireNonAlphanumeric = true;
-
-                    options.Lockout.AllowedForNewUsers = true;
-                    options.Lockout.MaxFailedAccessAttempts = 5;
-                    options.Lockout.DefaultLockoutTimeSpan =
-                        TimeSpan.FromMinutes(15);
-                })
+                ConfigureIdentityOptions)
             .AddEntityFrameworkStores<CrateSyncIdentityDbContext>()
             .AddDefaultTokenProviders();
 
@@ -55,8 +39,7 @@ public static class DependencyInjection
                     Microsoft.AspNetCore.Http.SameSiteMode.Lax;
             });
 
-        services.AddScoped<UserTenantMembershipStore>();
-        services.AddScoped<IdentityAccessReader>();
+        AddSharedIdentityServices(services);
 
         return services;
     }
@@ -69,6 +52,51 @@ public static class DependencyInjection
         services.AddScoped<IdentityAccessReader>();
 
         return services;
+    }
+
+    public static IServiceCollection AddCrateSyncIdentityApiInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        AddIdentityDbContext(services, configuration);
+
+        services
+            .AddIdentityCore<ApplicationUser>(
+                ConfigureIdentityOptions)
+            .AddRoles<IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<CrateSyncIdentityDbContext>()
+            .AddDefaultTokenProviders();
+
+        AddSharedIdentityServices(services);
+        services.AddScoped<TenantUserManagementService>();
+
+        return services;
+    }
+
+    private static void AddSharedIdentityServices(
+        IServiceCollection services)
+    {
+        services.AddScoped<UserTenantMembershipStore>();
+        services.AddScoped<IdentityAccessReader>();
+    }
+
+    private static void ConfigureIdentityOptions(
+        IdentityOptions options)
+    {
+        options.User.RequireUniqueEmail = true;
+
+        options.SignIn.RequireConfirmedEmail = true;
+
+        options.Password.RequiredLength = 10;
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = true;
+
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan =
+            TimeSpan.FromMinutes(15);
     }
 
     private static void AddIdentityDbContext(
