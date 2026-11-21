@@ -4,7 +4,7 @@ using CrateSync.Platform.Identity.Domain.Authorization;
 namespace CrateSync.Platform.Api.Requests.Identity;
 
 public sealed record UpdateTenantUserAccessRequest(
-    [property: Required]
+    [param: Required]
     IReadOnlyCollection<TenantRole> Roles,
-    [property: Required]
+    [param: Required]
     IReadOnlyCollection<WarehouseAccessRequest> Warehouses);
