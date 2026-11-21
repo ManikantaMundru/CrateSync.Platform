@@ -12,6 +12,18 @@ export interface TenantAccess {
   path: string
 }
 
+export interface CurrentTenant {
+  tenantId: string
+  name: string
+  status: string
+  accessMode:
+    | 'Membership'
+    | 'PlatformAdmin'
+  roles: string[]
+  warehouses: WarehouseAccess[]
+  path: string
+}
+
 export interface MeResponse {
   userId: string
   displayName: string
@@ -22,6 +34,7 @@ export interface MeResponse {
     adminPath: string
   }
   currentTenantId: string | null
+  currentTenant: CurrentTenant | null
   actingAsPlatformAdmin: boolean
   tenants: TenantAccess[]
 }
