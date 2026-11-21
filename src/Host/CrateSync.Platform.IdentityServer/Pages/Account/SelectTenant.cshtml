@@ -22,12 +22,13 @@
         {
             <label class="tenant">
                 <input type="radio"
-                       name="SelectedTenantId"
+                       asp-for="SelectedTenantId"
                        value="@membership.TenantId"
                        required />
                 <span>
-                    Tenant
-                    <strong>@membership.TenantId</strong>
+                    <strong>@membership.TenantName</strong>
+                    <br />
+                    <small>@membership.TenantId</small>
                     <br />
                     <small>
                         @string.Join(", ", membership.Roles)

@@ -19,5 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\Identity\CrateSync.Platform.Identity.Domain\CrateSync.Platform.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\CrateSync.Platform.Identity.Infrastructure\CrateSync.Platform.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Tenancy\CrateSync.Platform.Tenancy.Application\CrateSync.Platform.Tenancy.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Tenancy\CrateSync.Platform.Tenancy.Infrastructure\CrateSync.Platform.Tenancy.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

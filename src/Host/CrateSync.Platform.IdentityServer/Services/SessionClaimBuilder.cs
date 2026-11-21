@@ -50,6 +50,27 @@ public sealed class SessionClaimBuilder
     }
 
     public IReadOnlyCollection<Claim>
+        BuildPlatformTenantSession(
+            ApplicationUser user,
+            Guid tenantId)
+    {
+        var claims =
+            BuildPlatformSession(user).ToList();
+
+        claims.Add(
+            new Claim(
+                CrateSyncClaimTypes.TenantId,
+                tenantId.ToString()));
+
+        claims.Add(
+            new Claim(
+                CrateSyncClaimTypes.ActingAsPlatformAdmin,
+                bool.TrueString));
+
+        return claims;
+    }
+
+    public IReadOnlyCollection<Claim>
         BuildTenantSelectionRequiredSession(
             ApplicationUser user)
     {

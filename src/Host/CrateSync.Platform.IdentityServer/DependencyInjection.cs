@@ -1,6 +1,7 @@
 using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.IdentityServer.Configuration;
 using CrateSync.Platform.IdentityServer.Services;
+using CrateSync.Platform.Tenancy.Infrastructure;
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<CrateSyncProfileService>();
         services.AddScoped<BootstrapSuperAdminSeeder>();
         services.AddScoped<SessionClaimBuilder>();
+        services.AddTenancyInfrastructure(configuration);
 
         var identityServer =
             services

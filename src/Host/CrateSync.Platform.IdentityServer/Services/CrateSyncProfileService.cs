@@ -63,6 +63,19 @@ public sealed class CrateSyncProfileService(
                     CrateSyncClaimTypes.Role,
                     roleClaim.Value));
         }
+
+        var actingAsPlatformAdmin =
+            context.Subject.FindFirst(
+                CrateSyncClaimTypes.ActingAsPlatformAdmin);
+
+        if (actingAsPlatformAdmin is not null)
+        {
+            AddIfMissing(
+                context.IssuedClaims,
+                new Claim(
+                    CrateSyncClaimTypes.ActingAsPlatformAdmin,
+                    actingAsPlatformAdmin.Value));
+        }
     }
 
     public async Task IsActiveAsync(

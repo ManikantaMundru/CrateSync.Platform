@@ -166,3 +166,42 @@ The warehouse-access phase adds `identity.UserWarehouseAssignments`. Warehouse a
 When clients request the `cratesync.api` scope, the resulting access token is issued for the `cratesync.api` audience.
 
 The development discovery endpoint is `https://localhost:7201/.well-known/openid-configuration`. The preconfigured `cratesync.web` client uses Authorization Code with PKCE and defaults to `http://localhost:5173/auth/callback` for its redirect URI.
+
+## Tenant session selection
+
+IdentityServer owns tenant session switching.
+
+Normal tenant users use:
+
+```text
+/Account/SelectTenant
+```
+
+The page lists active tenant memberships and reissues the Identity cookie with the selected `tenant_id` and tenant roles.
+
+SuperAdmin uses:
+
+```text
+/Account/EnterTenant
+```
+
+This validates the selected tenant is active and reissues the session with:
+
+```text
+platform_role = SuperAdmin
+tenant_id = <selected tenant>
+acting_as_platform_admin = True
+```
+
+No TenantAdmin role is fabricated for SuperAdmin. The API recognizes SuperAdmin separately while still requiring an explicit tenant context for tenant operations.
+
+To return to the platform-only session:
+
+```text
+/Account/ExitTenant
+```
+
+This removes `tenant_id` and `acting_as_platform_admin` from the Identity session.
+
+After changing tenant session, the SPA must complete a new OIDC authorization request so it receives a fresh access token containing the new session claims.
+

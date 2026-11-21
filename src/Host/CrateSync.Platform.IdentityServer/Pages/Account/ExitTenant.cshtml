@@ -1,0 +1,21 @@
+@page
+@model CrateSync.Platform.IdentityServer.Pages.Account.ExitTenantModel
+@{
+    ViewData["Title"] = "Exit tenant";
+}
+
+<div class="card">
+    <h1>Exit tenant</h1>
+
+    <p class="help">
+        Return to your platform session and remove the current tenant context.
+    </p>
+
+    <form method="post">
+        <input type="hidden" asp-for="ReturnUrl" />
+
+        <button type="submit">
+            Exit tenant
+        </button>
+    </form>
+</div>

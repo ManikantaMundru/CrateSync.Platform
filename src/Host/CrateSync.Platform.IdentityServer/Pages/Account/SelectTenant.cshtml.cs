@@ -1,6 +1,8 @@
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Identity.Infrastructure.Identity;
 using CrateSync.Platform.Identity.Infrastructure.Persistence;
 using CrateSync.Platform.IdentityServer.Services;
+using CrateSync.Platform.Tenancy.Application.Abstractions;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -16,10 +18,11 @@ public sealed class SelectTenantModel(
     SignInManager<ApplicationUser> signInManager,
     UserTenantMembershipStore membershipStore,
     SessionClaimBuilder sessionClaimBuilder,
+    ITenantReadService tenantReadService,
     IIdentityServerInteractionService interaction)
     : PageModel
 {
-    [BindProperty]
+    [BindProperty(SupportsGet = true)]
     public Guid SelectedTenantId { get; set; }
 
     [BindProperty(SupportsGet = true)]
@@ -41,6 +44,16 @@ public sealed class SelectTenantModel(
 
         if (Memberships.Count == 0)
         {
+            if (user.PlatformRole == PlatformRole.SuperAdmin)
+            {
+                return RedirectToPage(
+                    "/Account/EnterTenant",
+                    new
+                    {
+                        returnUrl = ReturnUrl
+                    });
+            }
+
             await signInManager.SignOutAsync();
             return RedirectToPage(
                 "/Account/Login",
@@ -109,12 +122,26 @@ public sealed class SelectTenantModel(
                     user.Id,
                     HttpContext.RequestAborted);
 
+        var tenants =
+            await tenantReadService.SearchAsync(
+                true,
+                HttpContext.RequestAborted);
+
+        var tenantNames =
+            tenants.ToDictionary(
+                x => x.Id,
+                x => x.Name);
+
         Memberships =
             memberships
+                .Where(x =>
+                    tenantNames.ContainsKey(
+                        x.TenantId))
                 .Select(
                     x =>
                         new MembershipOption(
                             x.TenantId,
+                            tenantNames[x.TenantId],
                             x.Roles
                                 .Select(
                                     role =>
@@ -144,5 +171,6 @@ public sealed class SelectTenantModel(
 
     public sealed record MembershipOption(
         Guid TenantId,
+        string TenantName,
         IReadOnlyCollection<string> Roles);
 }
