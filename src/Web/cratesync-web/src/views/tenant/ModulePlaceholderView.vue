@@ -44,8 +44,8 @@ const title = computed(
           {{ title }} workspace
         </h3>
         <p>
-          Routing, tenant context and
-          authorization are already in place.
+          The workspace and authorization are
+          ready for this module.
         </p>
       </CCardBody>
     </CCard>
