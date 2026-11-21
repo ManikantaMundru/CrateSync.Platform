@@ -23,7 +23,7 @@ const title = computed(
     <div class="page-heading">
       <div>
         <p class="eyebrow">
-          Tenant module
+          Organisation module
         </p>
         <h1>{{ title }}</h1>
         <p>
