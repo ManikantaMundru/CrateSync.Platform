@@ -80,6 +80,65 @@ public sealed class MeController(
                 ? null
                 : access.PlatformRole.ToString();
 
+        var currentTenantId =
+            TryGetCurrentTenantId();
+
+        var actingAsPlatformAdmin =
+            User.HasClaim(
+                CrateSyncClaimTypes.ActingAsPlatformAdmin,
+                bool.TrueString);
+
+        object? currentTenant = null;
+
+        if (currentTenantId.HasValue)
+        {
+            var currentMembership =
+                access.Tenants.FirstOrDefault(
+                    x => x.TenantId == currentTenantId.Value);
+
+            var canUseCurrentTenant =
+                actingAsPlatformAdmin ||
+                currentMembership is not null;
+
+            if (canUseCurrentTenant)
+            {
+                var tenant =
+                    await tenantReadService.GetAsync(
+                        currentTenantId.Value,
+                        cancellationToken);
+
+                if (tenant is not null)
+                {
+                    currentTenant = new
+                    {
+                        tenantId = tenant.Id,
+                        name = tenant.Name,
+                        status = tenant.Status,
+                        accessMode =
+                            actingAsPlatformAdmin
+                                ? "PlatformAdmin"
+                                : "Membership",
+                        roles =
+                            currentMembership?.Roles
+                                .Select(x => x.ToString())
+                                .ToArray()
+                            ?? Array.Empty<string>(),
+                        warehouses =
+                            currentMembership?.Warehouses
+                                .Select(x => new
+                                {
+                                    warehouseId = x.WarehouseId,
+                                    role = x.Role.ToString()
+                                })
+                                .ToArray()
+                            ?? Array.Empty<object>(),
+                        path =
+                            $"/tenant/{tenant.Id}"
+                    };
+                }
+            }
+        }
+
         return Ok(new
         {
             userId = access.UserId,
@@ -93,12 +152,9 @@ public sealed class MeController(
                         or PlatformRole.SuperAdmin,
                 adminPath = "/admin"
             },
-            currentTenantId =
-                TryGetCurrentTenantId(),
-            actingAsPlatformAdmin =
-                User.HasClaim(
-                    CrateSyncClaimTypes.ActingAsPlatformAdmin,
-                    bool.TrueString),
+            currentTenantId,
+            currentTenant,
+            actingAsPlatformAdmin,
             tenants
         });
     }
