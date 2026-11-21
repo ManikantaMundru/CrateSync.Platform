@@ -151,8 +151,7 @@ public sealed class MeController(
             {
                 role = platformRole,
                 canAccessAdminPortal =
-                    access.PlatformRole is PlatformRole.Admin
-                        or PlatformRole.SuperAdmin,
+                    access.PlatformRole == PlatformRole.SuperAdmin,
                 adminPath = "/admin"
             },
             currentTenantId,
