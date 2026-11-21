@@ -67,6 +67,7 @@ export const router = createRouter({
             ),
           meta: {
             requiresTenant: true,
+            requiresTenantAdmin: true,
             title: 'Users',
           },
         },
@@ -121,6 +122,18 @@ router.beforeEach(async (to) => {
     auth.me.currentTenant
   ) {
     return auth.me.currentTenant.path
+  }
+
+  if (
+    to.meta.requiresTenantAdmin &&
+    auth.me?.currentTenant?.accessMode !==
+      'SuperAdmin' &&
+    auth.me?.currentTenant?.roles.includes(
+      'TenantAdmin',
+    ) !== true
+  ) {
+    return auth.me?.currentTenant?.path ??
+      { name: 'home' }
   }
 
   if (to.meta.requiresTenant) {
