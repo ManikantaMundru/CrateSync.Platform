@@ -85,17 +85,6 @@ builder.Services.AddAuthorization(options =>
             .Build();
 
     options.AddPolicy(
-        AuthorizationPolicies.PlatformAdmin,
-        policy =>
-            policy.RequireAssertion(context =>
-                context.User.HasClaim(
-                    CrateSyncClaimTypes.PlatformRole,
-                    "Admin") ||
-                context.User.HasClaim(
-                    CrateSyncClaimTypes.PlatformRole,
-                    "SuperAdmin")));
-
-    options.AddPolicy(
         AuthorizationPolicies.SuperAdmin,
         policy =>
             policy.RequireClaim(
