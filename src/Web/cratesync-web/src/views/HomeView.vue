@@ -12,25 +12,38 @@ import type { TenantAccess } from '@/types/me'
 const router = useRouter()
 const auth = useAuthStore()
 
-function openTenant(
-  tenant: TenantAccess,
+function openOrganisation(
+  organisation: TenantAccess,
 ) {
   const target =
-    `/tenant/${tenant.tenantId}`
+    `/tenant/${organisation.tenantId}`
 
   if (
     auth.me?.currentTenant?.tenantId ===
-    tenant.tenantId
+    organisation.tenantId
   ) {
     router.push(target)
     return
   }
 
   auth.selectTenant(
-    tenant.tenantId,
+    organisation.tenantId,
     target,
     false,
   )
+}
+
+function displayRole(role: string) {
+  switch (role) {
+    case 'TenantAdmin':
+      return 'Administrator'
+    case 'WarehouseAdmin':
+      return 'Warehouse administrator'
+    case 'WarehouseUser':
+      return 'Warehouse user'
+    default:
+      return role
+  }
 }
 </script>
 
@@ -62,8 +75,8 @@ function openTenant(
         <div>
           <h2>Platform access</h2>
           <p>
-            Manage tenants and platform-level
-            administration.
+            Manage organisations and
+            platform-level administration.
           </p>
         </div>
       </div>
@@ -88,8 +101,9 @@ function openTenant(
           </div>
 
           <p>
-            Review tenants and enter a tenant
-            when operating as SuperAdmin.
+            Manage organisations and enter one
+            when administrative access is
+            required.
           </p>
 
           <CButton
@@ -98,6 +112,10 @@ function openTenant(
               router.push('/admin')
             "
           >
+            <i
+              class="button-icon cil-settings"
+              aria-hidden="true"
+            />
             Open administration
           </CButton>
         </CCardBody>
@@ -109,8 +127,8 @@ function openTenant(
         <div>
           <h2>Your organisations</h2>
           <p>
-            Tenant memberships available to
-            your account.
+            Organisations available to your
+            account.
           </p>
         </div>
       </div>
@@ -120,8 +138,8 @@ function openTenant(
         class="workspace-grid"
       >
         <CCard
-          v-for="tenant in auth.me.tenants"
-          :key="tenant.tenantId"
+          v-for="organisation in auth.me.tenants"
+          :key="organisation.tenantId"
           class="workspace-card"
         >
           <CCardBody>
@@ -131,46 +149,52 @@ function openTenant(
                   Organisation
                 </p>
                 <h3>
-                  {{ tenant.name }}
+                  {{ organisation.name }}
                 </h3>
               </div>
 
               <CBadge
                 :color="
-                  tenant.status === 'Active'
+                  organisation.status === 'Active'
                     ? 'success'
                     : 'secondary'
                 "
               >
-                {{ tenant.status }}
+                {{ organisation.status }}
               </CBadge>
             </div>
 
             <div class="badge-row">
               <CBadge
-                v-for="role in tenant.roles"
+                v-for="role in organisation.roles"
                 :key="role"
                 color="info"
               >
-                {{ role }}
+                {{ displayRole(role) }}
               </CBadge>
 
               <CBadge
-                v-for="warehouse in tenant.warehouses"
+                v-for="warehouse in organisation.warehouses"
                 :key="
                   warehouse.warehouseId
                 "
                 color="secondary"
               >
-                {{ warehouse.role }}
+                {{ displayRole(warehouse.role) }}
               </CBadge>
             </div>
 
             <CButton
               color="primary"
-              @click="openTenant(tenant)"
+              @click="
+                openOrganisation(organisation)
+              "
             >
-              Open CrateSync
+              <i
+                class="button-icon cil-arrow-right"
+                aria-hidden="true"
+              />
+              Open organisation
             </CButton>
           </CCardBody>
         </CCard>
@@ -182,11 +206,11 @@ function openTenant(
       >
         <CCardBody>
           <h3>
-            No organisation memberships
+            No organisations available
           </h3>
           <p>
-            Your account currently has no
-            tenant memberships.
+            Your account is not currently
+            assigned to an organisation.
           </p>
         </CCardBody>
       </CCard>
