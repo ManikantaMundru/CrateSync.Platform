@@ -449,7 +449,7 @@ function enterTenant(
         class="loading-state"
       >
         <CSpinner />
-        Loading tenants…
+        Loading organisations…
       </div>
 
       <CCard
@@ -570,7 +570,11 @@ function enterTenant(
                   size="sm"
                   @click="openAdminModal(tenant)"
                 >
-                  Add TenantAdmin
+                  <i
+                    class="button-icon cil-user-plus"
+                    aria-hidden="true"
+                  />
+                  Add administrator
                 </CButton>
 
                 <CButton
@@ -638,14 +642,14 @@ function enterTenant(
     >
       <CModalHeader>
         <CModalTitle>
-          New tenant
+          New organisation
         </CModalTitle>
       </CModalHeader>
 
       <CModalBody>
         <p class="modal-help">
           Create the organisation and its
-          first TenantAdmin.
+          first administrator.
         </p>
 
         <form
@@ -739,7 +743,7 @@ function enterTenant(
     >
       <CModalHeader>
         <CModalTitle>
-          Add TenantAdmin
+          Add administrator
         </CModalTitle>
       </CModalHeader>
 
@@ -748,7 +752,7 @@ function enterTenant(
           {{
             selectedTenant
               ? `Add an administrator to ${selectedTenant.name}.`
-              : 'Add a tenant administrator.'
+              : 'Add an administrator.'
           }}
         </p>
 
