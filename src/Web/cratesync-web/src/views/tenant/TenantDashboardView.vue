@@ -37,7 +37,7 @@ const currentTenant = computed(
         <CBadge
           v-if="
             currentTenant?.accessMode ===
-            'PlatformAdmin'
+            'SuperAdmin'
           "
           color="warning"
         >

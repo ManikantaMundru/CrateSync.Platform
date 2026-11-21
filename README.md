@@ -147,8 +147,10 @@ The API keeps tenant selection claim-based. A valid `tenant_id` claim is require
 
 Platform administration remains separate from tenant operations:
 
-- `PlatformRole.Admin` and `PlatformRole.SuperAdmin` can access platform administration endpoints.
-- `/api/tenants` is currently protected by the `PlatformAdmin` policy.
+- `PlatformRole.SuperAdmin` is the only platform-level administrator role.
+- Tenant lifecycle operations under `/api/tenants` require the `SuperAdmin` policy.
+- SuperAdmin creates tenant organisations and provisions their initial `TenantAdmin`.
+- TenantAdmin is scoped to its own tenant and manages tenant users, roles, warehouse access and operational setup.
 - A platform-only SuperAdmin token does not automatically bypass tenant isolation on operational endpoints. The IdentityServer **Enter Tenant** flow establishes an explicit tenant context and marks the session with `acting_as_platform_admin=true`.
 
 Initial tenant access is intentionally simple:

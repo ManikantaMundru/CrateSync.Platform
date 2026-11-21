@@ -43,7 +43,7 @@ export const router = createRouter({
               '@/views/admin/PlatformAdminView.vue'
             ),
           meta: {
-            requiresPlatformAdmin: true,
+            requiresSuperAdmin: true,
           },
         },
         {
@@ -97,9 +97,8 @@ router.beforeEach(async (to) => {
   }
 
   if (
-    to.meta.requiresPlatformAdmin &&
-    !auth.me?.platform
-      .canAccessAdminPortal
+    to.meta.requiresSuperAdmin &&
+    !auth.isSuperAdmin
   ) {
     return { name: 'home' }
   }

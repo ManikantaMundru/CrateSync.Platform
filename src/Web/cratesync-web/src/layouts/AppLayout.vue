@@ -42,7 +42,7 @@ const hasTenantSession = computed(
 const canManageTenant = computed(
   () =>
     currentTenant.value?.accessMode ===
-      'PlatformAdmin' ||
+      'SuperAdmin' ||
     currentTenant.value?.roles.includes(
       'TenantAdmin',
     ) === true,
@@ -168,14 +168,6 @@ function isActive(path: string) {
             </small>
           </div>
         </div>
-
-        <CButton
-          color="light"
-          class="w-100"
-          @click="auth.logout()"
-        >
-          Sign out
-        </CButton>
       </div>
     </aside>
 
@@ -204,7 +196,7 @@ function isActive(path: string) {
           <CBadge
             v-if="
               currentTenant?.accessMode ===
-              'PlatformAdmin'
+              'SuperAdmin'
             "
             color="warning"
           >
@@ -220,13 +212,22 @@ function isActive(path: string) {
           >
             Exit tenant
           </CButton>
+
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            @click="auth.logout()"
+          >
+            Sign out
+          </CButton>
         </div>
       </header>
 
       <div
         v-if="
           currentTenant?.accessMode ===
-          'PlatformAdmin'
+          'SuperAdmin'
         "
         class="platform-admin-banner"
       >

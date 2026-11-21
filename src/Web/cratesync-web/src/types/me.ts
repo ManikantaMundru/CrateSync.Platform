@@ -18,7 +18,7 @@ export interface CurrentTenant {
   status: string
   accessMode:
     | 'Membership'
-    | 'PlatformAdmin'
+    | 'SuperAdmin'
   roles: string[]
   warehouses: WarehouseAccess[]
   path: string
