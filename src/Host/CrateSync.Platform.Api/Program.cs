@@ -91,10 +91,13 @@ builder.Services.AddAuthorization(options =>
         AuthorizationPolicies.TenantAdmin,
         policy =>
             policy.RequireAssertion(context =>
-                context.User.HasClaim(
-                    CrateSyncClaimTypes.TenantId,
-                    context.User.FindFirst(
-                        CrateSyncClaimTypes.TenantId)?.Value) &&
+                context.User.Claims.Any(
+                    claim =>
+                        claim.Type ==
+                            CrateSyncClaimTypes.TenantId &&
+                        Guid.TryParse(
+                            claim.Value,
+                            out _)) &&
                 (context.User.HasClaim(
                      CrateSyncClaimTypes.Role,
                      "TenantAdmin") ||
