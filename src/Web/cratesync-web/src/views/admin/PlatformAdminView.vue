@@ -28,10 +28,18 @@ const saving = ref(false)
 const error = ref<string | null>(null)
 const success = ref<string | null>(null)
 const editingTenantId = ref<string | null>(null)
+const provisioningTenantId = ref<string | null>(null)
 const renameValue = ref('')
 
 const form = reactive({
   tenantName: '',
+  firstName: '',
+  lastName: '',
+  email: '',
+  userName: '',
+})
+
+const adminForm = reactive({
   firstName: '',
   lastName: '',
   email: '',
@@ -81,7 +89,10 @@ async function createTenant() {
         },
       )
 
-    await apiFetch(
+    const administrator =
+      await apiFetch<{
+        requiresActivation: boolean
+      }>(
       `/api/tenants/${tenantId}/administrators`,
       {
         method: 'POST',
@@ -100,7 +111,9 @@ async function createTenant() {
     )
 
     success.value =
-      'Tenant and initial TenantAdmin created successfully.'
+      administrator.requiresActivation
+        ? 'Tenant and initial TenantAdmin created. The administrator must complete account activation before first login.'
+        : 'Tenant and initial TenantAdmin created successfully.'
 
     form.tenantName = ''
     form.firstName = ''
@@ -124,6 +137,62 @@ async function createTenant() {
       await loadTenants()
   } finally {
     saving.value = false
+  }
+}
+
+function startAdministrator(
+  tenant: TenantSummary,
+) {
+  provisioningTenantId.value = tenant.id
+  adminForm.firstName = ''
+  adminForm.lastName = ''
+  adminForm.email = ''
+  adminForm.userName = ''
+}
+
+function cancelAdministrator() {
+  provisioningTenantId.value = null
+}
+
+async function provisionAdministrator(
+  tenant: TenantSummary,
+) {
+  error.value = null
+  success.value = null
+
+  try {
+    const result =
+      await apiFetch<{
+        requiresActivation: boolean
+      }>(
+        `/api/tenants/${tenant.id}/administrators`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            email: adminForm.email,
+            userName:
+              adminForm.userName.trim() || null,
+            firstName: adminForm.firstName,
+            lastName: adminForm.lastName,
+          }),
+        },
+      )
+
+    success.value =
+      result.requiresActivation
+        ? 'TenantAdmin added. Account activation is required before first login.'
+        : 'TenantAdmin added successfully.'
+
+    cancelAdministrator()
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to add TenantAdmin.'
   }
 }
 
@@ -176,6 +245,15 @@ async function setTenantActive(
 ) {
   error.value = null
   success.value = null
+
+  if (
+    !active &&
+    !window.confirm(
+      `Deactivate ${tenant.name}? Tenant operations will be blocked until it is activated again.`,
+    )
+  ) {
+    return
+  }
 
   try {
     await apiFetch(
@@ -429,7 +507,12 @@ function enterTenant(
                 </CButton>
               </template>
 
-              <template v-else>
+              <template
+                v-else-if="
+                  provisioningTenantId !==
+                  tenant.id
+                "
+              >
                 <CButton
                   v-if="tenant.status === 'Active'"
                   color="warning"
@@ -437,6 +520,17 @@ function enterTenant(
                   @click="enterTenant(tenant)"
                 >
                   Enter tenant
+                </CButton>
+
+                <CButton
+                  color="primary"
+                  variant="outline"
+                  size="sm"
+                  @click="
+                    startAdministrator(tenant)
+                  "
+                >
+                  Add TenantAdmin
                 </CButton>
 
                 <CButton
@@ -479,6 +573,77 @@ function enterTenant(
                 </CButton>
               </template>
             </div>
+
+            <form
+              v-if="
+                provisioningTenantId ===
+                tenant.id
+              "
+              class="inline-admin-form"
+              @submit.prevent="
+                provisionAdministrator(tenant)
+              "
+            >
+              <strong>Add TenantAdmin</strong>
+
+              <div class="inline-admin-grid">
+                <input
+                  v-model.trim="adminForm.firstName"
+                  class="form-control"
+                  required
+                  maxlength="100"
+                  placeholder="First name"
+                  aria-label="First name"
+                >
+
+                <input
+                  v-model.trim="adminForm.lastName"
+                  class="form-control"
+                  required
+                  maxlength="100"
+                  placeholder="Last name"
+                  aria-label="Last name"
+                >
+
+                <input
+                  v-model.trim="adminForm.email"
+                  class="form-control"
+                  type="email"
+                  required
+                  maxlength="256"
+                  placeholder="Email"
+                  aria-label="Email"
+                >
+
+                <input
+                  v-model.trim="adminForm.userName"
+                  class="form-control"
+                  maxlength="256"
+                  placeholder="Username (optional)"
+                  aria-label="Username"
+                >
+              </div>
+
+              <div class="tenant-actions">
+                <CButton
+                  color="primary"
+                  size="sm"
+                  type="submit"
+                >
+                  Add administrator
+                </CButton>
+
+                <CButton
+                  color="secondary"
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  @click="cancelAdministrator"
+                >
+                  Cancel
+                </CButton>
+              </div>
+            </form>
           </CCardBody>
         </CCard>
       </div>
