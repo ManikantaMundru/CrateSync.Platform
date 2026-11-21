@@ -42,7 +42,7 @@ const hasTenantSession = computed(
 const canManageTenant = computed(
   () =>
     currentTenant.value?.accessMode ===
-      'PlatformAdmin' ||
+      'SuperAdmin' ||
     currentTenant.value?.roles.includes(
       'TenantAdmin',
     ) === true,
@@ -197,7 +197,7 @@ function isActive(path: string) {
           <CBadge
             v-if="
               currentTenant?.accessMode ===
-              'PlatformAdmin'
+              'SuperAdmin'
             "
             color="warning"
           >
@@ -228,7 +228,7 @@ function isActive(path: string) {
       <div
         v-if="
           currentTenant?.accessMode ===
-          'PlatformAdmin'
+          'SuperAdmin'
         "
         class="platform-admin-banner"
       >
