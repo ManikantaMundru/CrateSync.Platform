@@ -10,10 +10,17 @@ import {
   useRoute,
 } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import {
+  themeService,
+  type ThemePreference,
+} from '@/services/theme'
 
 const auth = useAuthStore()
 const route = useRoute()
 const sidebarOpen = ref(false)
+const themePreference = ref<ThemePreference>(
+  themeService.getPreference(),
+)
 
 const initials = computed(() => {
   const name =
@@ -139,6 +146,17 @@ function isActive(path: string) {
 
 function leaveOrganisation() {
   auth.exitTenant('/')
+}
+
+function changeTheme(
+  event: Event,
+) {
+  const value =
+    (event.target as HTMLSelectElement)
+      .value as ThemePreference
+
+  themePreference.value = value
+  themeService.setPreference(value)
 }
 </script>
 
@@ -267,6 +285,31 @@ function leaveOrganisation() {
         </div>
 
         <div class="header-actions">
+          <label
+            class="theme-control"
+            title="Theme"
+          >
+            <span class="visually-hidden">
+              Theme
+            </span>
+            <select
+              :value="themePreference"
+              class="theme-select"
+              aria-label="Theme"
+              @change="changeTheme"
+            >
+              <option value="system">
+                System
+              </option>
+              <option value="light">
+                Light
+              </option>
+              <option value="dark">
+                Dark
+              </option>
+            </select>
+          </label>
+
           <CBadge
             v-if="isSuperAdminSession"
             color="warning"
