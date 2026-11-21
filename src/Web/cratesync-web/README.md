@@ -173,3 +173,23 @@ The selected preference is stored in browser local storage under `cratesync:them
 When `System` is selected, the portal follows the operating-system colour scheme and reacts to system theme changes while the app is open.
 
 CoreUI theme tokens are switched through `data-coreui-theme`, and CrateSync-specific shell/card/form styles include matching dark-mode overrides.
+
+
+## Organisation user management
+
+The organisation **Users** route is available to organisation Administrators and to SuperAdmin while explicitly operating inside an organisation.
+
+The screen supports:
+
+- searching organisation users
+- adding a new or existing CrateSync identity
+- assigning organisation roles (`TenantAdmin`, displayed as **Administrator**, and `Viewer`)
+- assigning active warehouses as `WarehouseUser` or `WarehouseAdmin`
+- editing roles and warehouse assignments
+- activating/deactivating organisation membership
+- showing when account activation is still required
+- generating and copying a fresh manual activation link
+
+The Vue route is guarded for administrator access, while the API `TenantAdmin` policy remains the authoritative security boundary.
+
+A user cannot deactivate their own membership or remove their own TenantAdmin role; these rules continue to be enforced server-side.
