@@ -10,7 +10,8 @@ namespace CrateSync.Platform.IdentityServer.Pages.Account;
 
 public sealed class ActivateModel(
     UserManager<ApplicationUser> userManager,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IConfiguration configuration)
     : PageModel
 {
     [BindProperty(SupportsGet = true)]
@@ -23,6 +24,11 @@ public sealed class ActivateModel(
     public InputModel Input { get; set; } = new();
 
     public bool Completed { get; private set; }
+
+    public string WebBaseUrl =>
+        configuration[
+            "Clients:CrateSyncWeb:BaseUrl"]
+        ?? "http://localhost:5173";
 
     public async Task<IActionResult> OnGetAsync()
     {
