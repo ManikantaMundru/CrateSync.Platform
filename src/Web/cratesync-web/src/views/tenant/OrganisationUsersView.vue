@@ -611,15 +611,15 @@ async function copyActivationLink() {
       <CCardBody>
         <h3>
           {{
-            search
+            search || roleFilter
               ? 'No matching users'
               : 'No users yet'
           }}
         </h3>
         <p>
           {{
-            search
-              ? 'Try another name, email or role.'
+            search || roleFilter
+              ? 'Try another name, email or role filter.'
               : 'Add the first organisation user.'
           }}
         </p>
@@ -672,13 +672,17 @@ async function copyActivationLink() {
 
               <td data-label="Organisation role">
                 <div class="badge-row compact-badges">
-                  <CBadge
+                  <span
                     v-for="role in user.roles"
                     :key="role"
-                    color="info"
+                    class="user-role-pill"
+                    :class="{
+                      administrator:
+                        role === 'TenantAdmin',
+                    }"
                   >
                     {{ displayRole(role) }}
-                  </CBadge>
+                  </span>
 
                   <span
                     v-if="user.roles.length === 0"
@@ -720,7 +724,15 @@ async function copyActivationLink() {
 
               <td data-label="Status">
                 <span
-                  v-if="user.requiresActivation"
+                  v-if="!user.isActive"
+                  class="user-status-pill inactive"
+                >
+                  <span class="status-dot" />
+                  Inactive
+                </span>
+
+                <span
+                  v-else-if="user.requiresActivation"
                   class="user-status-pill pending"
                 >
                   <span class="status-dot" />
@@ -728,16 +740,8 @@ async function copyActivationLink() {
                 </span>
 
                 <span
-                  v-else-if="user.isActive"
-                  class="user-status-pill active"
-                >
-                  <span class="status-dot" />
-                  Active
-                </span>
-
-                <span
                   v-else
-                  class="user-status-pill inactive"
+                  class="user-status-pill active"
                 >
                   <span class="status-dot" />
                   Inactive
