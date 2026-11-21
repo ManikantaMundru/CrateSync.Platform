@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<CrateSyncProfileService>();
         services.AddScoped<BootstrapSuperAdminSeeder>();
         services.AddScoped<SessionClaimBuilder>();
+        services.AddSingleton<WebClientReturnUrlService>();
         services.AddTenancyInfrastructure(configuration);
 
         var identityServer =
