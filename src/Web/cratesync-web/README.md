@@ -158,3 +158,18 @@ When SuperAdmin creates a new TenantAdmin whose account requires activation:
 6. the user continues to the CrateSync web app and signs in normally
 
 The tenant management screen is browse-first: **New tenant** and **Add TenantAdmin** open modal forms, while the main page contains a searchable tenant grid with tenant actions.
+
+
+## Theme selection
+
+The Vue portal supports:
+
+- System
+- Light
+- Dark
+
+The selected preference is stored in browser local storage under `cratesync:theme`.
+
+When `System` is selected, the portal follows the operating-system colour scheme and reacts to system theme changes while the app is open.
+
+CoreUI theme tokens are switched through `data-coreui-theme`, and CrateSync-specific shell/card/form styles include matching dark-mode overrides.
