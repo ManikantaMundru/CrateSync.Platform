@@ -19,7 +19,7 @@ function openTenant(
     `/tenant/${tenant.tenantId}`
 
   if (
-    auth.me?.currentTenantId ===
+    auth.me?.currentTenant?.tenantId ===
     tenant.tenantId
   ) {
     router.push(target)
