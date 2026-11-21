@@ -5,6 +5,10 @@ namespace CrateSync.Platform.Api.IntegrationTests.Infrastructure;
 internal sealed class TestCurrentTenantAccessService
     : ICurrentTenantAccessService
 {
+    public Task<bool> HasTenantAccessAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(true);
+
     public Task<bool> IsTenantAdminAsync(
         CancellationToken cancellationToken = default) =>
         Task.FromResult(true);
