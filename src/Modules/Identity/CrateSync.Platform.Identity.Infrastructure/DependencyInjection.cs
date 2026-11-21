@@ -15,9 +15,9 @@ public static class DependencyInjection
     {
         var connectionString =
             configuration.GetConnectionString(
-                "IdentityDatabase")
+                "CrateSync")
             ?? throw new InvalidOperationException(
-                "Connection string 'IdentityDatabase' was not found.");
+                "Connection string 'CrateSync' was not found.");
 
         services.AddDbContext<CrateSyncIdentityDbContext>(
             options =>

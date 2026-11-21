@@ -74,7 +74,7 @@ The operational API uses one SQL Server database, `CrateSync` by default. Each m
 
 Operational records are scoped by tenant. Cross-module references such as a shipment's supplier ID or an order's warehouse ID are stored as identifiers. The checked-in foreign keys link records within their own module schemas.
 
-The standalone IdentityServer uses a separate database, `CrateSync.Identity` by convention, configured through `ConnectionStrings__IdentityDatabase`. The `identity` schema holds ASP.NET Core Identity users, roles, and tenant memberships. The `idsrv` schema holds IdentityServer operational data such as persisted grants and signing keys. The [IdentityServer setup](src/Host/CrateSync.Platform.IdentityServer/README.md) covers generating its two initial migrations, setting up the database, and bootstrapping the first SuperAdmin.
+The standalone IdentityServer uses the same `CrateSync` database and `ConnectionStrings__CrateSync` setting as the API. The `identity` schema holds ASP.NET Core Identity users, roles, and tenant memberships. The `idsrv` schema holds IdentityServer operational data such as persisted grants and signing keys. The [IdentityServer setup](src/Host/CrateSync.Platform.IdentityServer/README.md) covers generating its two initial migrations, setting up the database, and bootstrapping the first SuperAdmin.
 
 ## EF Core commands
 
