@@ -6,6 +6,8 @@ namespace CrateSync.Platform.IdentityServer.Configuration;
 
 public static class IdentityServerConfig
 {
+    private const string ApiScopeName = "cratesync.api";
+
     public static IEnumerable<IdentityResource>
         GetIdentityResources()
     {
@@ -30,7 +32,7 @@ public static class IdentityServerConfig
         return
         [
             new ApiScope(
-                "cratesync.api",
+                ApiScopeName,
                 "CrateSync API",
                 [
                     CrateSyncClaimTypes.PlatformRole,
@@ -39,6 +41,17 @@ public static class IdentityServerConfig
                     "name",
                     "email"
                 ])
+        ];
+    }
+
+    public static IEnumerable<ApiResource> GetApiResources()
+    {
+        return
+        [
+            new ApiResource(ApiScopeName, "CrateSync API")
+            {
+                Scopes = { ApiScopeName }
+            }
         ];
     }
 
@@ -83,7 +96,7 @@ public static class IdentityServerConfig
                     IdentityServerConstants.StandardScopes.Profile,
                     IdentityServerConstants.StandardScopes.Email,
                     "cratesync.identity",
-                    "cratesync.api"
+                    ApiScopeName
                 },
 
                 AccessTokenLifetime = 15 * 60,

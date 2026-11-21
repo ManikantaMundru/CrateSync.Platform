@@ -15,9 +15,9 @@ public static class DependencyInjection
     {
         var connectionString =
             configuration.GetConnectionString(
-                "IdentityDatabase")
+                "CrateSync")
             ?? throw new InvalidOperationException(
-                "Connection string 'IdentityDatabase' was not found.");
+                "Connection string 'CrateSync' was not found.");
 
         services.AddRazorPages();
         services.AddAuthorization();
@@ -38,7 +38,6 @@ public static class DependencyInjection
                     options.UserInteraction.LogoutUrl =
                         "/Account/Logout";
 
-                    options.EmitStaticAudienceClaim = true;
                     options.KeyManagement.Enabled = !environment.IsDevelopment();
                 })
                 .AddAspNetIdentity<ApplicationUser>()
@@ -48,6 +47,8 @@ public static class DependencyInjection
                         .GetIdentityResources())
                 .AddInMemoryApiScopes(
                     IdentityServerConfig.GetApiScopes())
+                .AddInMemoryApiResources(
+                    IdentityServerConfig.GetApiResources())
                 .AddInMemoryClients(
                     IdentityServerConfig.GetClients(
                         configuration))
