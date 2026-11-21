@@ -33,6 +33,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 
+var webBaseUrl =
+    builder.Configuration["Web:BaseUrl"]
+    ?? "http://localhost:5173";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "CrateSyncWeb",
+        policy =>
+            policy
+                .WithOrigins(webBaseUrl)
+                .AllowAnyHeader()
+                .AllowAnyMethod());
+});
+
 builder.Services
     .AddAuthentication(
         JwtBearerDefaults.AuthenticationScheme)
@@ -148,6 +163,8 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseCors("CrateSyncWeb");
 
 app.UseAuthentication();
 app.UseAuthorization();
