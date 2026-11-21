@@ -83,8 +83,10 @@ export const useAuthStore =
       )
     }
 
-    function exitTenant() {
-      authService.exitTenant('/')
+    function exitTenant(
+      returnPath = '/',
+    ) {
+      authService.exitTenant(returnPath)
     }
 
     return {
