@@ -1,0 +1,27 @@
+@page
+@model CrateSync.Platform.IdentityServer.Pages.IndexModel
+@{
+    ViewData["Title"] = "Identity";
+}
+
+<div class="card">
+    <h1>CrateSync Identity</h1>
+    <p class="help">
+        OpenID Connect and OAuth 2.0 identity service for CrateSync.
+    </p>
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <p>You are signed in as <strong>@User.Identity.Name</strong>.</p>
+
+        <form method="get" action="/Account/Logout">
+            <button type="submit">Sign out</button>
+        </form>
+    }
+    else
+    {
+        <p class="help">
+            Applications will redirect here when authentication is required.
+        </p>
+    }
+</div>

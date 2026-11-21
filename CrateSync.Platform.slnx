@@ -12,6 +12,7 @@
   </Folder>
   <Folder Name="/src/Host/">
     <Project Path="src/Host/CrateSync.Platform.Api/CrateSync.Platform.Api.csproj" />
+    <Project Path="src/Host/CrateSync.Platform.IdentityServer/CrateSync.Platform.IdentityServer.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/Catalog/">
@@ -25,6 +26,10 @@
     <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Contracts/CrateSync.Platform.Finance.Contracts.csproj" />
     <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Domain/CrateSync.Platform.Finance.Domain.csproj" />
     <Project Path="src/Modules/Finance/CrateSync.Platform.Finance.Infrastructure/CrateSync.Platform.Finance.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/CrateSync.Platform.Identity.Domain/CrateSync.Platform.Identity.Domain.csproj" />
+    <Project Path="src/Modules/Identity/CrateSync.Platform.Identity.Infrastructure/CrateSync.Platform.Identity.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/Modules/InboundLogistics/">
     <Project Path="src/Modules/InboundLogistics/CrateSync.Platform.InboundLogistics.Application/CrateSync.Platform.InboundLogistics.Application.csproj" />
@@ -71,6 +76,7 @@
   </Folder>
   <Folder Name="/tests/UnitTests/">
     <Project Path="tests/UnitTests/CrateSync.Platform.Catalog.Tests/CrateSync.Platform.Catalog.Tests.csproj" Id="886d2617-fc8a-40f4-b4f3-1e49f0d6091d" />
+    <Project Path="tests/UnitTests/CrateSync.Platform.Identity.Tests/CrateSync.Platform.Identity.Tests.csproj" />
     <Project Path="tests/UnitTests/CrateSync.Platform.InboundLogistics.Tests/CrateSync.Platform.InboundLogistics.Tests.csproj" Id="f50c3d99-7c28-4477-8b9a-b1449905ce0b" />
     <Project Path="tests/UnitTests/CrateSync.Platform.Inventory.Tests/CrateSync.Platform.Inventory.Tests.csproj" Id="f107fe86-007f-489a-8565-bdbf7c4b9647" />
     <Project Path="tests/UnitTests/CrateSync.Platform.Sales.Tests/CrateSync.Platform.Sales.Tests.csproj" Id="520ba07b-446e-4718-826d-506e4054a5c5" />
