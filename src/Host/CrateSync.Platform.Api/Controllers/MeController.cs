@@ -119,7 +119,7 @@ public sealed class MeController(
                         status = tenant.Status,
                         accessMode =
                             actingAsPlatformAdmin
-                                ? "PlatformAdmin"
+                                ? "SuperAdmin"
                                 : "Membership",
                         roles =
                             currentMembership?.Roles
