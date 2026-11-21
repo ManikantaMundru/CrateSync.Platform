@@ -44,12 +44,27 @@ dotnet run --project src/Host/CrateSync.Platform.Api --launch-profile https
 | [https://localhost:7038/swagger/v1/swagger.json](https://localhost:7038/swagger/v1/swagger.json) | OpenAPI document for Postman or other clients |
 | [http://localhost:5255](http://localhost:5255) | HTTP profile address. The HTTPS profile also binds it and redirects HTTP requests to HTTPS. |
 
+## Run the Vue portal locally
+
+The web application is under `src/Web/cratesync-web`. Use Node.js 22.12 or later. Start IdentityServer and the API first, then run:
+
+```powershell
+cd .\src\Web\cratesync-web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. The SPA uses the `cratesync.web` OIDC client, redirects to IdentityServer at `https://localhost:7201`, and calls the operational API at `https://localhost:7038`.
+
+The first web slice includes the responsive CoreUI application shell, OIDC/PKCE login, `GET /api/me`, tenant switching, SuperAdmin Enter Tenant/Exit Tenant, the platform tenant list, and tenant module navigation. See [the web README](src/Web/cratesync-web/README.md) for the session flow.
+
 ## Solution structure
 
 | Location | Responsibility |
 | --- | --- |
 | `src/Host/CrateSync.Platform.Api` | Operational host, controllers, request and response DTOs, validation pipeline, Swagger, tenant middleware, and Problem Details |
 | `src/Host/CrateSync.Platform.IdentityServer` | Standalone Duende IdentityServer host for identity and token issuance |
+| `src/Web/cratesync-web` | Responsive Vue 3 + TypeScript + CoreUI portal using OIDC Authorization Code + PKCE |
 | `src/Modules/<Module>` | Domain aggregates and business rules, Application feature slices and handlers, Infrastructure persistence and migrations, and Contracts where defined |
 | `src/Modules/Identity` | Identity Domain and Infrastructure projects for users, tenant memberships, and roles |
 | `src/BuildingBlocks` | Shared application and domain abstractions, SQL and EF infrastructure, and shared integration contracts |
@@ -134,7 +149,7 @@ Platform administration remains separate from tenant operations:
 
 - `PlatformRole.Admin` and `PlatformRole.SuperAdmin` can access platform administration endpoints.
 - `/api/tenants` is currently protected by the `PlatformAdmin` policy.
-- A platform-only SuperAdmin token does not automatically bypass tenant isolation on operational endpoints. The later **Enter Tenant** flow will establish an explicit tenant context.
+- A platform-only SuperAdmin token does not automatically bypass tenant isolation on operational endpoints. The IdentityServer **Enter Tenant** flow establishes an explicit tenant context and marks the session with `acting_as_platform_admin=true`.
 
 Initial tenant access is intentionally simple:
 
