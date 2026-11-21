@@ -58,6 +58,19 @@ export const router = createRouter({
             title: 'Dashboard',
           },
         },
+        {
+          path: 'tenant/:tenantId/users',
+          name: 'organisation-users',
+          component: () =>
+            import(
+              '@/views/tenant/OrganisationUsersView.vue'
+            ),
+          meta: {
+            requiresTenant: true,
+            requiresTenantAdmin: true,
+            title: 'Users',
+          },
+        },
         ...[
           ['sales', 'Sales'],
           ['shipments', 'Inbound Shipments'],
@@ -66,7 +79,6 @@ export const router = createRouter({
           ['suppliers', 'Suppliers'],
           ['finance', 'Finance'],
           ['warehouses', 'Warehouses'],
-          ['users', 'Users'],
         ].map(([path, title]) => ({
           path: `tenant/:tenantId/${path}`,
           component: () =>
@@ -110,6 +122,18 @@ router.beforeEach(async (to) => {
     auth.me.currentTenant
   ) {
     return auth.me.currentTenant.path
+  }
+
+  if (
+    to.meta.requiresTenantAdmin &&
+    auth.me?.currentTenant?.accessMode !==
+      'SuperAdmin' &&
+    auth.me?.currentTenant?.roles.includes(
+      'TenantAdmin',
+    ) !== true
+  ) {
+    return auth.me?.currentTenant?.path ??
+      { name: 'home' }
   }
 
   if (to.meta.requiresTenant) {

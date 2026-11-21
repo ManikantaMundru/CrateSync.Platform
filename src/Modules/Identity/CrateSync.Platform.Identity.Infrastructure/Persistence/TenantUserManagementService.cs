@@ -13,6 +13,7 @@ public sealed record TenantUserSummary(
     string FirstName,
     string LastName,
     bool IsMembershipActive,
+    bool RequiresActivation,
     IReadOnlyCollection<TenantRole> Roles,
     IReadOnlyCollection<WarehouseAccessSnapshot> Warehouses);
 
@@ -99,6 +100,9 @@ public sealed class TenantUserManagementService(
                     user.FirstName,
                     user.LastName,
                     x.IsActive,
+                    !user.EmailConfirmed ||
+                    string.IsNullOrWhiteSpace(
+                        user.PasswordHash),
                     x.Roles
                         .Select(role => role.Role)
                         .OrderBy(role => role)
@@ -223,6 +227,33 @@ public sealed class TenantUserManagementService(
             user.Id,
             createdNewIdentity,
             requiresActivation);
+    }
+
+    public async Task<bool> CanManageUserAsync(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user =
+            await dbContext.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    x => x.Id == userId,
+                    cancellationToken);
+
+        if (user is null ||
+            user.PlatformRole != PlatformRole.None)
+        {
+            return false;
+        }
+
+        return await dbContext.UserTenantMemberships
+            .AsNoTracking()
+            .AnyAsync(
+                x =>
+                    x.UserId == userId &&
+                    x.TenantId == tenantId,
+                cancellationToken);
     }
 
     public async Task<bool> UpdateAccessAsync(
