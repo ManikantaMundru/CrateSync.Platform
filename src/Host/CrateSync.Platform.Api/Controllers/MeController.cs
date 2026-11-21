@@ -95,6 +95,10 @@ public sealed class MeController(
             },
             currentTenantId =
                 TryGetCurrentTenantId(),
+            actingAsPlatformAdmin =
+                User.HasClaim(
+                    CrateSyncClaimTypes.ActingAsPlatformAdmin,
+                    bool.TrueString),
             tenants
         });
     }
