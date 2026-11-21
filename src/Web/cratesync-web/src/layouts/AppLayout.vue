@@ -169,13 +169,6 @@ function isActive(path: string) {
           </div>
         </div>
 
-        <CButton
-          color="light"
-          class="w-100"
-          @click="auth.logout()"
-        >
-          Sign out
-        </CButton>
       </div>
     </aside>
 
@@ -219,6 +212,15 @@ function isActive(path: string) {
             @click="auth.exitTenant()"
           >
             Exit tenant
+          </CButton>
+
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            @click="auth.logout()"
+          >
+            Sign out
           </CButton>
         </div>
       </header>
