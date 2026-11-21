@@ -5,7 +5,7 @@ Responsive Vue 3 portal for CrateSync.
 ## Stack
 
 - Vue 3
-- TypeScript
+- TypeScript 6 (pinned for current `vue-tsc` compatibility)
 - Vite
 - Vue Router
 - Pinia
@@ -114,3 +114,15 @@ The shell is designed mobile-first:
 - mobile: drawer sidebar and single-column cards
 
 Business modules are placeholders in this initial shell PR. Build them as vertical frontend feature slices rather than putting every API call into one global store.
+
+## TypeScript version
+
+The web project currently pins TypeScript to `6.0.2`.
+
+`vue-tsc 3.3.x` does not yet support the TypeScript 7 package layout, so upgrading this app to TypeScript 7 causes:
+
+```text
+ERR_PACKAGE_PATH_NOT_EXPORTED: Package subpath './lib/tsc'
+```
+
+Keep TypeScript on 6.x until Vue language-tools officially supports the TypeScript 7 API.
