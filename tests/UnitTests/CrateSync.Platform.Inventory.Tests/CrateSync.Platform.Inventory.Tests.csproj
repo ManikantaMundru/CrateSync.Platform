@@ -17,9 +17,9 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Modules\Inventory\CrateSync.Platform.Inventory.Application\CrateSync.Platform.Inventory.Application.csproj" />
-    <ProjectReference Include="..\src\Modules\Inventory\CrateSync.Platform.Inventory.Contracts\CrateSync.Platform.Inventory.Contracts.csproj" />
-    <ProjectReference Include="..\src\Modules\Inventory\CrateSync.Platform.Inventory.Domain\CrateSync.Platform.Inventory.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Inventory\CrateSync.Platform.Inventory.Application\CrateSync.Platform.Inventory.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Inventory\CrateSync.Platform.Inventory.Contracts\CrateSync.Platform.Inventory.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Inventory\CrateSync.Platform.Inventory.Domain\CrateSync.Platform.Inventory.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Modules\Catalog\CrateSync.Platform.Catalog.Application\CrateSync.Platform.Catalog.Application.csproj" />
-    <ProjectReference Include="..\src\Modules\Catalog\CrateSync.Platform.Catalog.Domain\CrateSync.Platform.Catalog.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Catalog\CrateSync.Platform.Catalog.Application\CrateSync.Platform.Catalog.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\Modules\Catalog\CrateSync.Platform.Catalog.Domain\CrateSync.Platform.Catalog.Domain.csproj" />
   </ItemGroup>
 
 </Project>

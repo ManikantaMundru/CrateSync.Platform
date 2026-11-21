@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Domain\CrateSync.Platform.BuildingBlocks.Domain.csproj" />
-		<ProjectReference Include="..\src\Modules\Sales\CrateSync.Platform.Sales.Domain\CrateSync.Platform.Sales.Domain.csproj" />
+		<ProjectReference Include="..\..\..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Domain\CrateSync.Platform.BuildingBlocks.Domain.csproj" />
+		<ProjectReference Include="..\..\..\src\Modules\Sales\CrateSync.Platform.Sales.Domain\CrateSync.Platform.Sales.Domain.csproj" />
 	</ItemGroup>
 </Project>

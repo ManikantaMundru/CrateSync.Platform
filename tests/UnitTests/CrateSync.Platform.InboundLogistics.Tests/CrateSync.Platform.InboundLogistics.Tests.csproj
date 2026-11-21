@@ -16,9 +16,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
-		<ProjectReference Include="..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Application\CrateSync.Platform.InboundLogistics.Application.csproj" />
-		<ProjectReference Include="..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Domain\CrateSync.Platform.InboundLogistics.Domain.csproj" />
+		<ProjectReference Include="..\..\..\src\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
+		<ProjectReference Include="..\..\..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Application\CrateSync.Platform.InboundLogistics.Application.csproj" />
+		<ProjectReference Include="..\..\..\src\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Domain\CrateSync.Platform.InboundLogistics.Domain.csproj" />
 	</ItemGroup>
 
 </Project>
