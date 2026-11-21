@@ -204,9 +204,18 @@ a {
 }
 
 .header-title {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   margin-right: auto;
+  overflow: hidden;
+}
+
+.header-title strong,
+.header-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-title strong {
@@ -601,5 +610,23 @@ a {
 
   .card-topline {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app-header {
+    gap: 0.5rem;
+  }
+
+  .header-title {
+    display: none;
+  }
+
+  .header-actions {
+    margin-left: auto;
+  }
+
+  .header-actions .btn {
+    font-size: 0.75rem;
   }
 }
