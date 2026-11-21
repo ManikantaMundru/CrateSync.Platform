@@ -135,7 +135,6 @@ a {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
 }
 
 .avatar-circle {
@@ -220,9 +219,15 @@ a {
 }
 
 .header-actions {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 0.65rem;
+}
+
+.header-actions .btn {
+  white-space: nowrap;
 }
 
 .platform-admin-banner {
@@ -388,6 +393,87 @@ a {
   white-space: nowrap;
 }
 
+.management-card {
+  border: 1px solid #e0e8e5;
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(22, 55, 48, 0.05);
+}
+
+.management-card .card-body {
+  padding: 1.35rem;
+}
+
+.admin-form {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.form-field {
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.form-field > span {
+  color: #44534f;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 0.2rem;
+}
+
+.status-message {
+  padding: 0.8rem 1rem;
+  border: 1px solid;
+  border-radius: 12px;
+  font-size: 0.86rem;
+}
+
+.status-error {
+  color: #8a1c24;
+  background: #fff0f1;
+  border-color: #f0c4c8;
+}
+
+.status-success {
+  color: #225b3a;
+  background: #edf8f1;
+  border-color: #c8e7d2;
+}
+
+.tenant-card-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.tenant-card-title .form-control {
+  margin-top: 0.25rem;
+}
+
+.tenant-actions {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.85rem;
+}
+
+.tenant-actions .btn {
+  white-space: nowrap;
+}
+
 .loading-state {
   min-height: 180px;
   display: grid;
@@ -473,8 +559,16 @@ a {
     display: none;
   }
 
+  .header-actions {
+    gap: 0.4rem;
+  }
+
   .header-actions .badge {
     display: none;
+  }
+
+  .header-actions .btn {
+    padding-inline: 0.6rem;
   }
 
   .platform-admin-banner {
@@ -492,8 +586,13 @@ a {
   }
 
   .workspace-grid,
-  .metric-grid {
+  .metric-grid,
+  .admin-form {
     grid-template-columns: 1fr;
+  }
+
+  .form-field-wide {
+    grid-column: auto;
   }
 
   .workspace-card {
