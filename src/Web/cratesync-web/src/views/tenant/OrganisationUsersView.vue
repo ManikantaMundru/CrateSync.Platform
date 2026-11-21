@@ -511,7 +511,7 @@ async function copyActivationLink() {
 </script>
 
 <template>
-  <section class="page-stack">
+  <section class="page-stack users-page">
     <div class="page-heading">
       <div>
         <p class="eyebrow">
@@ -744,7 +744,7 @@ async function copyActivationLink() {
                   class="user-status-pill active"
                 >
                   <span class="status-dot" />
-                  Inactive
+                  Active
                 </span>
               </td>
 
