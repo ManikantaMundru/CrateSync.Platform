@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.BuildingBlocks.Application;
 using CrateSync.Platform.Tenancy.Application.Abstractions;
 
@@ -9,7 +10,8 @@ public sealed class TenantValidationMiddleware(
     public async Task InvokeAsync(
         HttpContext context,
         ITenantContext tenantContext,
-        ITenantReadService tenantReadService)
+        ITenantReadService tenantReadService,
+        ICurrentTenantAccessService accessService)
     {
         var path = context.Request.Path;
 
@@ -53,6 +55,22 @@ public sealed class TenantValidationMiddleware(
                 title = "Tenant is inactive",
                 detail =
                     "Operational activity is not allowed for this tenant."
+            });
+
+            return;
+        }
+
+        if (!await accessService.HasTenantAccessAsync(
+                context.RequestAborted))
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status403Forbidden;
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                title = "Tenant access denied",
+                detail =
+                    "The authenticated user does not have an active membership for this tenant."
             });
 
             return;
