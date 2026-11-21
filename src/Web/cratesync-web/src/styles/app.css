@@ -107,6 +107,38 @@ a {
     color 140ms ease;
 }
 
+.nav-icon {
+  width: 1.1rem;
+  flex: 0 0 1.1rem;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.button-icon {
+  margin-right: 0.35rem;
+  font-size: 0.9em;
+}
+
+.search-field {
+  position: relative;
+  width: min(100%, 360px);
+}
+
+.search-field > i {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  z-index: 1;
+  color: #7b8b86;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.search-field .tenant-search {
+  width: 100%;
+  padding-left: 2.2rem;
+}
+
 .nav-entry:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
@@ -676,7 +708,8 @@ a {
     flex-direction: column;
   }
 
-  .tenant-search {
+  .tenant-search,
+  .search-field {
     width: 100%;
   }
 
