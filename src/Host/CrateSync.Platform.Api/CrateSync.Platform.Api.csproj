@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
@@ -25,6 +26,7 @@
     <ProjectReference Include="..\..\Modules\InboundLogistics\CrateSync.Platform.InboundLogistics.Infrastructure\CrateSync.Platform.InboundLogistics.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Inventory\CrateSync.Platform.Inventory.Application\CrateSync.Platform.Inventory.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Inventory\CrateSync.Platform.Inventory.Infrastructure\CrateSync.Platform.Inventory.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\CrateSync.Platform.Identity.Infrastructure\CrateSync.Platform.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Sales\CrateSync.Platform.Sales.Application\CrateSync.Platform.Sales.Application.csproj" />
     <ProjectReference Include="..\..\Modules\Sales\CrateSync.Platform.Sales.Infrastructure\CrateSync.Platform.Sales.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Tenancy\CrateSync.Platform.Tenancy.Application\CrateSync.Platform.Tenancy.Application.csproj" />
