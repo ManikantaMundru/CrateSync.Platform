@@ -115,6 +115,35 @@ public sealed class TenantController(
             });
     }
 
+    private async Task<string?> BuildActivationUrlAsync(
+        Guid userId)
+    {
+        var user =
+            await userManager.FindByIdAsync(
+                userId.ToString());
+
+        if (user is null)
+            return null;
+
+        var token =
+            await userManager
+                .GeneratePasswordResetTokenAsync(
+                    user);
+
+        var encodedToken =
+            WebEncoders.Base64UrlEncode(
+                Encoding.UTF8.GetBytes(token));
+
+        var authority =
+            configuration["Identity:Authority"]
+            ?? "https://localhost:7201";
+
+        return
+            $"{authority.TrimEnd('/')}/Account/Activate" +
+            $"?userId={user.Id:D}" +
+            $"&token={encodedToken}";
+    }
+
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Rename(
         Guid id,
