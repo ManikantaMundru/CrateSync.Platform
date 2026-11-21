@@ -89,7 +89,7 @@ async function loadTenants() {
     error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to load tenants.'
+        : 'Unable to load organisations.'
   } finally {
     loading.value = false
   }
@@ -212,7 +212,7 @@ async function createTenant() {
 
     createModalVisible.value = false
     success.value =
-      'Tenant and initial TenantAdmin created.'
+      'Organisation and initial administrator created.'
 
     showActivationLink(administrator)
     await loadTenants()
@@ -220,11 +220,11 @@ async function createTenant() {
     const message =
       exception instanceof Error
         ? exception.message
-        : 'Unable to create tenant.'
+        : 'Unable to create organisation.'
 
     error.value =
       tenantId
-        ? `Tenant was created, but the initial administrator could not be provisioned: ${message}`
+        ? `Organisation was created, but the initial administrator could not be provisioned: ${message}`
         : message
 
     if (tenantId)
@@ -266,14 +266,14 @@ async function provisionAdministrator() {
     adminModalVisible.value = false
     selectedTenant.value = null
     success.value =
-      'TenantAdmin added successfully.'
+      'Administrator added successfully.'
 
     showActivationLink(result)
   } catch (exception) {
     error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to add TenantAdmin.'
+        : 'Unable to add administrator.'
   } finally {
     saving.value = false
   }
@@ -313,14 +313,14 @@ async function renameTenant(
     )
 
     success.value =
-      'Tenant renamed successfully.'
+      'Organisation renamed successfully.'
     cancelRename()
     await loadTenants()
   } catch (exception) {
     error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to rename tenant.'
+        : 'Unable to rename organisation.'
   }
 }
 
@@ -334,7 +334,7 @@ async function setTenantActive(
   if (
     !active &&
     !window.confirm(
-      `Deactivate ${tenant.name}? Tenant operations will be blocked until it is activated again.`,
+      `Deactivate ${tenant.name}? Organisation operations will be blocked until it is activated again.`,
     )
   ) {
     return
@@ -350,15 +350,15 @@ async function setTenantActive(
 
     success.value =
       active
-        ? 'Tenant activated.'
-        : 'Tenant deactivated.'
+        ? 'Organisation activated.'
+        : 'Organisation deactivated.'
 
     await loadTenants()
   } catch (exception) {
     error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to update tenant status.'
+        : 'Unable to update organisation status.'
   }
 }
 
@@ -381,7 +381,7 @@ function enterTenant(
           Platform
         </p>
         <h1>
-          Tenant management
+          Organisation management
         </h1>
         <p>
           Find and manage CrateSync tenant
@@ -393,7 +393,11 @@ function enterTenant(
         color="primary"
         @click="openCreateModal"
       >
-        + New tenant
+        <i
+          class="button-icon cil-plus"
+          aria-hidden="true"
+        />
+        New organisation
       </CButton>
     </div>
 
@@ -414,7 +418,7 @@ function enterTenant(
     <section class="section-block">
       <div class="tenant-toolbar">
         <div>
-          <h2>Tenants</h2>
+          <h2>Organisations</h2>
           <p>
             {{
               filteredTenants.length
@@ -425,13 +429,19 @@ function enterTenant(
           </p>
         </div>
 
-        <input
+        <div class="search-field">
+          <i
+            class="cil-search"
+            aria-hidden="true"
+          />
+          <input
           v-model="search"
           class="form-control tenant-search"
           type="search"
-          placeholder="Search tenants..."
-          aria-label="Search tenants"
-        >
+          placeholder="Search organisations..."
+          aria-label="Search organisations"
+          >
+        </div>
       </div>
 
       <div
@@ -439,7 +449,7 @@ function enterTenant(
         class="loading-state"
       >
         <CSpinner />
-        Loading tenants…
+        Loading organisations…
       </div>
 
       <CCard
@@ -450,15 +460,15 @@ function enterTenant(
           <h3>
             {{
               search
-                ? 'No matching tenants'
-                : 'No tenants yet'
+                ? 'No matching organisations'
+                : 'No organisations yet'
             }}
           </h3>
           <p>
             {{
               search
-                ? 'Try another tenant name, ID or status.'
-                : 'Create the first tenant to get started.'
+                ? 'Try another organisation name, ID or status.'
+                : 'Create the first organisation to get started.'
             }}
           </p>
         </CCardBody>
@@ -547,6 +557,10 @@ function enterTenant(
                   size="sm"
                   @click="enterTenant(tenant)"
                 >
+                  <i
+                    class="button-icon cil-arrow-right"
+                    aria-hidden="true"
+                  />
                   Enter
                 </CButton>
 
@@ -556,7 +570,11 @@ function enterTenant(
                   size="sm"
                   @click="openAdminModal(tenant)"
                 >
-                  Add TenantAdmin
+                  <i
+                    class="button-icon cil-user-plus"
+                    aria-hidden="true"
+                  />
+                  Add administrator
                 </CButton>
 
                 <CButton
@@ -565,6 +583,10 @@ function enterTenant(
                   size="sm"
                   @click="startRename(tenant)"
                 >
+                  <i
+                    class="button-icon cil-pencil"
+                    aria-hidden="true"
+                  />
                   Rename
                 </CButton>
 
@@ -580,6 +602,10 @@ function enterTenant(
                     )
                   "
                 >
+                  <i
+                    class="button-icon cil-ban"
+                    aria-hidden="true"
+                  />
                   Deactivate
                 </CButton>
 
@@ -595,6 +621,10 @@ function enterTenant(
                     )
                   "
                 >
+                  <i
+                    class="button-icon cil-check-circle"
+                    aria-hidden="true"
+                  />
                   Activate
                 </CButton>
               </template>
@@ -612,14 +642,14 @@ function enterTenant(
     >
       <CModalHeader>
         <CModalTitle>
-          New tenant
+          New organisation
         </CModalTitle>
       </CModalHeader>
 
       <CModalBody>
         <p class="modal-help">
           Create the organisation and its
-          first TenantAdmin.
+          first administrator.
         </p>
 
         <form
@@ -700,7 +730,7 @@ function enterTenant(
           {{
             saving
               ? 'Creating…'
-              : 'Create tenant'
+              : 'Create organisation'
           }}
         </CButton>
       </CModalFooter>
@@ -713,7 +743,7 @@ function enterTenant(
     >
       <CModalHeader>
         <CModalTitle>
-          Add TenantAdmin
+          Add administrator
         </CModalTitle>
       </CModalHeader>
 
@@ -722,7 +752,7 @@ function enterTenant(
           {{
             selectedTenant
               ? `Add an administrator to ${selectedTenant.name}.`
-              : 'Add a tenant administrator.'
+              : 'Add an administrator.'
           }}
         </p>
 
@@ -793,7 +823,7 @@ function enterTenant(
           {{
             saving
               ? 'Adding…'
-              : 'Add TenantAdmin'
+              : 'Add administrator'
           }}
         </CButton>
       </CModalFooter>
@@ -815,7 +845,7 @@ function enterTenant(
       <CModalBody>
         <p class="modal-help">
           Send this link manually to the new
-          TenantAdmin. They will use it to set
+          administrator. They will use it to set
           their password and activate the
           account.
         </p>
@@ -847,6 +877,10 @@ function enterTenant(
           color="primary"
           @click="copyActivationLink"
         >
+          <i
+            class="button-icon cil-copy"
+            aria-hidden="true"
+          />
           Copy activation link
         </CButton>
       </CModalFooter>

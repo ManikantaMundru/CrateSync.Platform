@@ -107,6 +107,38 @@ a {
     color 140ms ease;
 }
 
+.nav-icon {
+  width: 1.1rem;
+  flex: 0 0 1.1rem;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.button-icon {
+  margin-right: 0.35rem;
+  font-size: 0.9em;
+}
+
+.search-field {
+  position: relative;
+  width: min(100%, 360px);
+}
+
+.search-field > i {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  z-index: 1;
+  color: #7b8b86;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.search-field .tenant-search {
+  width: 100%;
+  padding-left: 2.2rem;
+}
+
 .nav-entry:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);
@@ -237,6 +269,24 @@ a {
 
 .header-actions .btn {
   white-space: nowrap;
+}
+
+
+.theme-control {
+  display: flex;
+  align-items: center;
+}
+
+.theme-select {
+  min-width: 92px;
+  height: 31px;
+  padding: 0.25rem 1.8rem 0.25rem 0.6rem;
+  border: 1px solid #cfd9d6;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #2d3a36;
+  font-size: 0.78rem;
+  line-height: 1;
 }
 
 .platform-admin-banner {
@@ -649,6 +699,12 @@ a {
     padding-inline: 0.6rem;
   }
 
+  .theme-select {
+    min-width: 78px;
+    padding-left: 0.45rem;
+    font-size: 0.72rem;
+  }
+
   .platform-admin-banner {
     align-items: flex-start;
     flex-direction: column;
@@ -676,7 +732,8 @@ a {
     flex-direction: column;
   }
 
-  .tenant-search {
+  .tenant-search,
+  .search-field {
     width: 100%;
   }
 
@@ -709,4 +766,137 @@ a {
   .header-actions .btn {
     font-size: 0.75rem;
   }
+}
+
+
+[data-coreui-theme="dark"] {
+  color: #e8eeec;
+  background: #101816;
+}
+
+[data-coreui-theme="dark"] body {
+  color: #e8eeec;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(52, 137, 116, 0.12),
+      transparent 32rem
+    ),
+    #101816;
+}
+
+[data-coreui-theme="dark"] .app-sidebar {
+  background: #102d28;
+  box-shadow:
+    10px 0 40px rgba(0, 0, 0, 0.24);
+}
+
+[data-coreui-theme="dark"] .brand-mark {
+  background: #e8eeec;
+  color: #102d28;
+}
+
+[data-coreui-theme="dark"] .app-header {
+  background: rgba(20, 29, 27, 0.96);
+  border-bottom-color: #2b3b37;
+}
+
+[data-coreui-theme="dark"] .mobile-menu-button {
+  color: #e8eeec;
+  background: #17221f;
+  border-color: #344641;
+}
+
+[data-coreui-theme="dark"] .header-title span,
+[data-coreui-theme="dark"] .page-heading p,
+[data-coreui-theme="dark"] .section-heading p,
+[data-coreui-theme="dark"] .tenant-toolbar p,
+[data-coreui-theme="dark"] .modal-help,
+[data-coreui-theme="dark"] .workspace-card p,
+[data-coreui-theme="dark"] .auth-card p,
+[data-coreui-theme="dark"] .loading-state {
+  color: #9caca7;
+}
+
+[data-coreui-theme="dark"] .eyebrow {
+  color: #63b69f !important;
+}
+
+[data-coreui-theme="dark"] .workspace-card,
+[data-coreui-theme="dark"] .metric-card,
+[data-coreui-theme="dark"] .empty-state,
+[data-coreui-theme="dark"] .management-card,
+[data-coreui-theme="dark"] .auth-card {
+  background: #17221f;
+  border-color: #2b3b37;
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.18);
+}
+
+[data-coreui-theme="dark"] .empty-state {
+  background: rgba(23, 34, 31, 0.82);
+}
+
+[data-coreui-theme="dark"] .metric-card span,
+[data-coreui-theme="dark"] .metric-card small {
+  color: #9caca7;
+}
+
+[data-coreui-theme="dark"] .metric-card strong {
+  color: #9fd0c2;
+}
+
+[data-coreui-theme="dark"] .form-field > span {
+  color: #c4cfcc;
+}
+
+[data-coreui-theme="dark"] .muted-id {
+  color: #7f918b !important;
+}
+
+[data-coreui-theme="dark"] .form-control,
+[data-coreui-theme="dark"] .theme-select {
+  color: #e8eeec;
+  background-color: #111b18;
+  border-color: #344641;
+}
+
+[data-coreui-theme="dark"] .form-control::placeholder {
+  color: #71837d;
+}
+
+[data-coreui-theme="dark"] .search-field > i {
+  color: #84958f;
+}
+
+[data-coreui-theme="dark"] .theme-select option {
+  color: #e8eeec;
+  background: #111b18;
+}
+
+[data-coreui-theme="dark"] .platform-admin-banner {
+  color: #f1d985;
+  background: #3a3113;
+  border-bottom-color: #5b4d1f;
+}
+
+[data-coreui-theme="dark"] .status-success {
+  color: #b9e6c8;
+  background: #173326;
+  border-color: #2f6248;
+}
+
+[data-coreui-theme="dark"] .status-error {
+  color: #f2b7bb;
+  background: #3b1d20;
+  border-color: #6c3338;
+}
+
+[data-coreui-theme="dark"] .nav-entry.active {
+  color: #102d28;
+  background: #e8eeec;
+}
+
+[data-coreui-theme="dark"] .sidebar-backdrop {
+  background: rgba(0, 0, 0, 0.62);
 }

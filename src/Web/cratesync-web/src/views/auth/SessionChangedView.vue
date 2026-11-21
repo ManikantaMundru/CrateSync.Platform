@@ -26,7 +26,7 @@ onMounted(async () => {
         <h1>Updating workspace</h1>
         <p>
           Refreshing your access token with
-          the selected tenant context.
+          your selected organisation.
         </p>
       </template>
 

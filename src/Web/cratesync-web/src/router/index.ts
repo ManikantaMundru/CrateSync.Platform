@@ -103,6 +103,15 @@ router.beforeEach(async (to) => {
     return { name: 'home' }
   }
 
+  if (
+    to.name === 'home' &&
+    !auth.isSuperAdmin &&
+    auth.me?.tenants.length === 1 &&
+    auth.me.currentTenant
+  ) {
+    return auth.me.currentTenant.path
+  }
+
   if (to.meta.requiresTenant) {
     const requestedTenantId =
       String(to.params.tenantId ?? '')
