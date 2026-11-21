@@ -107,7 +107,10 @@ public sealed class MeController(
                         currentTenantId.Value,
                         cancellationToken);
 
-                if (tenant is not null)
+                if (tenant is not null &&
+                    await tenantReadService.IsActiveAsync(
+                        tenant.Id,
+                        cancellationToken))
                 {
                     currentTenant = new
                     {
