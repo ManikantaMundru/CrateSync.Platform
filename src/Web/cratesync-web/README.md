@@ -126,3 +126,19 @@ ERR_PACKAGE_PATH_NOT_EXPORTED: Package subpath './lib/tsc'
 ```
 
 Keep TypeScript on 6.x until Vue language-tools officially supports the TypeScript 7 API.
+
+## Platform tenant management
+
+Platform administration is restricted to `SuperAdmin`.
+
+The tenant management screen supports:
+
+- creating a tenant organisation
+- provisioning its first `TenantAdmin`
+- renaming a tenant
+- activating or deactivating a tenant
+- explicitly entering an active tenant using SuperAdmin support access
+
+TenantAdmin remains tenant-scoped and cannot create or manage other tenant organisations.
+
+The application header contains Sign out and, when a tenant session exists, Exit tenant. The sidebar footer is identity-only so narrow layouts do not wrap the sign-out action.
