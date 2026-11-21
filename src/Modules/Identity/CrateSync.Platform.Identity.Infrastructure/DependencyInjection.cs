@@ -13,20 +13,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString =
-            configuration.GetConnectionString(
-                "CrateSync")
-            ?? throw new InvalidOperationException(
-                "Connection string 'CrateSync' was not found.");
-
-        services.AddDbContext<CrateSyncIdentityDbContext>(
-            options =>
-                options.UseSqlServer(
-                    connectionString,
-                    sql =>
-                        sql.MigrationsHistoryTable(
-                            "__EFMigrationsHistory",
-                            "identity")));
+        AddIdentityDbContext(services, configuration);
 
         services
             .AddIdentity<ApplicationUser, IdentityRole<Guid>>(
@@ -69,7 +56,38 @@ public static class DependencyInjection
             });
 
         services.AddScoped<UserTenantMembershipStore>();
+        services.AddScoped<IdentityAccessReader>();
 
         return services;
+    }
+
+    public static IServiceCollection AddCrateSyncIdentityReadInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        AddIdentityDbContext(services, configuration);
+        services.AddScoped<IdentityAccessReader>();
+
+        return services;
+    }
+
+    private static void AddIdentityDbContext(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var connectionString =
+            configuration.GetConnectionString(
+                "CrateSync")
+            ?? throw new InvalidOperationException(
+                "Connection string 'CrateSync' was not found.");
+
+        services.AddDbContext<CrateSyncIdentityDbContext>(
+            options =>
+                options.UseSqlServer(
+                    connectionString,
+                    sql =>
+                        sql.MigrationsHistoryTable(
+                            "__EFMigrationsHistory",
+                            "identity")));
     }
 }
