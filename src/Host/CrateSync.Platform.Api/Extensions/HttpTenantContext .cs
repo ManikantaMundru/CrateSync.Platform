@@ -4,28 +4,21 @@ using CrateSync.Platform.BuildingBlocks.Application;
 namespace CrateSync.Platform.Api.Tenancy;
 
 internal sealed class HttpTenantContext(
-    IHttpContextAccessor httpContextAccessor,
-    IHostEnvironment hostEnvironment) : ITenantContext
+    IHttpContextAccessor httpContextAccessor)
+    : ITenantContext
 {
-    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-    private readonly IHostEnvironment _hostEnvironment = hostEnvironment;
+    private readonly IHttpContextAccessor _httpContextAccessor =
+        httpContextAccessor;
 
     public bool HasTenant =>
-        TryGetTenantId(out _) || _hostEnvironment.IsDevelopment();
+        TryGetTenantId(out _);
 
     public Guid TenantId
     {
         get
         {
             if (TryGetTenantId(out var tenantId))
-            {
                 return tenantId;
-            }
-
-            if (_hostEnvironment.IsDevelopment())
-            {
-                return Guid.Empty;
-            }
 
             throw new UnauthorizedAccessException(
                 "Tenant identifier is missing from the authenticated user.");
