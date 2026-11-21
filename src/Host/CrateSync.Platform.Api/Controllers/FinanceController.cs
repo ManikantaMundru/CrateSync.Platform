@@ -1,3 +1,4 @@
+using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Finance;
 using CrateSync.Platform.Finance.Application.Payables.CreateSupplierInvoice;
@@ -10,6 +11,8 @@ using CrateSync.Platform.Finance.Application.Receivables.RecordCustomerPayment;
 using CrateSync.Platform.Finance.Application.Receivables.SearchCustomerInvoices;
 using CrateSync.Platform.Finance.Application.Receivables.VoidCustomerInvoice;
 using CrateSync.Platform.Finance.Domain.Common;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.GetShipment;
+using CrateSync.Platform.Sales.Application.Orders.GetOrder;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,11 +21,10 @@ namespace CrateSync.Platform.Api.Controllers;
 [ApiController]
 [Route("api/finance")]
 public sealed class FinanceController(
-    ISender sender)
+    ISender sender,
+    ICurrentTenantAccessService accessService)
     : ControllerBase
 {
-    // ---------------- RECEIVABLES ----------------
-
     [HttpGet("customer-invoices/{id:guid}")]
     public async Task<IActionResult> GetCustomerInvoice(
         Guid id,
@@ -32,9 +34,23 @@ public sealed class FinanceController(
             new GetCustomerInvoiceQuery(id),
             cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : Ok(result.Value);
+        if (result.IsFailure)
+            return this.ToProblem(result.Error);
+
+        var warehouseId =
+            await GetSalesOrderWarehouseIdAsync(
+                result.Value.SalesOrderId,
+                cancellationToken);
+
+        if (!warehouseId.HasValue ||
+            !await accessService.CanReadWarehouseAsync(
+                warehouseId.Value,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpGet("customer-invoices")]
@@ -49,7 +65,35 @@ public sealed class FinanceController(
                 customerId),
             cancellationToken);
 
-        return Ok(result);
+        if (await accessService.HasTenantWideReadAsync(
+                cancellationToken))
+        {
+            return Ok(result);
+        }
+
+        var assignedWarehouseIds =
+            await accessService.GetAssignedWarehouseIdsAsync(
+                cancellationToken);
+
+        var filtered =
+            new List<CustomerInvoiceSummaryResponse>();
+
+        foreach (var invoice in result)
+        {
+            var warehouseId =
+                await GetSalesOrderWarehouseIdAsync(
+                    invoice.SalesOrderId,
+                    cancellationToken);
+
+            if (warehouseId.HasValue &&
+                assignedWarehouseIds.Contains(
+                    warehouseId.Value))
+            {
+                filtered.Add(invoice);
+            }
+        }
+
+        return Ok(filtered);
     }
 
     [HttpPost("customer-invoices/{id:guid}/payments")]
@@ -58,6 +102,14 @@ public sealed class FinanceController(
         RecordPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        var accessResult =
+            await EnsureCustomerInvoiceAdminAccessAsync(
+                id,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
         var result = await sender.Send(
             new RecordCustomerPaymentCommand(
                 id,
@@ -77,6 +129,14 @@ public sealed class FinanceController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        var accessResult =
+            await EnsureCustomerInvoiceAdminAccessAsync(
+                id,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
         var result = await sender.Send(
             new VoidCustomerInvoiceCommand(id),
             cancellationToken);
@@ -86,13 +146,27 @@ public sealed class FinanceController(
             : NoContent();
     }
 
-    // ---------------- PAYABLES ----------------
-
     [HttpPost("supplier-invoices")]
     public async Task<IActionResult> CreateSupplierInvoice(
         CreateSupplierInvoiceRequest request,
         CancellationToken cancellationToken)
     {
+        var shipment =
+            await sender.Send(
+                new GetShipmentQuery(
+                    request.ShipmentId),
+                cancellationToken);
+
+        if (shipment.IsFailure)
+            return this.ToProblem(shipment.Error);
+
+        if (!await accessService.CanAdminWarehouseAsync(
+                shipment.Value.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
         var result = await sender.Send(
             new CreateSupplierInvoiceCommand(
                 request.SupplierId,
@@ -127,9 +201,23 @@ public sealed class FinanceController(
             new GetSupplierInvoiceQuery(id),
             cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : Ok(result.Value);
+        if (result.IsFailure)
+            return this.ToProblem(result.Error);
+
+        var warehouseId =
+            await GetShipmentWarehouseIdAsync(
+                result.Value.ShipmentId,
+                cancellationToken);
+
+        if (!warehouseId.HasValue ||
+            !await accessService.CanReadWarehouseAsync(
+                warehouseId.Value,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpGet("supplier-invoices")]
@@ -144,7 +232,35 @@ public sealed class FinanceController(
                 supplierId),
             cancellationToken);
 
-        return Ok(result);
+        if (await accessService.HasTenantWideReadAsync(
+                cancellationToken))
+        {
+            return Ok(result);
+        }
+
+        var assignedWarehouseIds =
+            await accessService.GetAssignedWarehouseIdsAsync(
+                cancellationToken);
+
+        var filtered =
+            new List<SupplierInvoiceSummaryResponse>();
+
+        foreach (var invoice in result)
+        {
+            var warehouseId =
+                await GetShipmentWarehouseIdAsync(
+                    invoice.ShipmentId,
+                    cancellationToken);
+
+            if (warehouseId.HasValue &&
+                assignedWarehouseIds.Contains(
+                    warehouseId.Value))
+            {
+                filtered.Add(invoice);
+            }
+        }
+
+        return Ok(filtered);
     }
 
     [HttpPost("supplier-invoices/{id:guid}/payments")]
@@ -153,6 +269,14 @@ public sealed class FinanceController(
         RecordPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        var accessResult =
+            await EnsureSupplierInvoiceAdminAccessAsync(
+                id,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
         var result = await sender.Send(
             new RecordSupplierPaymentCommand(
                 id,
@@ -172,6 +296,14 @@ public sealed class FinanceController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        var accessResult =
+            await EnsureSupplierInvoiceAdminAccessAsync(
+                id,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
         var result = await sender.Send(
             new VoidSupplierInvoiceCommand(id),
             cancellationToken);
@@ -179,5 +311,97 @@ public sealed class FinanceController(
         return result.IsFailure
             ? this.ToProblem(result.Error)
             : NoContent();
+    }
+
+    private async Task<IActionResult?>
+        EnsureCustomerInvoiceAdminAccessAsync(
+            Guid invoiceId,
+            CancellationToken cancellationToken)
+    {
+        var invoice =
+            await sender.Send(
+                new GetCustomerInvoiceQuery(
+                    invoiceId),
+                cancellationToken);
+
+        if (invoice.IsFailure)
+            return this.ToProblem(
+                invoice.Error);
+
+        var warehouseId =
+            await GetSalesOrderWarehouseIdAsync(
+                invoice.Value.SalesOrderId,
+                cancellationToken);
+
+        if (!warehouseId.HasValue)
+            return NotFound();
+
+        return await accessService.CanAdminWarehouseAsync(
+                warehouseId.Value,
+                cancellationToken)
+            ? null
+            : Forbid();
+    }
+
+    private async Task<IActionResult?>
+        EnsureSupplierInvoiceAdminAccessAsync(
+            Guid invoiceId,
+            CancellationToken cancellationToken)
+    {
+        var invoice =
+            await sender.Send(
+                new GetSupplierInvoiceQuery(
+                    invoiceId),
+                cancellationToken);
+
+        if (invoice.IsFailure)
+            return this.ToProblem(
+                invoice.Error);
+
+        var warehouseId =
+            await GetShipmentWarehouseIdAsync(
+                invoice.Value.ShipmentId,
+                cancellationToken);
+
+        if (!warehouseId.HasValue)
+            return NotFound();
+
+        return await accessService.CanAdminWarehouseAsync(
+                warehouseId.Value,
+                cancellationToken)
+            ? null
+            : Forbid();
+    }
+
+    private async Task<Guid?>
+        GetSalesOrderWarehouseIdAsync(
+            Guid salesOrderId,
+            CancellationToken cancellationToken)
+    {
+        var order =
+            await sender.Send(
+                new GetSalesOrderQuery(
+                    salesOrderId),
+                cancellationToken);
+
+        return order.IsFailure
+            ? null
+            : order.Value.WarehouseId;
+    }
+
+    private async Task<Guid?>
+        GetShipmentWarehouseIdAsync(
+            Guid shipmentId,
+            CancellationToken cancellationToken)
+    {
+        var shipment =
+            await sender.Send(
+                new GetShipmentQuery(
+                    shipmentId),
+                cancellationToken);
+
+        return shipment.IsFailure
+            ? null
+            : shipment.Value.WarehouseId;
     }
 }
