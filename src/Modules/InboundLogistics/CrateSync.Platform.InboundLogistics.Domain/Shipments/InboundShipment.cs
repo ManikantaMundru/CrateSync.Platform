@@ -35,8 +35,8 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         ExpectedArrivalAtUtc = expectedArrivalAtUtc;
         Status = ShipmentStatus.Draft;
         CustomsStatus = CustomsClearanceStatus.NotStarted;
-        PlantQuarantineStatus = PlantQuarantineStatus.Pending;
-        FoodSafetyStatus = FoodSafetyStatus.Pending;
+        PlantQuarantineStatus = PlantQuarantineStatus.NotRequired;
+        FoodSafetyStatus = FoodSafetyStatus.NotRequired;
         CreatedAtUtc = occurredOnUtc;
         UpdatedAtUtc = occurredOnUtc;
     }
@@ -164,7 +164,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         string? remarks,
         DateTimeOffset occurredOnUtc)
     {
-        ApplyClearanceStatus(authority, status);
+        ApplyClearanceStatus(authority, status, occurredOnUtc);
 
         var clearanceEvent = new ShipmentClearanceEvent(
             ShipmentClearanceEventId.New(),
@@ -330,7 +330,8 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 
     private void ApplyClearanceStatus(
         ClearanceAuthority authority,
-        string status)
+        string status,
+        DateTimeOffset occurredOnUtc)
     {
         switch (authority)
         {
@@ -348,7 +349,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 CustomsStatus = customsStatus;
 
                 if (customsStatus == CustomsClearanceStatus.OutOfCharge)
-                    OutOfChargeAtUtc ??= DateTimeOffset.UtcNow;
+                    OutOfChargeAtUtc ??= occurredOnUtc;
 
                 break;
 
