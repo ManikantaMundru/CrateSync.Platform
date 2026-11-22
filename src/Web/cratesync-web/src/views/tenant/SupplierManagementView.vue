@@ -105,7 +105,11 @@ const canManageSuppliers = computed(
 watch(
   [statusFilter, pageSize],
   () => {
-    page.value = 1
+    if (page.value !== 1) {
+      page.value = 1
+      return
+    }
+
     void loadSuppliers()
   },
 )
@@ -119,7 +123,11 @@ watch(search, () => {
     clearTimeout(searchTimer)
 
   searchTimer = setTimeout(() => {
-    page.value = 1
+    if (page.value !== 1) {
+      page.value = 1
+      return
+    }
+
     void loadSuppliers()
   }, 250)
 })
@@ -154,6 +162,19 @@ async function loadSuppliers() {
     suppliers.value = result.items
     totalCount.value = result.totalCount
     totalPages.value = result.totalPages
+
+    if (
+      isCompact.value &&
+      expandedSupplierId.value &&
+      !suppliers.value.some(
+        (supplier) =>
+          supplier.id ===
+          expandedSupplierId.value,
+      )
+    ) {
+      expandedSupplierId.value = null
+      selectedSupplier.value = null
+    }
 
     if (
       result.totalPages > 0 &&
