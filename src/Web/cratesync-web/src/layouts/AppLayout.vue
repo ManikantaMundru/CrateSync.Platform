@@ -87,7 +87,7 @@ const tenantLinks = computed(() => {
     {
       label: 'Products',
       suffix: '/products',
-      icon: 'cil-list-rich',
+      icon: 'cil-list',
     },
     {
       label: 'Sales',
