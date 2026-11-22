@@ -34,16 +34,55 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<DateTimeOffset?>("CancelledAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("BillOfEntryNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset?>("BillOfEntryDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("BillOfLadingNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ContainerNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<int>("CustomsStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomsBrokerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<DateTimeOffset>("ExpectedArrivalAtUtc")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("FoodSafetyStatus")
+                        .HasColumnType("int");
 
                     b.Property<string>("OriginCountry")
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
+
+                    b.Property<DateTimeOffset?>("OutOfChargeAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("PlantQuarantineStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PortOfDischarge")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("PortOfLoading")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateTimeOffset?>("ReceivedAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -68,6 +107,14 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("VesselName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("VoyageNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<Guid>("WarehouseId")
                         .HasColumnType("uniqueidentifier");
 
@@ -85,6 +132,78 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.HasIndex("TenantId", "WarehouseId");
 
                     b.ToTable("InboundShipments", "logistics");
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentClearanceEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Authority")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShipmentId");
+
+                    b.HasIndex("Authority", "OccurredAtUtc");
+
+                    b.ToTable("ShipmentClearanceEvents", "logistics");
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DocumentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShipmentId");
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("ShipmentDocuments", "logistics");
                 });
 
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentLine", b =>
@@ -124,6 +243,24 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.HasIndex("ShipmentId");
 
                     b.ToTable("InboundShipmentLines", "logistics");
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentClearanceEvent", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
+                        .WithMany("ClearanceEvents")
+                        .HasForeignKey("ShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDocument", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
+                        .WithMany("Documents")
+                        .HasForeignKey("ShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentLine", b =>
@@ -179,6 +316,10 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
 
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", b =>
                 {
+                    b.Navigation("ClearanceEvents");
+
+                    b.Navigation("Documents");
+
                     b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
