@@ -79,7 +79,8 @@ public static class IdentityServerConfig
 
                 RedirectUris =
                 {
-                    $"{webBaseUrl}/auth/callback"
+                    $"{webBaseUrl}/auth/callback",
+                    $"{webBaseUrl}/auth/silent-callback"
                 },
 
                 PostLogoutRedirectUris =
