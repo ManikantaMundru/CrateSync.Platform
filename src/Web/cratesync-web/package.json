@@ -17,6 +17,7 @@
     "@coreui/icons": "3.1.0",
     "@coreui/vue": "5.10.1",
     "@fontsource/inter": "5.2.8",
+    "@tanstack/vue-table": "9.3.1",
     "oidc-client-ts": "3.5.0",
     "pinia": "4.1.0",
     "vue": "3.5.45",
