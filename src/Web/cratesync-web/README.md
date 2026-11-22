@@ -257,3 +257,26 @@ Current backend capabilities intentionally reflected in the UI:
 - there are currently no variety edit/deactivate endpoints
 
 The UI does not expose actions that the backend does not yet support.
+
+
+## Silent access-token renewal
+
+The Vue OIDC client now renews the 15-minute access token silently through:
+
+```text
+/auth/silent-callback
+```
+
+The IdentityServer SPA client allows this redirect URI, `apiFetch` requests a valid/renewed user before sending API calls, and the Pinia auth store listens for renewed OIDC users so route guards remain synchronized.
+
+## Multi-add product varieties
+
+The Product detail modal now supports multi-add variety pills:
+
+- type a variety and press Enter or comma to queue it
+- duplicate names are ignored case-insensitively
+- draft pills can be removed with the close button before saving
+- Save varieties persists all queued items through the existing add-variety API
+- successfully persisted varieties render as compact saved pills
+
+Persisted varieties are display-only because the backend currently has no variety delete/deactivate command.
