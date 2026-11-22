@@ -3968,3 +3968,463 @@ a {
     font-size: 0.7rem;
   }
 }
+
+
+/* Inbound shipments */
+.shipment-page {
+  gap: 1rem;
+}
+
+.shipment-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.shipment-search {
+  flex: 1 1 auto;
+}
+
+.shipment-status-filter {
+  width: 190px;
+}
+
+.shipment-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.shipment-list-shell,
+.shipment-detail-shell {
+  overflow: hidden;
+  border: 1px solid #dfe7ee;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.shipment-table {
+  min-width: 980px;
+}
+
+.shipment-row {
+  cursor: pointer;
+}
+
+.shipment-row:hover,
+.shipment-row.selected {
+  background: #f8f9ff;
+}
+
+.shipment-row.selected {
+  box-shadow: inset 4px 0 0 #6558e8;
+}
+
+.shipment-primary {
+  min-width: 180px;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.shipment-primary strong {
+  color: #172033;
+  font-size: 0.84rem;
+}
+
+.shipment-primary small {
+  color: #7b8ba1;
+  font-size: 0.73rem;
+}
+
+.shipment-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.58rem;
+  border: 1px solid #dfe5ec;
+  border-radius: 999px;
+  color: #53657b;
+  background: #f5f7fa;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.shipment-status-pill.prominent {
+  padding: 0.38rem 0.68rem;
+}
+
+.shipment-clearance-mini {
+  min-width: 160px;
+  display: grid;
+  gap: 0.18rem;
+  font-size: 0.69rem;
+  font-weight: 700;
+}
+
+.shipment-clearance-mini span,
+.clearance-card strong {
+  color: #8b6f24;
+}
+
+.shipment-clearance-mini .good,
+.clearance-card .good {
+  color: #18794e;
+}
+
+.shipment-clearance-mini .bad,
+.clearance-card .bad {
+  color: #b42318;
+}
+
+.shipment-detail-shell {
+  position: sticky;
+  top: 1rem;
+}
+
+.shipment-detail-content {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.1rem;
+}
+
+.shipment-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shipment-detail-heading h2 {
+  margin: 0.15rem 0;
+  font-size: 1.15rem;
+}
+
+.shipment-detail-heading p {
+  margin: 0;
+  color: #77869b;
+  font-size: 0.8rem;
+}
+
+.shipment-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.shipment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.shipment-summary-grid > div,
+.clearance-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border: 1px solid #e6ebf0;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.shipment-summary-grid small,
+.clearance-card small {
+  color: #8492a6;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.shipment-summary-grid strong,
+.clearance-card strong {
+  font-size: 0.8rem;
+}
+
+.shipment-detail-section {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e8edf2;
+}
+
+.shipment-detail-section .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shipment-detail-section h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.shipment-detail-section .section-heading p {
+  margin: 0.1rem 0 0;
+  color: #8896a9;
+  font-size: 0.73rem;
+}
+
+.clearance-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.shipment-lines-list,
+.shipment-documents,
+.shipment-timeline {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.shipment-line-row,
+.shipment-document-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e8edf2;
+  border-radius: 9px;
+}
+
+.shipment-line-row > div,
+.shipment-document-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.shipment-line-row strong,
+.shipment-document-row strong {
+  font-size: 0.8rem;
+}
+
+.shipment-line-row small,
+.shipment-document-row small,
+.shipment-line-row > span,
+.shipment-document-row > span {
+  color: #7d8ca0;
+  font-size: 0.72rem;
+}
+
+.shipment-timeline-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.timeline-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 0.3rem;
+  border-radius: 50%;
+  background: #6d5ce7;
+}
+
+.shipment-timeline-row > div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.shipment-timeline-row strong {
+  font-size: 0.78rem;
+}
+
+.shipment-timeline-row small,
+.shipment-timeline-row p,
+.shipment-muted {
+  margin: 0;
+  color: #7e8ca0;
+  font-size: 0.72rem;
+}
+
+.shipment-detail-empty {
+  min-height: 340px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.45rem;
+  padding: 2rem;
+  text-align: center;
+  color: #8693a6;
+}
+
+.shipment-detail-empty i {
+  font-size: 2rem;
+}
+
+.shipment-detail-empty h3,
+.shipment-detail-empty p {
+  margin: 0;
+}
+
+.shipment-detail-empty p {
+  max-width: 300px;
+  font-size: 0.78rem;
+}
+
+.shipment-mobile-list {
+  display: none;
+}
+
+.shipment-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.shipment-lines-editor {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e4eaf0;
+}
+
+.shipment-line-editor {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.2fr)
+    minmax(140px, 1.1fr)
+    minmax(110px, 1fr)
+    90px
+    90px
+    100px
+    70px
+    auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+[data-coreui-theme="dark"] .shipment-list-shell,
+[data-coreui-theme="dark"] .shipment-detail-shell {
+  border-color: #2a3935;
+  background: #17221f;
+}
+
+[data-coreui-theme="dark"] .shipment-row:hover,
+[data-coreui-theme="dark"] .shipment-row.selected {
+  background: #1d2925;
+}
+
+[data-coreui-theme="dark"] .shipment-primary strong,
+[data-coreui-theme="dark"] .shipment-detail-heading h2,
+[data-coreui-theme="dark"] .shipment-summary-grid strong,
+[data-coreui-theme="dark"] .shipment-line-row strong,
+[data-coreui-theme="dark"] .shipment-document-row strong,
+[data-coreui-theme="dark"] .shipment-timeline-row strong {
+  color: #eef3f1;
+}
+
+[data-coreui-theme="dark"] .shipment-summary-grid > div,
+[data-coreui-theme="dark"] .clearance-card,
+[data-coreui-theme="dark"] .shipment-line-row,
+[data-coreui-theme="dark"] .shipment-document-row {
+  border-color: #2e3d38;
+  background: #1d2925;
+}
+
+[data-coreui-theme="dark"] .shipment-detail-section {
+  border-color: #2e3d38;
+}
+
+@media (max-width: 1199.98px) {
+  .shipment-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .shipment-detail-shell {
+    position: static;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .shipment-desktop-table {
+    display: none;
+  }
+
+  .shipment-mobile-list {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.8rem;
+  }
+
+  .shipment-mobile-card {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem;
+    border: 1px solid #dfe7ee;
+    border-radius: 12px;
+    color: inherit;
+    background: #fff;
+    text-align: left;
+  }
+
+  .shipment-mobile-card.selected {
+    border-color: #bfc0ff;
+    box-shadow: inset 4px 0 0 #6558e8;
+  }
+
+  .shipment-mobile-card > span:first-child {
+    min-width: 0;
+    display: grid;
+    gap: 0.12rem;
+  }
+
+  .shipment-mobile-card strong {
+    font-size: 0.86rem;
+  }
+
+  .shipment-mobile-card small {
+    overflow: hidden;
+    color: #78889d;
+    font-size: 0.73rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [data-coreui-theme="dark"] .shipment-mobile-card {
+    border-color: #2a3935;
+    background: #17221f;
+  }
+
+  .shipment-line-editor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .shipment-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shipment-status-filter {
+    width: 100%;
+  }
+
+  .shipment-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .clearance-cards,
+  .shipment-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shipment-line-editor {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.shipment-modal-fields {
+  display: grid;
+  gap: 0.8rem;
+}
