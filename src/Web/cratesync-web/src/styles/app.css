@@ -1466,3 +1466,79 @@ a {
   background: #111b18;
   border-color: #344641;
 }
+
+
+.user-grid-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-top: 1px solid #e8eeec;
+  background: #fafbfc;
+}
+
+.pagination-summary,
+.page-number {
+  color: #667085;
+  font-size: 0.76rem;
+}
+
+.pagination-summary strong {
+  color: #344054;
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-size-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #667085;
+  font-size: 0.76rem;
+}
+
+.page-size-control .form-select {
+  width: 70px;
+}
+
+.users-page .user-row-actions {
+  gap: 0.3rem;
+}
+
+.users-page .user-row-actions .btn {
+  min-width: auto;
+  padding-inline: 0.55rem;
+}
+
+[data-coreui-theme="dark"] .user-grid-pagination {
+  background: #111b18;
+  border-top-color: #263631;
+}
+
+[data-coreui-theme="dark"] .pagination-summary,
+[data-coreui-theme="dark"] .page-number,
+[data-coreui-theme="dark"] .page-size-control {
+  color: #9caca7;
+}
+
+[data-coreui-theme="dark"] .pagination-summary strong {
+  color: #e8eeec;
+}
+
+@media (max-width: 767.98px) {
+  .user-grid-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+}
