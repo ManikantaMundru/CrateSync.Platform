@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   computed,
+  nextTick,
   onMounted,
   reactive,
   ref,
@@ -66,7 +67,6 @@ const createForm = reactive({
   name: '',
 })
 
-const detailsModalVisible = ref(false)
 const detailsLoading = ref(false)
 const detailsError = ref<string | null>(null)
 const selectedProduct = ref<ProductDetails | null>(null)
@@ -128,10 +128,6 @@ const productColumns =
         header: 'Status',
       },
     ),
-    productColumnHelper.display({
-      id: 'actions',
-      header: 'Actions',
-    }),
   ])
 
 const productTable = useTable({
@@ -155,6 +151,11 @@ const pageCount = computed(
   () => productTable.getPageCount(),
 )
 
+
+const visibleProductRows = computed(
+  () => productTable.getRowModel().rows,
+)
+
 const firstVisibleProduct = computed(() => {
   if (filteredProducts.value.length === 0)
     return 0
@@ -174,9 +175,37 @@ const lastVisibleProduct = computed(() =>
   ),
 )
 
-watch([search, statusFilter], () => {
+watch([search, statusFilter], async () => {
   productTable.setPageIndex(0)
+  await nextTick()
 })
+
+watch(
+  () =>
+    visibleProductRows.value
+      .map((row) => row.original.id)
+      .join('|'),
+  async () => {
+    const rows = visibleProductRows.value
+
+    if (rows.length === 0) {
+      selectedProduct.value = null
+      return
+    }
+
+    const selectedIsVisible =
+      selectedProduct.value &&
+      rows.some(
+        (row) =>
+          row.original.id ===
+          selectedProduct.value?.id,
+      )
+
+    if (!selectedIsVisible) {
+      await selectProduct(rows[0]!.original)
+    }
+  },
+)
 
 function changePageSize(event: Event) {
   const value = Number(
@@ -195,6 +224,17 @@ async function loadProducts() {
       await apiFetch<ProductSummary[]>(
         '/api/catalog/products',
       )
+
+    await nextTick()
+
+    if (
+      !selectedProduct.value &&
+      visibleProductRows.value.length > 0
+    ) {
+      await selectProduct(
+        visibleProductRows.value[0]!.original,
+      )
+    }
   } catch (exception) {
     error.value =
       exception instanceof Error
@@ -246,7 +286,7 @@ async function createProduct() {
       'Product created successfully.'
 
     await loadProducts()
-    await openDetails({
+    await selectProduct({
       id: response.id,
       name: createForm.name.trim(),
       isActive: true,
@@ -262,38 +302,45 @@ async function createProduct() {
   }
 }
 
-async function openDetails(
+let productSelectionRequest = 0
+
+async function selectProduct(
   product: ProductSummary,
 ) {
-  detailsModalVisible.value = true
+  const requestId =
+    ++productSelectionRequest
+
   detailsLoading.value = true
   detailsError.value = null
-  selectedProduct.value = null
   varietyName.value = ''
   draftVarieties.value = []
 
   try {
-    selectedProduct.value =
+    const details =
       await apiFetch<ProductDetails>(
         `/api/catalog/products/${product.id}`,
       )
-  } catch (exception) {
-    detailsError.value =
-      exception instanceof Error
-        ? exception.message
-        : 'Unable to load product details.'
-  } finally {
-    detailsLoading.value = false
-  }
-}
 
-function closeDetailsModal() {
-  if (!saving.value) {
-    detailsModalVisible.value = false
-    detailsError.value = null
-    selectedProduct.value = null
-    varietyName.value = ''
-    draftVarieties.value = []
+    if (
+      requestId === productSelectionRequest
+    ) {
+      selectedProduct.value = details
+    }
+  } catch (exception) {
+    if (
+      requestId === productSelectionRequest
+    ) {
+      detailsError.value =
+        exception instanceof Error
+          ? exception.message
+          : 'Unable to load product details.'
+    }
+  } finally {
+    if (
+      requestId === productSelectionRequest
+    ) {
+      detailsLoading.value = false
+    }
   }
 }
 
@@ -381,8 +428,6 @@ function removeDraftVariety(index: number) {
 async function saveVarieties() {
   if (!selectedProduct.value)
     return
-
-  queueVarietyInput()
 
   if (draftVarieties.value.length === 0)
     return
@@ -600,163 +645,357 @@ async function deactivateProduct() {
 
     <div
       v-else
-      class="user-table-shell"
+      class="catalog-master-detail"
     >
-      <div class="table-responsive">
-        <table class="user-table product-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Varieties</th>
-              <th>Status</th>
-              <th class="user-actions-column">
-                Actions
-              </th>
-            </tr>
-          </thead>
+      <section class="catalog-list-panel">
+        <div class="user-table-shell">
+          <div class="table-responsive">
+            <table class="user-table product-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Varieties</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
 
-          <tbody>
-            <tr
-              v-for="row in productTable.getRowModel().rows"
-              :key="row.id"
-            >
-              <td data-label="Product">
-                <div class="product-identity">
-                  <div class="product-icon">
-                    <i
-                      class="cil-leaf"
-                      aria-hidden="true"
-                    />
-                  </div>
-
-                  <strong>
-                    {{ row.original.name }}
-                  </strong>
-                </div>
-              </td>
-
-              <td data-label="Varieties">
-                <span class="product-variety-count">
-                  {{ row.original.varietyCount }}
-                  {{
-                    row.original.varietyCount === 1
-                      ? 'variety'
-                      : 'varieties'
-                  }}
-                </span>
-              </td>
-
-              <td data-label="Status">
-                <span
-                  v-if="row.original.isActive"
-                  class="user-status-pill active"
+              <tbody>
+                <tr
+                  v-for="row in visibleProductRows"
+                  :key="row.id"
+                  class="product-select-row"
+                  :class="{
+                    selected:
+                      row.original.id ===
+                      selectedProduct?.id,
+                  }"
+                  tabindex="0"
+                  @click="
+                    selectProduct(row.original)
+                  "
+                  @keydown.enter="
+                    selectProduct(row.original)
+                  "
                 >
-                  <span class="status-dot" />
-                  Active
-                </span>
+                  <td data-label="Product">
+                    <div class="product-identity">
+                      <div class="product-icon">
+                        <i
+                          class="cil-leaf"
+                          aria-hidden="true"
+                        />
+                      </div>
 
-                <span
-                  v-else
-                  class="user-status-pill inactive"
+                      <strong>
+                        {{ row.original.name }}
+                      </strong>
+                    </div>
+                  </td>
+
+                  <td data-label="Varieties">
+                    <span class="product-variety-count">
+                      {{ row.original.varietyCount }}
+                      {{
+                        row.original.varietyCount === 1
+                          ? 'variety'
+                          : 'varieties'
+                      }}
+                    </span>
+                  </td>
+
+                  <td data-label="Status">
+                    <span
+                      v-if="row.original.isActive"
+                      class="user-status-pill active"
+                    >
+                      <span class="status-dot" />
+                      Active
+                    </span>
+
+                    <span
+                      v-else
+                      class="user-status-pill inactive"
+                    >
+                      <span class="status-dot" />
+                      Inactive
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="user-grid-pagination">
+            <div class="pagination-summary">
+              Showing
+              <strong>
+                {{ firstVisibleProduct }}
+              </strong>
+              –
+              <strong>
+                {{ lastVisibleProduct }}
+              </strong>
+              of
+              <strong>
+                {{ filteredProducts.length }}
+              </strong>
+            </div>
+
+            <div class="pagination-controls">
+              <label class="page-size-control">
+                <span>Rows</span>
+                <select
+                  :value="pagination.pageSize"
+                  class="form-select form-select-sm"
+                  aria-label="Rows per page"
+                  @change="changePageSize"
                 >
-                  <span class="status-dot" />
-                  Inactive
-                </span>
-              </td>
+                  <option :value="10">10</option>
+                  <option :value="25">25</option>
+                  <option :value="50">50</option>
+                </select>
+              </label>
 
-              <td
-                data-label="Actions"
-                class="user-actions-cell"
+              <span class="page-number">
+                Page
+                {{ pagination.pageIndex + 1 }}
+                of
+                {{ Math.max(pageCount, 1) }}
+              </span>
+
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                :disabled="
+                  !productTable.getCanPreviousPage()
+                "
+                @click="
+                  productTable.previousPage()
+                "
               >
-                <div class="user-row-actions">
-                  <CButton
-                    color="secondary"
-                    variant="outline"
-                    size="sm"
-                    @click="
-                      openDetails(row.original)
-                    "
-                  >
-                    <i
-                      class="button-icon cil-list"
-                      aria-hidden="true"
-                    />
-                    View
-                  </CButton>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                Previous
+              </CButton>
 
-      <div class="user-grid-pagination">
-        <div class="pagination-summary">
-          Showing
-          <strong>
-            {{ firstVisibleProduct }}
-          </strong>
-          –
-          <strong>
-            {{ lastVisibleProduct }}
-          </strong>
-          of
-          <strong>
-            {{ filteredProducts.length }}
-          </strong>
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                :disabled="
+                  !productTable.getCanNextPage()
+                "
+                @click="
+                  productTable.nextPage()
+                "
+              >
+                Next
+              </CButton>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside
+        class="catalog-detail-panel"
+        aria-live="polite"
+      >
+        <div
+          v-if="detailsError"
+          class="status-message status-error modal-status-message"
+        >
+          {{ detailsError }}
         </div>
 
-        <div class="pagination-controls">
-          <label class="page-size-control">
-            <span>Rows</span>
-            <select
-              :value="pagination.pageSize"
-              class="form-select form-select-sm"
-              aria-label="Rows per page"
-              @change="changePageSize"
+        <div
+          v-if="detailsLoading"
+          class="loading-state catalog-detail-loading"
+        >
+          <CSpinner />
+          Loading product…
+        </div>
+
+        <template v-else-if="selectedProduct">
+          <div class="catalog-detail-header">
+            <div>
+              <p class="eyebrow">
+                Product
+              </p>
+              <h2>
+                {{ selectedProduct.name }}
+              </h2>
+            </div>
+
+            <span
+              v-if="selectedProduct.isActive"
+              class="user-status-pill active"
             >
-              <option :value="10">10</option>
-              <option :value="25">25</option>
-              <option :value="50">50</option>
-            </select>
-          </label>
+              <span class="status-dot" />
+              Active
+            </span>
 
-          <span class="page-number">
-            Page
-            {{ pagination.pageIndex + 1 }}
-            of
-            {{ Math.max(pageCount, 1) }}
-          </span>
+            <span
+              v-else
+              class="user-status-pill inactive"
+            >
+              <span class="status-dot" />
+              Inactive
+            </span>
+          </div>
 
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            :disabled="
-              !productTable.getCanPreviousPage()
+          <div class="product-varieties-section">
+            <div class="section-heading product-detail-heading">
+              <div>
+                <h3>Varieties</h3>
+                <p>
+                  {{
+                    selectedProduct.varieties.length
+                  }}
+                  configured
+                </p>
+              </div>
+            </div>
+
+            <div
+              v-if="
+                canManageCatalog &&
+                selectedProduct.isActive
+              "
+              class="variety-editor"
+            >
+              <div class="variety-input-row catalog-variety-input">
+                <input
+                  v-model="varietyName"
+                  class="form-control"
+                  maxlength="150"
+                  placeholder="Type a variety"
+                  @keydown="handleVarietyKeydown"
+                >
+
+                <CButton
+                  color="secondary"
+                  variant="outline"
+                  type="button"
+                  :disabled="
+                    saving ||
+                    !varietyName.trim()
+                  "
+                  @click="queueVarietyInput"
+                >
+                  <i
+                    class="button-icon cil-plus"
+                    aria-hidden="true"
+                  />
+                  Add variety
+                </CButton>
+
+                <CButton
+                  color="primary"
+                  type="button"
+                  :disabled="
+                    saving ||
+                    draftVarieties.length === 0
+                  "
+                  @click="saveVarieties"
+                >
+                  Save varieties
+                </CButton>
+              </div>
+
+              <div
+                v-if="draftVarieties.length"
+                class="variety-pill-group draft"
+              >
+                <span
+                  v-for="(name, index) in draftVarieties"
+                  :key="`${name}-${index}`"
+                  class="variety-pill draft"
+                >
+                  {{ name }}
+                  <button
+                    type="button"
+                    aria-label="Remove draft variety"
+                    @click="removeDraftVariety(index)"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            </div>
+
+            <div
+              v-if="
+                selectedProduct.varieties.length
+              "
+              class="variety-pill-group saved"
+            >
+              <span
+                v-for="variety in selectedProduct.varieties"
+                :key="variety.id"
+                class="variety-pill saved"
+                :class="{
+                  inactive: !variety.isActive,
+                }"
+              >
+                {{ variety.name }}
+                <span
+                  class="variety-pill-status"
+                  :title="
+                    variety.isActive
+                      ? 'Active'
+                      : 'Inactive'
+                  "
+                />
+              </span>
+            </div>
+
+            <div
+              v-else
+              class="catalog-empty-inline"
+            >
+              No varieties configured yet.
+            </div>
+          </div>
+
+          <div
+            v-if="
+              canManageCatalog &&
+              selectedProduct.isActive
             "
-            @click="
-              productTable.previousPage()
-            "
+            class="catalog-detail-danger-zone"
           >
-            Previous
-          </CButton>
+            <div>
+              <strong>
+                Deactivate product
+              </strong>
+              <p>
+                Keeps historical references intact
+                while preventing new operational use.
+              </p>
+            </div>
 
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            :disabled="
-              !productTable.getCanNextPage()
-            "
-            @click="
-              productTable.nextPage()
-            "
-          >
-            Next
-          </CButton>
+            <CButton
+              color="danger"
+              variant="outline"
+              size="sm"
+              :disabled="saving"
+              @click="deactivateProduct"
+            >
+              <i
+                class="button-icon cil-ban"
+                aria-hidden="true"
+              />
+              Deactivate
+            </CButton>
+          </div>
+        </template>
+
+        <div
+          v-else
+          class="catalog-empty-inline"
+        >
+          Select a product to view its details.
         </div>
-      </div>
+      </aside>
     </div>
 
     <CModal
@@ -820,191 +1059,6 @@ async function deactivateProduct() {
       </CModalFooter>
     </CModal>
 
-    <CModal
-      :visible="detailsModalVisible"
-      alignment="center"
-      size="lg"
-      @close="closeDetailsModal"
-    >
-      <CModalHeader>
-        <CModalTitle>
-          {{
-            selectedProduct?.name ??
-            'Product'
-          }}
-        </CModalTitle>
-      </CModalHeader>
 
-      <CModalBody>
-        <div
-          v-if="detailsError"
-          class="status-message status-error modal-status-message"
-        >
-          {{ detailsError }}
-        </div>
-
-        <div
-          v-if="detailsLoading"
-          class="loading-state"
-        >
-          <CSpinner />
-          Loading product…
-        </div>
-
-        <template v-else-if="selectedProduct">
-          <div class="product-detail-summary">
-            <div>
-              <span class="detail-label">
-                Status
-              </span>
-              <span
-                v-if="selectedProduct.isActive"
-                class="user-status-pill active"
-              >
-                <span class="status-dot" />
-                Active
-              </span>
-              <span
-                v-else
-                class="user-status-pill inactive"
-              >
-                <span class="status-dot" />
-                Inactive
-              </span>
-            </div>
-
-            <CButton
-              v-if="
-                canManageCatalog &&
-                selectedProduct.isActive
-              "
-              color="danger"
-              variant="outline"
-              size="sm"
-              :disabled="saving"
-              @click="deactivateProduct"
-            >
-              <i
-                class="button-icon cil-ban"
-                aria-hidden="true"
-              />
-              Deactivate product
-            </CButton>
-          </div>
-
-          <div class="product-varieties-section">
-            <div class="section-heading product-detail-heading">
-              <div>
-                <h3>Varieties</h3>
-                <p>
-                  {{
-                    selectedProduct.varieties.length
-                  }}
-                  configured
-                </p>
-              </div>
-            </div>
-
-            <div
-              v-if="
-                canManageCatalog &&
-                selectedProduct.isActive
-              "
-              class="variety-editor"
-            >
-              <div class="variety-input-row">
-                <input
-                  v-model="varietyName"
-                  class="form-control"
-                  maxlength="150"
-                  placeholder="Type a variety and press Enter or comma"
-                  @keydown="handleVarietyKeydown"
-                  @blur="queueVarietyInput"
-                >
-
-                <CButton
-                  color="primary"
-                  type="button"
-                  :disabled="
-                    saving ||
-                    (
-                      draftVarieties.length === 0 &&
-                      !varietyName.trim()
-                    )
-                  "
-                  @click="saveVarieties"
-                >
-                  Save varieties
-                </CButton>
-              </div>
-
-              <div
-                v-if="draftVarieties.length"
-                class="variety-pill-group draft"
-              >
-                <span
-                  v-for="(name, index) in draftVarieties"
-                  :key="`${name}-${index}`"
-                  class="variety-pill draft"
-                >
-                  {{ name }}
-                  <button
-                    type="button"
-                    aria-label="Remove draft variety"
-                    @click="removeDraftVariety(index)"
-                  >
-                    ×
-                  </button>
-                </span>
-              </div>
-            </div>
-
-            <div
-              v-if="
-                selectedProduct.varieties.length
-              "
-              class="variety-pill-group saved"
-            >
-              <span
-                v-for="variety in selectedProduct.varieties"
-                :key="variety.id"
-                class="variety-pill saved"
-                :class="{
-                  inactive: !variety.isActive,
-                }"
-              >
-                {{ variety.name }}
-                <span
-                  class="variety-pill-status"
-                  :title="
-                    variety.isActive
-                      ? 'Active'
-                      : 'Inactive'
-                  "
-                />
-              </span>
-            </div>
-
-            <div
-              v-else
-              class="catalog-empty-inline"
-            >
-              No varieties configured yet.
-            </div>
-          </div>
-        </template>
-      </CModalBody>
-
-      <CModalFooter>
-        <CButton
-          color="secondary"
-          variant="outline"
-          :disabled="saving"
-          @click="closeDetailsModal"
-        >
-          Close
-        </CButton>
-      </CModalFooter>
-    </CModal>
   </section>
 </template>
