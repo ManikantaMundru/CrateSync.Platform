@@ -6,6 +6,9 @@ internal sealed class ReceiveShipmentCommandValidator : AbstractValidator<Receiv
 {
     public ReceiveShipmentCommandValidator()
     {
+        RuleFor(x => x.ReceiptId)
+            .NotEmpty();
+
         RuleFor(x => x.ShipmentId)
             .NotEmpty();
 
