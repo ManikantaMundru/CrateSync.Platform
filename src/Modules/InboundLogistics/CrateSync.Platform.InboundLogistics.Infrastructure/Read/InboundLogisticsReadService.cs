@@ -226,13 +226,54 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 END AS Status,
                 s.ExpectedArrivalAtUtc,
                 COALESCE(SUM(l.ExpectedQuantity), 0) AS TotalExpectedCrates,
-                COALESCE(SUM(l.ReceivedQuantity), 0) AS TotalReceivedCrates
+                COALESCE(SUM(l.ReceivedQuantity), 0) AS TotalReceivedCrates,
+                s.ContainerNumber,
+                s.BillOfLadingNumber,
+                s.BillOfEntryNumber,
+                CASE s.CustomsStatus
+                    WHEN 1 THEN 'NotStarted'
+                    WHEN 2 THEN 'BillOfEntryFiled'
+                    WHEN 3 THEN 'Assessment'
+                    WHEN 4 THEN 'Examination'
+                    WHEN 5 THEN 'QueryRaised'
+                    WHEN 6 THEN 'Held'
+                    WHEN 7 THEN 'Cleared'
+                    WHEN 8 THEN 'OutOfCharge'
+                    WHEN 9 THEN 'Rejected'
+                END AS CustomsStatus,
+                CASE s.PlantQuarantineStatus
+                    WHEN 1 THEN 'NotRequired'
+                    WHEN 2 THEN 'Pending'
+                    WHEN 3 THEN 'DocumentsSubmitted'
+                    WHEN 4 THEN 'InspectionScheduled'
+                    WHEN 5 THEN 'UnderInspection'
+                    WHEN 6 THEN 'Sampling'
+                    WHEN 7 THEN 'TreatmentRequired'
+                    WHEN 8 THEN 'Cleared'
+                    WHEN 9 THEN 'Rejected'
+                END AS PlantQuarantineStatus,
+                CASE s.FoodSafetyStatus
+                    WHEN 1 THEN 'NotRequired'
+                    WHEN 2 THEN 'Pending'
+                    WHEN 3 THEN 'Referred'
+                    WHEN 4 THEN 'DocumentScrutiny'
+                    WHEN 5 THEN 'InspectionScheduled'
+                    WHEN 6 THEN 'VisualInspection'
+                    WHEN 7 THEN 'Sampling'
+                    WHEN 8 THEN 'LabTesting'
+                    WHEN 9 THEN 'NocIssued'
+                    WHEN 10 THEN 'NonConformance'
+                    WHEN 11 THEN 'Rejected'
+                END AS FoodSafetyStatus
             FROM logistics.InboundShipments s
             LEFT JOIN logistics.InboundShipmentLines l
                 ON l.ShipmentId = s.Id
             WHERE s.TenantId = @TenantId
               AND (@SearchTerm IS NULL
-                   OR s.TrackingNumber LIKE '%' + @SearchTerm + '%')
+                   OR s.TrackingNumber LIKE '%' + @SearchTerm + '%'
+                   OR s.ContainerNumber LIKE '%' + @SearchTerm + '%'
+                   OR s.BillOfLadingNumber LIKE '%' + @SearchTerm + '%'
+                   OR s.BillOfEntryNumber LIKE '%' + @SearchTerm + '%')
               AND (@Status IS NULL OR s.Status = @Status)
               AND (@SupplierId IS NULL OR s.SupplierId = @SupplierId)
               AND (@WarehouseId IS NULL OR s.WarehouseId = @WarehouseId)
@@ -243,7 +284,13 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 s.TrackingNumber,
                 s.OriginCountry,
                 s.Status,
-                s.ExpectedArrivalAtUtc
+                s.ExpectedArrivalAtUtc,
+                s.ContainerNumber,
+                s.BillOfLadingNumber,
+                s.BillOfEntryNumber,
+                s.CustomsStatus,
+                s.PlantQuarantineStatus,
+                s.FoodSafetyStatus
             ORDER BY s.ExpectedArrivalAtUtc DESC;
             """;
 
