@@ -282,10 +282,28 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     }
 
     public ShipmentReceiptId ReceiveLine(
+        ShipmentReceiptId receiptId,
         ShipmentLineId shipmentLineId,
         CrateQuantity quantity,
         DateTimeOffset occurredOnUtc)
     {
+        var existingReceipt =
+            _receipts.SingleOrDefault(
+                x => x.Id == receiptId);
+
+        if (existingReceipt is not null)
+        {
+            if (
+                existingReceipt.ShipmentLineId != shipmentLineId ||
+                existingReceipt.Quantity != quantity.Value)
+            {
+                throw new InvalidOperationException(
+                    "Receipt ID has already been used for a different receipt.");
+            }
+
+            return existingReceipt.Id;
+        }
+
         if (Status is not ShipmentStatus.Arrived and
             not ShipmentStatus.Receiving and
             not ShipmentStatus.PartiallyReceived)
@@ -312,7 +330,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         line.Receive(quantity);
 
         var receipt = new ShipmentReceipt(
-            ShipmentReceiptId.New(),
+            receiptId,
             line.Id,
             line.ProductVarietyId,
             quantity.Value,
