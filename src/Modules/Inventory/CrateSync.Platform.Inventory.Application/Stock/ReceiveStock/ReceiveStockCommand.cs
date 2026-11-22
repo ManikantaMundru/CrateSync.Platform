@@ -8,4 +8,5 @@ public sealed record ReceiveStockCommand(
     Guid WarehouseId,
     Guid ProductVarietyId,
     int Quantity,
-    Guid ShipmentId) : ICommand<Result>;
+    Guid ShipmentId,
+    Guid? ReceiptId = null) : ICommand<Result>;
