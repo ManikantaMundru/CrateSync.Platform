@@ -4422,3 +4422,9 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+
+.shipment-modal-fields {
+  display: grid;
+  gap: 0.8rem;
+}
