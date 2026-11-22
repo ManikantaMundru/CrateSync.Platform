@@ -1,0 +1,910 @@
+<script setup lang="ts">
+import {
+  computed,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue'
+import {
+  CButton,
+  CCard,
+  CCardBody,
+  CModal,
+  CModalBody,
+  CModalFooter,
+  CModalHeader,
+  CModalTitle,
+  CSpinner,
+} from '@coreui/vue'
+import {
+  createColumnHelper,
+  createPaginatedRowModel,
+  rowPaginationFeature,
+  tableFeatures,
+  useTable,
+} from '@tanstack/vue-table'
+import { apiFetch } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+interface ProductSummary {
+  id: string
+  name: string
+  isActive: boolean
+  varietyCount: number
+}
+
+interface ProductVariety {
+  id: string
+  name: string
+  isActive: boolean
+}
+
+interface ProductDetails {
+  id: string
+  name: string
+  isActive: boolean
+  varieties: ProductVariety[]
+}
+
+interface CreateProductResponse {
+  id: string
+}
+
+const auth = useAuthStore()
+const products = ref<ProductSummary[]>([])
+const loading = ref(true)
+const saving = ref(false)
+const search = ref('')
+const statusFilter = ref('')
+const error = ref<string | null>(null)
+const success = ref<string | null>(null)
+
+const createModalVisible = ref(false)
+const createModalError = ref<string | null>(null)
+const createForm = reactive({
+  name: '',
+})
+
+const detailsModalVisible = ref(false)
+const detailsLoading = ref(false)
+const detailsError = ref<string | null>(null)
+const selectedProduct = ref<ProductDetails | null>(null)
+const varietyName = ref('')
+
+const canManageCatalog = computed(
+  () =>
+    auth.me?.currentTenant?.accessMode ===
+      'SuperAdmin' ||
+    auth.me?.currentTenant?.roles.includes(
+      'TenantAdmin',
+    ) === true,
+)
+
+const filteredProducts = computed(() => {
+  const term = search.value.trim().toLowerCase()
+
+  return products.value.filter((product) => {
+    const matchesSearch =
+      !term ||
+      product.name.toLowerCase().includes(term)
+
+    const matchesStatus =
+      !statusFilter.value ||
+      (statusFilter.value === 'active'
+        ? product.isActive
+        : !product.isActive)
+
+    return matchesSearch && matchesStatus
+  })
+})
+
+const productTableFeatures = tableFeatures({
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+})
+
+const productColumnHelper =
+  createColumnHelper<
+    typeof productTableFeatures,
+    ProductSummary
+  >()
+
+const productColumns =
+  productColumnHelper.columns([
+    productColumnHelper.accessor('name', {
+      header: 'Product',
+    }),
+    productColumnHelper.accessor(
+      'varietyCount',
+      {
+        header: 'Varieties',
+      },
+    ),
+    productColumnHelper.accessor(
+      'isActive',
+      {
+        header: 'Status',
+      },
+    ),
+    productColumnHelper.display({
+      id: 'actions',
+      header: 'Actions',
+    }),
+  ])
+
+const productTable = useTable({
+  key: 'catalog-products',
+  features: productTableFeatures,
+  data: filteredProducts,
+  columns: productColumns,
+  initialState: {
+    pagination: {
+      pageIndex: 0,
+      pageSize: 10,
+    },
+  },
+})
+
+const pagination = computed(
+  () => productTable.atoms.pagination.get(),
+)
+
+const pageCount = computed(
+  () => productTable.getPageCount(),
+)
+
+const firstVisibleProduct = computed(() => {
+  if (filteredProducts.value.length === 0)
+    return 0
+
+  return (
+    pagination.value.pageIndex *
+      pagination.value.pageSize +
+    1
+  )
+})
+
+const lastVisibleProduct = computed(() =>
+  Math.min(
+    filteredProducts.value.length,
+    (pagination.value.pageIndex + 1) *
+      pagination.value.pageSize,
+  ),
+)
+
+watch([search, statusFilter], () => {
+  productTable.setPageIndex(0)
+})
+
+function changePageSize(event: Event) {
+  const value = Number(
+    (event.target as HTMLSelectElement).value,
+  )
+
+  productTable.setPageSize(value)
+}
+
+async function loadProducts() {
+  loading.value = true
+  error.value = null
+
+  try {
+    products.value =
+      await apiFetch<ProductSummary[]>(
+        '/api/catalog/products',
+      )
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to load products.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadProducts)
+
+function openCreateModal() {
+  createModalError.value = null
+  createForm.name = ''
+  createModalVisible.value = true
+}
+
+function closeCreateModal() {
+  if (!saving.value) {
+    createModalError.value = null
+    createModalVisible.value = false
+  }
+}
+
+async function createProduct() {
+  saving.value = true
+  createModalError.value = null
+  success.value = null
+
+  try {
+    const response =
+      await apiFetch<CreateProductResponse>(
+        '/api/catalog/products',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            name: createForm.name.trim(),
+          }),
+        },
+      )
+
+    createModalVisible.value = false
+    success.value =
+      'Product created successfully.'
+
+    await loadProducts()
+    await openDetails({
+      id: response.id,
+      name: createForm.name.trim(),
+      isActive: true,
+      varietyCount: 0,
+    })
+  } catch (exception) {
+    createModalError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to create product.'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function openDetails(
+  product: ProductSummary,
+) {
+  detailsModalVisible.value = true
+  detailsLoading.value = true
+  detailsError.value = null
+  selectedProduct.value = null
+  varietyName.value = ''
+
+  try {
+    selectedProduct.value =
+      await apiFetch<ProductDetails>(
+        `/api/catalog/products/${product.id}`,
+      )
+  } catch (exception) {
+    detailsError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to load product details.'
+  } finally {
+    detailsLoading.value = false
+  }
+}
+
+function closeDetailsModal() {
+  if (!saving.value) {
+    detailsModalVisible.value = false
+    detailsError.value = null
+    selectedProduct.value = null
+    varietyName.value = ''
+  }
+}
+
+async function refreshSelectedProduct() {
+  if (!selectedProduct.value)
+    return
+
+  const id = selectedProduct.value.id
+
+  selectedProduct.value =
+    await apiFetch<ProductDetails>(
+      `/api/catalog/products/${id}`,
+    )
+}
+
+async function addVariety() {
+  if (
+    !selectedProduct.value ||
+    !varietyName.value.trim()
+  ) {
+    return
+  }
+
+  saving.value = true
+  detailsError.value = null
+  success.value = null
+
+  try {
+    await apiFetch(
+      `/api/catalog/products/${selectedProduct.value.id}/varieties`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          name: varietyName.value.trim(),
+        }),
+      },
+    )
+
+    varietyName.value = ''
+    success.value =
+      'Variety added successfully.'
+
+    await Promise.all([
+      refreshSelectedProduct(),
+      loadProducts(),
+    ])
+  } catch (exception) {
+    detailsError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to add variety.'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deactivateProduct() {
+  if (!selectedProduct.value)
+    return
+
+  if (
+    !window.confirm(
+      `Deactivate ${selectedProduct.value.name}? It will no longer be available for new operational use.`,
+    )
+  ) {
+    return
+  }
+
+  saving.value = true
+  detailsError.value = null
+  success.value = null
+
+  try {
+    await apiFetch(
+      `/api/catalog/products/${selectedProduct.value.id}/deactivate`,
+      {
+        method: 'PATCH',
+      },
+    )
+
+    success.value =
+      'Product deactivated.'
+    await Promise.all([
+      refreshSelectedProduct(),
+      loadProducts(),
+    ])
+  } catch (exception) {
+    detailsError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to deactivate product.'
+  } finally {
+    saving.value = false
+  }
+}
+</script>
+
+<template>
+  <section class="page-stack users-page">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">
+          Catalog
+        </p>
+        <h1>Products</h1>
+        <p>
+          Manage products and varieties used
+          across trading, inbound logistics and
+          inventory.
+        </p>
+      </div>
+    </div>
+
+    <div
+      v-if="error"
+      class="status-message status-error"
+    >
+      {{ error }}
+    </div>
+
+    <div
+      v-if="success"
+      class="status-message status-success"
+    >
+      {{ success }}
+    </div>
+
+    <div class="tenant-toolbar users-toolbar">
+      <div>
+        <h2>Product catalog</h2>
+        <p>
+          {{ filteredProducts.length }}
+          of
+          {{ products.length }}
+          products
+        </p>
+      </div>
+
+      <div class="users-toolbar-actions">
+        <div class="search-field">
+          <i
+            class="cil-search"
+            aria-hidden="true"
+          />
+          <input
+            v-model="search"
+            class="form-control tenant-search"
+            type="search"
+            placeholder="Search products..."
+            aria-label="Search products"
+          >
+        </div>
+
+        <select
+          v-model="statusFilter"
+          class="form-select user-role-filter"
+          aria-label="Filter product status"
+        >
+          <option value="">
+            All statuses
+          </option>
+          <option value="active">
+            Active
+          </option>
+          <option value="inactive">
+            Inactive
+          </option>
+        </select>
+
+        <CButton
+          v-if="canManageCatalog"
+          color="primary"
+          class="users-add-button"
+          @click="openCreateModal"
+        >
+          <i
+            class="button-icon cil-plus"
+            aria-hidden="true"
+          />
+          Add product
+        </CButton>
+      </div>
+    </div>
+
+    <div
+      v-if="loading"
+      class="loading-state"
+    >
+      <CSpinner />
+      Loading products…
+    </div>
+
+    <CCard
+      v-else-if="
+        filteredProducts.length === 0
+      "
+      class="empty-state"
+    >
+      <CCardBody>
+        <h3>
+          {{
+            search || statusFilter
+              ? 'No matching products'
+              : 'No products yet'
+          }}
+        </h3>
+        <p>
+          {{
+            search || statusFilter
+              ? 'Try another product name or status.'
+              : canManageCatalog
+                ? 'Add the first product to this organisation catalog.'
+                : 'No products are available.'
+          }}
+        </p>
+      </CCardBody>
+    </CCard>
+
+    <div
+      v-else
+      class="user-table-shell"
+    >
+      <div class="table-responsive">
+        <table class="user-table product-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Varieties</th>
+              <th>Status</th>
+              <th class="user-actions-column">
+                Actions
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              v-for="row in productTable.getRowModel().rows"
+              :key="row.id"
+            >
+              <td data-label="Product">
+                <div class="product-identity">
+                  <div class="product-icon">
+                    <i
+                      class="cil-leaf"
+                      aria-hidden="true"
+                    />
+                  </div>
+
+                  <strong>
+                    {{ row.original.name }}
+                  </strong>
+                </div>
+              </td>
+
+              <td data-label="Varieties">
+                <span class="product-variety-count">
+                  {{ row.original.varietyCount }}
+                  {{
+                    row.original.varietyCount === 1
+                      ? 'variety'
+                      : 'varieties'
+                  }}
+                </span>
+              </td>
+
+              <td data-label="Status">
+                <span
+                  v-if="row.original.isActive"
+                  class="user-status-pill active"
+                >
+                  <span class="status-dot" />
+                  Active
+                </span>
+
+                <span
+                  v-else
+                  class="user-status-pill inactive"
+                >
+                  <span class="status-dot" />
+                  Inactive
+                </span>
+              </td>
+
+              <td
+                data-label="Actions"
+                class="user-actions-cell"
+              >
+                <div class="user-row-actions">
+                  <CButton
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    @click="
+                      openDetails(row.original)
+                    "
+                  >
+                    <i
+                      class="button-icon cil-list"
+                      aria-hidden="true"
+                    />
+                    View
+                  </CButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="user-grid-pagination">
+        <div class="pagination-summary">
+          Showing
+          <strong>
+            {{ firstVisibleProduct }}
+          </strong>
+          –
+          <strong>
+            {{ lastVisibleProduct }}
+          </strong>
+          of
+          <strong>
+            {{ filteredProducts.length }}
+          </strong>
+        </div>
+
+        <div class="pagination-controls">
+          <label class="page-size-control">
+            <span>Rows</span>
+            <select
+              :value="pagination.pageSize"
+              class="form-select form-select-sm"
+              aria-label="Rows per page"
+              @change="changePageSize"
+            >
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+            </select>
+          </label>
+
+          <span class="page-number">
+            Page
+            {{ pagination.pageIndex + 1 }}
+            of
+            {{ Math.max(pageCount, 1) }}
+          </span>
+
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            :disabled="
+              !productTable.getCanPreviousPage()
+            "
+            @click="
+              productTable.previousPage()
+            "
+          >
+            Previous
+          </CButton>
+
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            :disabled="
+              !productTable.getCanNextPage()
+            "
+            @click="
+              productTable.nextPage()
+            "
+          >
+            Next
+          </CButton>
+        </div>
+      </div>
+    </div>
+
+    <CModal
+      :visible="createModalVisible"
+      alignment="center"
+      @close="closeCreateModal"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          Add product
+        </CModalTitle>
+      </CModalHeader>
+
+      <CModalBody>
+        <div
+          v-if="createModalError"
+          class="status-message status-error modal-status-message"
+        >
+          {{ createModalError }}
+        </div>
+
+        <form
+          id="create-product-form"
+          @submit.prevent="createProduct"
+        >
+          <label class="form-field">
+            <span>Product name</span>
+            <input
+              v-model.trim="createForm.name"
+              class="form-control"
+              required
+              maxlength="150"
+              placeholder="Apple"
+            >
+          </label>
+        </form>
+      </CModalBody>
+
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="closeCreateModal"
+        >
+          Cancel
+        </CButton>
+
+        <CButton
+          color="primary"
+          type="submit"
+          form="create-product-form"
+          :disabled="saving"
+        >
+          {{
+            saving
+              ? 'Creating…'
+              : 'Create product'
+          }}
+        </CButton>
+      </CModalFooter>
+    </CModal>
+
+    <CModal
+      :visible="detailsModalVisible"
+      alignment="center"
+      size="lg"
+      @close="closeDetailsModal"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          {{
+            selectedProduct?.name ??
+            'Product'
+          }}
+        </CModalTitle>
+      </CModalHeader>
+
+      <CModalBody>
+        <div
+          v-if="detailsError"
+          class="status-message status-error modal-status-message"
+        >
+          {{ detailsError }}
+        </div>
+
+        <div
+          v-if="detailsLoading"
+          class="loading-state"
+        >
+          <CSpinner />
+          Loading product…
+        </div>
+
+        <template v-else-if="selectedProduct">
+          <div class="product-detail-summary">
+            <div>
+              <span class="detail-label">
+                Status
+              </span>
+              <span
+                v-if="selectedProduct.isActive"
+                class="user-status-pill active"
+              >
+                <span class="status-dot" />
+                Active
+              </span>
+              <span
+                v-else
+                class="user-status-pill inactive"
+              >
+                <span class="status-dot" />
+                Inactive
+              </span>
+            </div>
+
+            <CButton
+              v-if="
+                canManageCatalog &&
+                selectedProduct.isActive
+              "
+              color="danger"
+              variant="outline"
+              size="sm"
+              :disabled="saving"
+              @click="deactivateProduct"
+            >
+              <i
+                class="button-icon cil-ban"
+                aria-hidden="true"
+              />
+              Deactivate product
+            </CButton>
+          </div>
+
+          <div class="product-varieties-section">
+            <div class="section-heading product-detail-heading">
+              <div>
+                <h3>Varieties</h3>
+                <p>
+                  {{
+                    selectedProduct.varieties.length
+                  }}
+                  configured
+                </p>
+              </div>
+            </div>
+
+            <form
+              v-if="
+                canManageCatalog &&
+                selectedProduct.isActive
+              "
+              class="add-variety-form"
+              @submit.prevent="addVariety"
+            >
+              <input
+                v-model.trim="varietyName"
+                class="form-control"
+                required
+                maxlength="150"
+                placeholder="e.g. Gala"
+              >
+
+              <CButton
+                color="primary"
+                type="submit"
+                :disabled="
+                  saving ||
+                  !varietyName.trim()
+                "
+              >
+                <i
+                  class="button-icon cil-plus"
+                  aria-hidden="true"
+                />
+                Add variety
+              </CButton>
+            </form>
+
+            <div
+              v-if="
+                selectedProduct.varieties.length
+              "
+              class="variety-list"
+            >
+              <div
+                v-for="variety in selectedProduct.varieties"
+                :key="variety.id"
+                class="variety-row"
+              >
+                <strong>
+                  {{ variety.name }}
+                </strong>
+
+                <span
+                  v-if="variety.isActive"
+                  class="user-status-pill active"
+                >
+                  <span class="status-dot" />
+                  Active
+                </span>
+
+                <span
+                  v-else
+                  class="user-status-pill inactive"
+                >
+                  <span class="status-dot" />
+                  Inactive
+                </span>
+              </div>
+            </div>
+
+            <div
+              v-else
+              class="catalog-empty-inline"
+            >
+              No varieties configured yet.
+            </div>
+          </div>
+        </template>
+      </CModalBody>
+
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="closeDetailsModal"
+        >
+          Close
+        </CButton>
+      </CModalFooter>
+    </CModal>
+  </section>
+</template>

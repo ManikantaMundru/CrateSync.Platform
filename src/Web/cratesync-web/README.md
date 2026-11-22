@@ -228,3 +228,32 @@ The view supports:
 - responsive rows on smaller screens
 
 The API remains the authoritative permission boundary through the existing `TenantAdmin` policy on mutation endpoints.
+
+
+## Product catalog
+
+The organisation **Products** workspace provides the Catalog UI over the existing Catalog module.
+
+All users in the current organisation can:
+
+- search products
+- filter Active / Inactive products
+- view product details
+- view configured varieties
+
+Organisation Administrators and SuperAdmin operating inside the organisation can additionally:
+
+- create products
+- add varieties to active products
+- deactivate active products
+
+The grid uses TanStack pagination with 10 / 25 / 50 row options.
+
+Current backend capabilities intentionally reflected in the UI:
+
+- products can be deactivated
+- there is currently no product reactivation command
+- varieties can be added and read
+- there are currently no variety edit/deactivate endpoints
+
+The UI does not expose actions that the backend does not yet support.

@@ -85,6 +85,11 @@ const tenantLinks = computed(() => {
       icon: 'cil-speedometer',
     },
     {
+      label: 'Products',
+      suffix: '/products',
+      icon: 'cil-list',
+    },
+    {
       label: 'Sales',
       suffix: '/sales',
       icon: 'cil-cart',
