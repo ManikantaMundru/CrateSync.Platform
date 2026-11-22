@@ -28,13 +28,18 @@ public sealed class SearchShipmentsQueryHandlerTests
             new(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
-                Guid.NewGuid(),
                 "TRACK-001",
                 "ZA",
                 "Shipped",
                 DateTimeOffset.UtcNow,
                 100,
-                0)
+                0,
+                null,
+                null,
+                null,
+                "NotStarted",
+                "NotRequired",
+                "NotRequired")
         ];
 
         readService
@@ -42,7 +47,6 @@ public sealed class SearchShipmentsQueryHandlerTests
                 tenantId,
                 "TRACK",
                 ShipmentStatus.Shipped,
-                null,
                 null,
                 TestContext.Current.CancellationToken)
             .Returns(expected);
@@ -55,7 +59,6 @@ public sealed class SearchShipmentsQueryHandlerTests
             new SearchShipmentsQuery(
                 "TRACK",
                 ShipmentStatus.Shipped,
-                null,
                 null),
             TestContext.Current.CancellationToken);
 
