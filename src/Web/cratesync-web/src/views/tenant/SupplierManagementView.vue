@@ -102,10 +102,6 @@ const canManageSuppliers = computed(
     ) === true,
 )
 
-const filteredSuppliers = computed(
-  () => suppliers.value,
-)
-
 watch(
   [statusFilter, pageSize],
   () => {
