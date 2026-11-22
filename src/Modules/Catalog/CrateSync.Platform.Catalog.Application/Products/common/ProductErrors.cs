@@ -19,4 +19,11 @@ public static class ProductErrors
         Error.Conflict(
             "Catalog.Product.Inactive",
             $"Product '{productId.Value}' is inactive.");
+
+    public static Error VarietyNotFound(
+        ProductId productId,
+        ProductVarietyId varietyId) =>
+        Error.NotFound(
+            "Catalog.Product.VarietyNotFound",
+            $"Variety '{varietyId.Value}' was not found on product '{productId.Value}'.");
 }
