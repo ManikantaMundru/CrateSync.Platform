@@ -193,3 +193,38 @@ The screen supports:
 The Vue route is guarded for administrator access, while the API `TenantAdmin` policy remains the authoritative security boundary.
 
 A user cannot deactivate their own membership or remove their own TenantAdmin role; these rules continue to be enforced server-side.
+
+
+## Warehouse management
+
+The organisation **Warehouses** route now uses the same compact TanStack grid pattern as Users.
+
+All tenant users can view warehouses available to their current access scope.
+
+Organisation Administrators and SuperAdmin operating inside the organisation can additionally:
+
+- create warehouses
+- edit warehouse details
+- activate warehouses
+- deactivate warehouses
+
+Warehouse fields:
+
+- name
+- code
+- address line 1
+- optional address line 2
+- city
+- optional state/province
+- postal code
+- country
+
+The view supports:
+
+- search by warehouse name, code, city or country
+- Active / Inactive status filtering
+- 10 / 25 / 50 row pagination
+- Light and Dark themes
+- responsive rows on smaller screens
+
+The API remains the authoritative permission boundary through the existing `TenantAdmin` policy on mutation endpoints.

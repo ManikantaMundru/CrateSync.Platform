@@ -71,6 +71,18 @@ export const router = createRouter({
             title: 'Users',
           },
         },
+        {
+          path: 'tenant/:tenantId/warehouses',
+          name: 'warehouses',
+          component: () =>
+            import(
+              '@/views/tenant/WarehouseManagementView.vue'
+            ),
+          meta: {
+            requiresTenant: true,
+            title: 'Warehouses',
+          },
+        },
         ...[
           ['sales', 'Sales'],
           ['shipments', 'Inbound Shipments'],
@@ -78,7 +90,6 @@ export const router = createRouter({
           ['customers', 'Customers'],
           ['suppliers', 'Suppliers'],
           ['finance', 'Finance'],
-          ['warehouses', 'Warehouses'],
         ].map(([path, title]) => ({
           path: `tenant/:tenantId/${path}`,
           component: () =>
