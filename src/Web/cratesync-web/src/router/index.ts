@@ -127,9 +127,20 @@ export const router = createRouter({
             title: 'Customers',
           },
         },
+        {
+          path: 'tenant/:tenantId/shipments',
+          name: 'inbound-shipments',
+          component: () =>
+            import(
+              '@/views/tenant/InboundShipmentManagementView.vue'
+            ),
+          meta: {
+            requiresTenant: true,
+            title: 'Inbound Shipments',
+          },
+        },
         ...[
           ['sales', 'Sales'],
-          ['shipments', 'Inbound Shipments'],
           ['inventory', 'Inventory'],
           ['finance', 'Finance'],
         ].map(([path, title]) => ({
