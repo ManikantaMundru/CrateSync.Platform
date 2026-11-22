@@ -49,8 +49,8 @@ export const authService = {
     }
   },
 
-  completeSilentLogin(): Promise<User> {
-    return userManager.signinSilentCallback()
+  async completeSilentLogin(): Promise<void> {
+    await userManager.signinSilentCallback()
   },
 
   login(returnPath = '/'): Promise<void> {
