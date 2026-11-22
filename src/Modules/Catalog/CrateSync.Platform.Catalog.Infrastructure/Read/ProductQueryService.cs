@@ -95,7 +95,10 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
                                 ON pv.ProductId = p.Id
                             WHERE
                                 p.TenantId = @TenantId
-                                AND (@SearchTerm IS NULL OR p.Name LIKE '%' + @SearchTerm + '%')
+                                AND (@SearchTerm IS NULL
+                                     OR p.Name LIKE '%' + @SearchTerm + '%'
+                                     OR p.CustomsTariffCode LIKE '%' + @SearchTerm + '%'
+                                     OR p.ScientificName LIKE '%' + @SearchTerm + '%')
                                 AND (@IsActive IS NULL OR p.IsActive = @IsActive)
                             GROUP BY
                                 p.Id,
