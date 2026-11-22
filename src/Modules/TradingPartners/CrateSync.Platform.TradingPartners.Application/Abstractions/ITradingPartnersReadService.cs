@@ -1,3 +1,4 @@
+using CrateSync.Platform.TradingPartners.Application.Common;
 using CrateSync.Platform.TradingPartners.Application.Customers.GetCustomer;
 using CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
 using CrateSync.Platform.TradingPartners.Application.Suppliers.GetSupplier;
@@ -9,18 +10,22 @@ namespace CrateSync.Platform.TradingPartners.Application.Abstractions
     {
         Task<CustomerResponse?> GetCustomerByIdAsync(Guid tenantId, Guid customerId, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyCollection<CustomerSummaryResponse>> SearchCustomersAsync(
+        Task<PagedResponse<CustomerSummaryResponse>> SearchCustomersAsync(
             Guid tenantId,
             string? searchTerm,
             bool? isActive,
+            int page,
+            int pageSize,
             CancellationToken cancellationToken = default);
 
         Task<SupplierResponse?> GetSupplierByIdAsync(Guid tenantId, Guid supplierId, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyCollection<SupplierSummaryResponse>> SearchSuppliersAsync(
+        Task<PagedResponse<SupplierSummaryResponse>> SearchSuppliersAsync(
             Guid tenantId,
             string? searchTerm,
             bool? isActive,
+            int page,
+            int pageSize,
             CancellationToken cancellationToken = default);
     }
 }

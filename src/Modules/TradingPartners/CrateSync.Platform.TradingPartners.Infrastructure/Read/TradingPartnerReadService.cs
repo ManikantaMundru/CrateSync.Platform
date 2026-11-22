@@ -1,5 +1,6 @@
 using CrateSync.Platform.BuildingBlocks.Application.Persistence;
 using CrateSync.Platform.TradingPartners.Application.Abstractions;
+using CrateSync.Platform.TradingPartners.Application.Common;
 using CrateSync.Platform.TradingPartners.Application.Customers.GetCustomer;
 using CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
 using CrateSync.Platform.TradingPartners.Application.Suppliers.GetSupplier;
@@ -60,10 +61,12 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
             CreateContactDetails(row));
     }
 
-    public async Task<IReadOnlyCollection<CustomerSummaryResponse>> SearchCustomersAsync(
+    public async Task<PagedResponse<CustomerSummaryResponse>> SearchCustomersAsync(
         Guid tenantId,
         string? searchTerm,
         bool? isActive,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
@@ -92,12 +95,32 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
                    OR Email LIKE '%' + @SearchTerm + '%'
                    OR Phone LIKE '%' + @SearchTerm + '%')
               AND (@IsActive IS NULL OR IsActive = @IsActive)
-            ORDER BY Name;
+            ORDER BY Name
+            OFFSET @Offset ROWS
+            FETCH NEXT @PageSize ROWS ONLY;
+
+            SELECT COUNT(*)
+            FROM partners.Customers
+            WHERE TenantId = @TenantId
+              AND (@SearchTerm IS NULL
+                   OR Name LIKE '%' + @SearchTerm + '%'
+                   OR CommercialIdentifier LIKE '%' + @SearchTerm + '%'
+                   OR AddressLine1 LIKE '%' + @SearchTerm + '%'
+                   OR City LIKE '%' + @SearchTerm + '%'
+                   OR StateOrProvince LIKE '%' + @SearchTerm + '%'
+                   OR Country LIKE '%' + @SearchTerm + '%'
+                   OR ContactName LIKE '%' + @SearchTerm + '%'
+                   OR Email LIKE '%' + @SearchTerm + '%'
+                   OR Phone LIKE '%' + @SearchTerm + '%')
+              AND (@IsActive IS NULL OR IsActive = @IsActive);
             """;
+
+        var normalizedPage = Math.Max(page, 1);
+        var normalizedPageSize = Math.Clamp(pageSize, 1, 100);
 
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        var rows = await connection.QueryAsync<CustomerSummaryResponse>(
+        using var grid = await connection.QueryMultipleAsync(
             new CommandDefinition(
                 sql,
                 new
@@ -106,11 +129,20 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
                     SearchTerm = string.IsNullOrWhiteSpace(searchTerm)
                         ? null
                         : searchTerm.Trim(),
-                    IsActive = isActive
+                    IsActive = isActive,
+                    Offset = (normalizedPage - 1) * normalizedPageSize,
+                    PageSize = normalizedPageSize
                 },
                 cancellationToken: cancellationToken));
 
-        return rows.AsList();
+        var items = (await grid.ReadAsync<CustomerSummaryResponse>()).AsList();
+        var totalCount = await grid.ReadSingleAsync<int>();
+
+        return new PagedResponse<CustomerSummaryResponse>(
+            items,
+            normalizedPage,
+            normalizedPageSize,
+            totalCount);
     }
 
     public async Task<SupplierResponse?> GetSupplierByIdAsync(
@@ -161,10 +193,12 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
             CreateContactDetails(row));
     }
 
-    public async Task<IReadOnlyCollection<SupplierSummaryResponse>> SearchSuppliersAsync(
+    public async Task<PagedResponse<SupplierSummaryResponse>> SearchSuppliersAsync(
         Guid tenantId,
         string? searchTerm,
         bool? isActive,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
@@ -193,12 +227,32 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
                    OR Email LIKE '%' + @SearchTerm + '%'
                    OR Phone LIKE '%' + @SearchTerm + '%')
               AND (@IsActive IS NULL OR IsActive = @IsActive)
-            ORDER BY Name;
+            ORDER BY Name
+            OFFSET @Offset ROWS
+            FETCH NEXT @PageSize ROWS ONLY;
+
+            SELECT COUNT(*)
+            FROM partners.Suppliers
+            WHERE TenantId = @TenantId
+              AND (@SearchTerm IS NULL
+                   OR Name LIKE '%' + @SearchTerm + '%'
+                   OR CommercialIdentifier LIKE '%' + @SearchTerm + '%'
+                   OR AddressLine1 LIKE '%' + @SearchTerm + '%'
+                   OR City LIKE '%' + @SearchTerm + '%'
+                   OR StateOrProvince LIKE '%' + @SearchTerm + '%'
+                   OR Country LIKE '%' + @SearchTerm + '%'
+                   OR ContactName LIKE '%' + @SearchTerm + '%'
+                   OR Email LIKE '%' + @SearchTerm + '%'
+                   OR Phone LIKE '%' + @SearchTerm + '%')
+              AND (@IsActive IS NULL OR IsActive = @IsActive);
             """;
+
+        var normalizedPage = Math.Max(page, 1);
+        var normalizedPageSize = Math.Clamp(pageSize, 1, 100);
 
         await using var connection = await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        var rows = await connection.QueryAsync<SupplierSummaryResponse>(
+        using var grid = await connection.QueryMultipleAsync(
             new CommandDefinition(
                 sql,
                 new
@@ -207,11 +261,20 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
                     SearchTerm = string.IsNullOrWhiteSpace(searchTerm)
                         ? null
                         : searchTerm.Trim(),
-                    IsActive = isActive
+                    IsActive = isActive,
+                    Offset = (normalizedPage - 1) * normalizedPageSize,
+                    PageSize = normalizedPageSize
                 },
                 cancellationToken: cancellationToken));
 
-        return rows.AsList();
+        var items = (await grid.ReadAsync<SupplierSummaryResponse>()).AsList();
+        var totalCount = await grid.ReadSingleAsync<int>();
+
+        return new PagedResponse<SupplierSummaryResponse>(
+            items,
+            normalizedPage,
+            normalizedPageSize,
+            totalCount);
     }
 
     private static AddressResponse? CreateAddress(CustomerRow row)

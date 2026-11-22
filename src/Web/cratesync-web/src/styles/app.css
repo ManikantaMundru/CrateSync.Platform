@@ -3745,3 +3745,226 @@ a {
     flex-basis: 38px;
   }
 }
+
+
+/* Shared trading partner components */
+.catalog-status-segmented button.active,
+.supplier-filter-row
+  .catalog-status-segmented button.active,
+.customer-filter-row
+  .catalog-status-segmented button.active {
+  color: #4338ca;
+  background: #eef2ff;
+  box-shadow:
+    inset 0 0 0 1px rgba(79, 70, 229, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.trading-partner-initials {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #4f5f75;
+  background: #f4f7fa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.trading-partner-card-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.trading-partner-card {
+  overflow: hidden;
+  border: 1px solid #dfe7ee;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.05);
+}
+
+.trading-partner-card.expanded {
+  border-color: #c8c4ff;
+  box-shadow:
+    inset 4px 0 0 #695cf0,
+    0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.trading-partner-card-trigger {
+  width: 100%;
+  display: grid;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto
+    auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.trading-partner-card-trigger:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: -2px;
+}
+
+.trading-partner-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.trading-partner-card-copy strong {
+  overflow: hidden;
+  color: #182230;
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trading-partner-card-copy small {
+  overflow: hidden;
+  color: #718096;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trading-partner-card-trigger
+  .product-accordion-chevron {
+  display: inline-block;
+  margin-left: 0.1rem;
+  color: #8da0b8;
+}
+
+.trading-partner-card-detail {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-top: 1px solid #e8edf3;
+}
+
+.trading-partner-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1.25rem;
+  border-top: 1px solid #e7edf2;
+  color: #7d8ea5;
+  font-size: 0.73rem;
+}
+
+.trading-partner-pager-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.trading-partner-pager-actions label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trading-partner-pager-actions
+  .form-select {
+  width: auto;
+  min-width: 68px;
+}
+
+[data-coreui-theme="dark"]
+  .catalog-status-segmented button.active,
+[data-coreui-theme="dark"]
+  .supplier-filter-row
+  .catalog-status-segmented button.active,
+[data-coreui-theme="dark"]
+  .customer-filter-row
+  .catalog-status-segmented button.active {
+  color: #c7d2fe;
+  background: #312e81;
+  box-shadow:
+    inset 0 0 0 1px rgba(165, 180, 252, 0.14);
+}
+
+[data-coreui-theme="dark"]
+  .trading-partner-initials {
+  border-color: #344641;
+  color: #d7e2de;
+  background: #202d29;
+}
+
+[data-coreui-theme="dark"]
+  .trading-partner-card {
+  border-color: #2b3b37;
+  background: #17221f;
+  box-shadow: none;
+}
+
+[data-coreui-theme="dark"]
+  .trading-partner-card.expanded {
+  border-color: #655fd1;
+  box-shadow: inset 4px 0 0 #818cf8;
+}
+
+[data-coreui-theme="dark"]
+  .trading-partner-card-copy strong {
+  color: #f2f4f7;
+}
+
+[data-coreui-theme="dark"]
+  .trading-partner-card-detail,
+[data-coreui-theme="dark"]
+  .trading-partner-pager {
+  border-color: #2b3b37;
+}
+
+@media (max-width: 991.98px) {
+  .trading-partner-pager {
+    margin-top: 1rem;
+    padding-inline: 0;
+    background: transparent;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .trading-partner-card-trigger {
+    gap: 0.65rem;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .trading-partner-pager {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .trading-partner-pager-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .trading-partner-initials {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .trading-partner-card-trigger
+    .user-status-pill {
+    padding-inline: 0.5rem;
+    font-size: 0.7rem;
+  }
+}

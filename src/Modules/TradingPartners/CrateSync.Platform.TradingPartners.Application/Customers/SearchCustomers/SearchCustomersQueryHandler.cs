@@ -1,11 +1,12 @@
 using CrateSync.Platform.BuildingBlocks.Application;
 using CrateSync.Platform.BuildingBlocks.Application.Queries;
 using CrateSync.Platform.TradingPartners.Application.Abstractions;
+using CrateSync.Platform.TradingPartners.Application.Common;
 
 namespace CrateSync.Platform.TradingPartners.Application.Customers.SearchCustomers;
 
 internal sealed class SearchCustomersQueryHandler
-    : IQueryHandler<SearchCustomersQuery, IReadOnlyCollection<CustomerSummaryResponse>>
+    : IQueryHandler<SearchCustomersQuery, PagedResponse<CustomerSummaryResponse>>
 {
     private readonly ITradingPartnersReadService _readService;
     private readonly ITenantContext _tenantContext;
@@ -16,7 +17,7 @@ internal sealed class SearchCustomersQueryHandler
         _tenantContext = tenantContext;
     }
 
-    public Task<IReadOnlyCollection<CustomerSummaryResponse>> Handle(
+    public Task<PagedResponse<CustomerSummaryResponse>> Handle(
         SearchCustomersQuery request,
         CancellationToken cancellationToken)
     {
@@ -24,6 +25,8 @@ internal sealed class SearchCustomersQueryHandler
             _tenantContext.TenantId,
             request.SearchTerm,
             request.IsActive,
+            request.Page,
+            request.PageSize,
             cancellationToken);
     }
 }

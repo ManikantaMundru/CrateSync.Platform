@@ -21,20 +21,15 @@ import {
 import { apiFetch } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { countries } from '@/data/countries'
+import TradingPartnerTable from '@/components/trading-partners/TradingPartnerTable.vue'
+import TradingPartnerCard from '@/components/trading-partners/TradingPartnerCard.vue'
+import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
+import type {
+  PagedResponse,
+  TradingPartnerSummary,
+} from '@/types/tradingPartners'
 
-interface SupplierSummary {
-  id: string
-  name: string
-  commercialIdentifier: string | null
-  isActive: boolean
-  addressLine1: string | null
-  city: string | null
-  stateOrProvince: string | null
-  country: string | null
-  contactName: string | null
-  email: string | null
-  phone: string | null
-}
+type SupplierSummary = TradingPartnerSummary
 
 interface SupplierAddress {
   line1: string
@@ -62,6 +57,11 @@ interface CreateSupplierResponse {
 
 const auth = useAuthStore()
 const suppliers = ref<SupplierSummary[]>([])
+const page = ref(1)
+const pageSize = ref(10)
+const totalCount = ref(0)
+const totalPages = ref(0)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 const selectedSupplier = ref<SupplierDetails | null>(null)
 const expandedSupplierId = ref<string | null>(null)
 const isCompact = ref(false)
@@ -102,69 +102,34 @@ const canManageSuppliers = computed(
     ) === true,
 )
 
-const filteredSuppliers = computed(() => {
-  const term = search.value.trim().toLowerCase()
-
-  return suppliers.value.filter((supplier) => {
-    const searchable = [
-      supplier.name,
-      supplier.commercialIdentifier,
-      supplier.addressLine1,
-      supplier.city,
-      supplier.stateOrProvince,
-      supplier.country,
-      supplier.contactName,
-      supplier.email,
-      supplier.phone,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-
-    const matchesSearch =
-      !term || searchable.includes(term)
-
-    const matchesStatus =
-      !statusFilter.value ||
-      (statusFilter.value === 'active'
-        ? supplier.isActive
-        : !supplier.isActive)
-
-    return matchesSearch && matchesStatus
-  })
-})
-
-watch(filteredSuppliers, async (items) => {
-  if (items.length === 0) {
-    selectedSupplier.value = null
-    expandedSupplierId.value = null
-    return
-  }
-
-  if (isCompact.value) {
-    if (
-      expandedSupplierId.value &&
-      !items.some(
-        (supplier) =>
-          supplier.id === expandedSupplierId.value,
-      )
-    ) {
-      expandedSupplierId.value = null
-      selectedSupplier.value = null
+watch(
+  [statusFilter, pageSize],
+  () => {
+    if (page.value !== 1) {
+      page.value = 1
+      return
     }
 
-    return
-  }
+    void loadSuppliers()
+  },
+)
 
-  if (
-    !selectedSupplier.value ||
-    !items.some(
-      (supplier) =>
-        supplier.id === selectedSupplier.value?.id,
-    )
-  ) {
-    await selectSupplier(items[0]!)
-  }
+watch(page, () => {
+  void loadSuppliers()
+})
+
+watch(search, () => {
+  if (searchTimer)
+    clearTimeout(searchTimer)
+
+  searchTimer = setTimeout(() => {
+    if (page.value !== 1) {
+      page.value = 1
+      return
+    }
+
+    void loadSuppliers()
+  }, 250)
 })
 
 async function loadSuppliers() {
@@ -172,18 +137,63 @@ async function loadSuppliers() {
   error.value = null
 
   try {
-    suppliers.value =
-      await apiFetch<SupplierSummary[]>(
-        '/api/Supplier',
+    const params = new URLSearchParams({
+      page: String(page.value),
+      pageSize: String(pageSize.value),
+    })
+
+    const term = search.value.trim()
+    if (term)
+      params.set('search', term)
+
+    if (statusFilter.value)
+      params.set(
+        'isActive',
+        statusFilter.value === 'active'
+          ? 'true'
+          : 'false',
       )
+
+    const result =
+      await apiFetch<PagedResponse<SupplierSummary>>(
+        `/api/Supplier?${params.toString()}`,
+      )
+
+    suppliers.value = result.items
+    totalCount.value = result.totalCount
+    totalPages.value = result.totalPages
+
+    if (
+      isCompact.value &&
+      expandedSupplierId.value &&
+      !suppliers.value.some(
+        (supplier) =>
+          supplier.id ===
+          expandedSupplierId.value,
+      )
+    ) {
+      expandedSupplierId.value = null
+      selectedSupplier.value = null
+    }
+
+    if (
+      result.totalPages > 0 &&
+      page.value > result.totalPages
+    ) {
+      page.value = result.totalPages
+      return
+    }
 
     if (
       !isCompact.value &&
-      filteredSuppliers.value.length > 0
+      suppliers.value.length > 0
     ) {
       await selectSupplier(
-        filteredSuppliers.value[0]!,
+        suppliers.value[0]!,
       )
+    } else if (suppliers.value.length === 0) {
+      selectedSupplier.value = null
+      expandedSupplierId.value = null
     }
   } catch (exception) {
     error.value =
@@ -261,9 +271,9 @@ function syncLayout(matches: boolean) {
 
   expandedSupplierId.value = null
 
-  if (filteredSuppliers.value.length > 0) {
+  if (suppliers.value.length > 0) {
     void selectSupplier(
-      filteredSuppliers.value[0]!,
+      suppliers.value[0]!,
     )
   }
 }
@@ -292,6 +302,9 @@ onBeforeUnmount(() => {
     'change',
     handleMediaChange,
   )
+
+  if (searchTimer)
+    clearTimeout(searchTimer)
 })
 
 function resetForm() {
@@ -525,28 +538,6 @@ async function setSupplierActive(
   }
 }
 
-function supplierInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-}
-
-function summaryAddress(
-  supplier: SupplierSummary,
-) {
-  return [
-    supplier.addressLine1,
-    supplier.city,
-    supplier.stateOrProvince,
-    supplier.country,
-  ]
-    .filter(Boolean)
-    .join(', ') || 'No address configured'
-}
-
 async function inspectSupplier(
   supplier: SupplierSummary,
 ) {
@@ -662,10 +653,7 @@ function formatAddress(
         </div>
 
         <span class="supplier-result-count">
-          {{ filteredSuppliers.length }}
-          of
-          {{ suppliers.length }}
-          suppliers
+          {{ totalCount }} suppliers
         </span>
       </div>
     </div>
@@ -680,7 +668,7 @@ function formatAddress(
 
     <CCard
       v-else-if="
-        filteredSuppliers.length === 0
+        suppliers.length === 0
       "
       class="empty-state"
     >
@@ -711,82 +699,18 @@ function formatAddress(
       <section class="supplier-list-panel">
         <div
           v-if="isCompact"
-          class="supplier-card-list"
+          class="supplier-card-list trading-partner-card-list"
         >
-          <article
-            v-for="supplier in filteredSuppliers"
+          <TradingPartnerCard
+            v-for="supplier in suppliers"
             :key="supplier.id"
-            class="supplier-card"
-            :class="{
-              expanded:
-                expandedSupplierId ===
-                supplier.id,
-            }"
+            :partner="supplier"
+            :expanded="
+              expandedSupplierId ===
+              supplier.id
+            "
+            @toggle="toggleSupplier(supplier)"
           >
-            <button
-              type="button"
-              class="supplier-card-trigger"
-              :aria-expanded="
-                expandedSupplierId ===
-                supplier.id
-              "
-              @click="toggleSupplier(supplier)"
-            >
-              <span class="supplier-initials">
-                {{ supplierInitials(supplier.name) }}
-              </span>
-
-              <span class="supplier-card-copy">
-                <strong>
-                  {{ supplier.name }}
-                </strong>
-                <small>
-                  {{
-                    supplier.commercialIdentifier ||
-                    'No commercial ID'
-                  }}
-                  <span v-if="supplier.country">
-                    · {{ supplier.country }}
-                  </span>
-                </small>
-              </span>
-
-              <span
-                v-if="supplier.isActive"
-                class="user-status-pill active"
-              >
-                <span class="status-dot" />
-                Active
-              </span>
-
-              <span
-                v-else
-                class="user-status-pill inactive"
-              >
-                <span class="status-dot" />
-                Inactive
-              </span>
-
-              <span
-                class="product-accordion-chevron"
-                :class="{
-                  expanded:
-                    expandedSupplierId ===
-                    supplier.id,
-                }"
-                aria-hidden="true"
-              >
-                ›
-              </span>
-            </button>
-
-            <div
-              v-if="
-                expandedSupplierId ===
-                supplier.id
-              "
-              class="supplier-card-detail"
-            >
               <div
                 v-if="detailsError"
                 class="status-message status-error"
@@ -897,118 +821,43 @@ function formatAddress(
                   </CButton>
                 </div>
               </template>
-            </div>
-          </article>
+
+          </TradingPartnerCard>
         </div>
 
         <div
           v-else
           class="user-table-shell trading-partner-table-shell"
         >
-          <div class="table-responsive">
-            <table class="user-table trading-partner-table">
-              <thead>
-                <tr>
-                  <th>Supplier</th>
-                  <th>Commercial ID</th>
-                  <th>Location / Country</th>
-                  <th>Primary Contact</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
+          <TradingPartnerTable
+            :partners="suppliers"
+            entity-label="Supplier"
+            @select="inspectSupplier"
+          />
 
-              <tbody>
-                <tr
-                  v-for="supplier in filteredSuppliers"
-                  :key="supplier.id"
-                  class="trading-partner-row"
-                  tabindex="0"
-                  @click="inspectSupplier(supplier)"
-                  @keydown.enter="inspectSupplier(supplier)"
-                >
-                  <td>
-                    <div class="trading-partner-identity">
-                      <span class="supplier-initials">
-                        {{ supplierInitials(supplier.name) }}
-                      </span>
-                      <span class="trading-partner-copy">
-                        <strong>{{ supplier.name }}</strong>
-                        <small>{{ summaryAddress(supplier) }}</small>
-                      </span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <span
-                      v-if="supplier.commercialIdentifier"
-                      class="trading-partner-id"
-                    >
-                      {{ supplier.commercialIdentifier }}
-                    </span>
-                    <span v-else>—</span>
-                  </td>
-
-                  <td>
-                    <span class="trading-partner-stack">
-                      <strong>
-                        {{ supplier.country || 'Not set' }}
-                      </strong>
-                      <small>
-                        {{
-                          [
-                            supplier.city,
-                            supplier.stateOrProvince,
-                          ].filter(Boolean).join(', ') ||
-                          '—'
-                        }}
-                      </small>
-                    </span>
-                  </td>
-
-                  <td>
-                    <span class="trading-partner-stack">
-                      <strong>
-                        {{ supplier.contactName || 'Not set' }}
-                      </strong>
-                      <small>
-                        {{ supplier.phone || supplier.email || '—' }}
-                      </small>
-                    </span>
-                  </td>
-
-                  <td>
-                    <span
-                      v-if="supplier.isActive"
-                      class="user-status-pill active"
-                    >
-                      <span class="status-dot" />
-                      Active
-                    </span>
-                    <span
-                      v-else
-                      class="user-status-pill inactive"
-                    >
-                      <span class="status-dot" />
-                      Inactive
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="trading-partner-table-footer">
-            <span>
-              Showing 1–{{ filteredSuppliers.length }}
-              of {{ filteredSuppliers.length }}
-              trading partners
-            </span>
-            <span>
-              Click any row to inspect or edit supplier details
-            </span>
-          </div>
+          <TradingPartnerPager
+            :page="page"
+            :page-size="pageSize"
+            :total-count="totalCount"
+            :total-pages="totalPages"
+            @update:page="page = $event"
+            @update:page-size="
+              pageSize = $event
+            "
+          />
         </div>
       </section>
+      <TradingPartnerPager
+        v-if="isCompact"
+        :page="page"
+        :page-size="pageSize"
+        :total-count="totalCount"
+        :total-pages="totalPages"
+        @update:page="page = $event"
+        @update:page-size="
+          pageSize = $event
+        "
+      />
 
 
     </div>
