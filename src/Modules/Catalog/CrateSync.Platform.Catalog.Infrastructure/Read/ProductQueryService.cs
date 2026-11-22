@@ -18,7 +18,11 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
                             SELECT
                                 p.Id,
                                 p.Name,
-                                p.IsActive
+                                p.IsActive,
+                                p.CustomsTariffCode,
+                                p.ScientificName,
+                                p.RegulatoryCategory,
+                                p.DefaultUnitOfMeasure
                             FROM catalog.Products p
                             WHERE
                                 p.TenantId = @TenantId
@@ -67,6 +71,10 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
             product.Id,
             product.Name,
             product.IsActive,
+            product.CustomsTariffCode,
+            product.ScientificName,
+            product.RegulatoryCategory,
+            product.DefaultUnitOfMeasure,
             varieties);
     }
 
