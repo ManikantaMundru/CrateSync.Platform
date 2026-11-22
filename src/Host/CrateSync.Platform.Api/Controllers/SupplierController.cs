@@ -102,14 +102,20 @@ namespace CrateSync.Platform.Api.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType<IReadOnlyCollection<SupplierSummaryResponse>>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> Search(
             [FromQuery] string? search,
             [FromQuery] bool? isActive,
-            CancellationToken cancellationToken)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 25,
+            CancellationToken cancellationToken = default)
         {
             var result = await _sender.Send(
-                new SearchSuppliersQuery(search, isActive),
+                new SearchSuppliersQuery(
+                    search,
+                    isActive,
+                    page,
+                    pageSize),
                 cancellationToken);
 
             return Ok(result);
