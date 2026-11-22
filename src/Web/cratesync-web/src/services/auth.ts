@@ -31,6 +31,17 @@ export const authService = {
     return userManager.getUser()
   },
 
+  onUserLoaded(
+    callback: (user: User) => void,
+  ): () => void {
+    userManager.events.addUserLoaded(callback)
+
+    return () =>
+      userManager.events.removeUserLoaded(
+        callback,
+      )
+  },
+
   async getValidUser(): Promise<User | null> {
     const user = await userManager.getUser()
 
