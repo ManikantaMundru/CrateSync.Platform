@@ -21,7 +21,6 @@ internal sealed class SearchShipmentsQueryHandler(
             request.SearchTerm,
             request.Status,
             request.SupplierId,
-            request.WarehouseId,
             cancellationToken);
     }
 }
