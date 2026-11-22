@@ -14,14 +14,14 @@ public sealed class InboundReceiptJourneyTests(
     CustomWebApplicationFactory factory)
 {
     [Fact]
-    public async Task ReceivedInboundShipment_ShouldIncreaseInventoryAndExposeReceivedMovement()
+    public async Task InboundShipment_ShouldSplitReceivedStockAcrossWarehouses()
     {
-        // Arrange
         await factory.ResetAsync();
 
         using var client = factory.CreateClient();
 
-        var warehouseId = Guid.NewGuid();
+        var warehouseAId = Guid.NewGuid();
+        var warehouseBId = Guid.NewGuid();
         var productId = Guid.NewGuid();
         var productVarietyId = Guid.NewGuid();
 
@@ -30,7 +30,6 @@ public sealed class InboundReceiptJourneyTests(
                 "/api/InboundShipment",
                 new CreateInboundShipmentRequest(
                     Guid.NewGuid(),
-                    warehouseId,
                     $"TRACK-{Guid.NewGuid():N}",
                     "ZA",
                     DateTimeOffset.UtcNow.AddDays(5)));
@@ -63,7 +62,6 @@ public sealed class InboundReceiptJourneyTests(
                 .ReadFromJsonAsync<AddShipmentLineResponse>())!
             .Id;
 
-        // Act
         (await client.PatchAsync(
             $"/api/InboundShipment/{shipmentId}/ship",
             null)).EnsureSuccessStatusCode();
@@ -72,15 +70,28 @@ public sealed class InboundReceiptJourneyTests(
             $"/api/InboundShipment/{shipmentId}/arrive",
             null)).EnsureSuccessStatusCode();
 
-        var receive =
+        var receiveA =
             await client.PostAsJsonAsync(
                 $"/api/InboundShipment/{shipmentId}/receive",
                 new ReceiveShipmentRequest(
+                    Guid.NewGuid(),
                     lineId,
-                    40));
+                    warehouseAId,
+                    15));
 
-        // Assert
-        receive.StatusCode.ShouldBe(
+        receiveA.StatusCode.ShouldBe(
+            HttpStatusCode.NoContent);
+
+        var receiveB =
+            await client.PostAsJsonAsync(
+                $"/api/InboundShipment/{shipmentId}/receive",
+                new ReceiveShipmentRequest(
+                    Guid.NewGuid(),
+                    lineId,
+                    warehouseBId,
+                    25));
+
+        receiveB.StatusCode.ShouldBe(
             HttpStatusCode.NoContent);
 
         var shipment =
@@ -90,28 +101,31 @@ public sealed class InboundReceiptJourneyTests(
         shipment.ShouldNotBeNull();
         shipment.Status.ShouldBe("Received");
         shipment.Lines.Single().ReceivedQuantity.ShouldBe(40);
+        shipment.Receipts.ShouldNotBeNull();
+        shipment.Receipts.Count.ShouldBe(2);
+        shipment.Receipts.ShouldContain(
+            x =>
+                x.WarehouseId == warehouseAId &&
+                x.Quantity == 15);
+        shipment.Receipts.ShouldContain(
+            x =>
+                x.WarehouseId == warehouseBId &&
+                x.Quantity == 25);
 
-        var stock =
+        var stockA =
             await JourneyTestData.GetStockAsync(
                 client,
-                warehouseId,
+                warehouseAId,
                 productVarietyId);
 
-        stock.OnHand.ShouldBe(40);
-        stock.Reserved.ShouldBe(0);
-        stock.Available.ShouldBe(40);
+        stockA.OnHand.ShouldBe(15);
 
-        var movementsResponse =
-            await client.GetAsync(
-                $"/api/inventory/movements?warehouseId={warehouseId}&productVarietyId={productVarietyId}");
+        var stockB =
+            await JourneyTestData.GetStockAsync(
+                client,
+                warehouseBId,
+                productVarietyId);
 
-        movementsResponse.StatusCode.ShouldBe(
-            HttpStatusCode.OK);
-
-        var movementJson =
-            await movementsResponse.Content.ReadAsStringAsync();
-
-        movementJson.ShouldContain("Received");
-        movementJson.ShouldContain(shipmentId.ToString());
+        stockB.OnHand.ShouldBe(25);
     }
 }
