@@ -16,7 +16,9 @@ const userManager = new UserManager({
   response_type: 'code',
   scope:
     'openid profile email cratesync.identity cratesync.api',
-  automaticSilentRenew: false,
+  automaticSilentRenew: true,
+  silent_redirect_uri:
+    `${window.location.origin}/auth/silent-callback`,
   monitorSession: true,
   loadUserInfo: false,
   userStore: new WebStorageStateStore({
@@ -27,6 +29,28 @@ const userManager = new UserManager({
 export const authService = {
   getUser(): Promise<User | null> {
     return userManager.getUser()
+  },
+
+  async getValidUser(): Promise<User | null> {
+    const user = await userManager.getUser()
+
+    if (
+      user &&
+      !user.expired &&
+      (user.expires_in ?? 0) > 30
+    ) {
+      return user
+    }
+
+    try {
+      return await userManager.signinSilent()
+    } catch {
+      return user
+    }
+  },
+
+  completeSilentLogin(): Promise<User> {
+    return userManager.signinSilentCallback()
   },
 
   login(returnPath = '/'): Promise<void> {
