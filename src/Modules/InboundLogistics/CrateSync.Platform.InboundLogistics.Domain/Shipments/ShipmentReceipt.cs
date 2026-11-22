@@ -9,18 +9,25 @@ public sealed class ShipmentReceipt : Entity<ShipmentReceiptId>
     internal ShipmentReceipt(
         ShipmentReceiptId id,
         ShipmentLineId shipmentLineId,
+        Guid warehouseId,
         Guid productVarietyId,
         int quantity,
         DateTimeOffset receivedAtUtc)
         : base(id)
     {
+        if (warehouseId == Guid.Empty)
+            throw new ArgumentException("Warehouse ID cannot be empty.", nameof(warehouseId));
+
         ShipmentLineId = shipmentLineId;
+        WarehouseId = warehouseId;
         ProductVarietyId = productVarietyId;
         Quantity = quantity;
         ReceivedAtUtc = receivedAtUtc;
     }
 
     public ShipmentLineId ShipmentLineId { get; private set; }
+
+    public Guid WarehouseId { get; private set; }
 
     public Guid ProductVarietyId { get; private set; }
 
