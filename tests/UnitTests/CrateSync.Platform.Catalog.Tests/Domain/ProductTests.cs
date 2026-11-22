@@ -147,6 +147,35 @@ public sealed class ProductTests
     }
 
     [Fact]
+    public void DeactivateVariety_Should_Preserve_Variety_And_Mark_It_Inactive()
+    {
+        var product = Product.Create(Guid.NewGuid(), "Apple", Now);
+        var varietyId = product.AddVariety("Gala", Now);
+
+        product.DeactivateVariety(varietyId);
+
+        var variety = product.Varieties.ShouldHaveSingleItem();
+
+        variety.Id.ShouldBe(varietyId);
+        variety.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ActivateVariety_Should_Reactivate_Existing_Variety()
+    {
+        var product = Product.Create(Guid.NewGuid(), "Apple", Now);
+        var varietyId = product.AddVariety("Gala", Now);
+
+        product.DeactivateVariety(varietyId);
+        product.ActivateVariety(varietyId);
+
+        product.Varieties
+            .ShouldHaveSingleItem()
+            .IsActive
+            .ShouldBeTrue();
+    }
+
+    [Fact]
     public void Deactivate_Should_Mark_Product_Inactive()
     {
         var product = Product.Create(Guid.NewGuid(), "Apple", Now);

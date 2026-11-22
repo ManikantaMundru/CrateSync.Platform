@@ -1884,3 +1884,221 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+
+.catalog-master-detail {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.15fr)
+    minmax(360px, 0.85fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.catalog-list-panel {
+  min-width: 0;
+}
+
+.catalog-detail-panel {
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #d9e2df;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.catalog-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid #e8eeec;
+}
+
+.catalog-detail-header .eyebrow {
+  margin-bottom: 0.15rem;
+}
+
+.catalog-detail-header h2 {
+  margin: 0;
+  color: #101828;
+  font-size: 1.2rem;
+  font-weight: 650;
+}
+
+.catalog-detail-loading {
+  min-height: 180px;
+}
+
+.product-select-row {
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.product-select-row:hover {
+  background: #f8fafc;
+}
+
+.product-select-row.selected {
+  background: #f0f7ff;
+  box-shadow:
+    inset 3px 0 0 #5b5bd6;
+}
+
+.product-select-row:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: -2px;
+}
+
+.catalog-variety-input {
+  grid-template-columns:
+    minmax(0, 1fr) auto auto;
+}
+
+.catalog-detail-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.3rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e8eeec;
+}
+
+.catalog-detail-danger-zone strong {
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.catalog-detail-danger-zone p {
+  max-width: 34rem;
+  margin: 0.15rem 0 0;
+  color: #667085;
+  font-size: 0.75rem;
+}
+
+.saved-variety-action {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #667085;
+  background: rgba(102, 112, 133, 0.1);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.saved-variety-action:hover:not(:disabled) {
+  color: #fff;
+  background: #667085;
+}
+
+.saved-variety-action:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.variety-pill.saved.inactive
+  .saved-variety-action {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.variety-pill.saved.inactive
+  .saved-variety-action:hover:not(:disabled) {
+  color: #fff;
+  background: #2563eb;
+}
+
+[data-coreui-theme="dark"] .catalog-detail-panel {
+  background: #17221f;
+  border-color: #2b3b37;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+[data-coreui-theme="dark"] .catalog-detail-header,
+[data-coreui-theme="dark"] .catalog-detail-danger-zone {
+  border-color: #2b3b37;
+}
+
+[data-coreui-theme="dark"] .catalog-detail-header h2,
+[data-coreui-theme="dark"] .catalog-detail-danger-zone strong {
+  color: #f2f4f7;
+}
+
+[data-coreui-theme="dark"] .catalog-detail-danger-zone p {
+  color: #9caca7;
+}
+
+[data-coreui-theme="dark"] .product-select-row:hover {
+  background: #1b2824;
+}
+
+[data-coreui-theme="dark"] .product-select-row.selected {
+  background: #1d2c35;
+  box-shadow:
+    inset 3px 0 0 #818cf8;
+}
+
+@media (max-width: 1199.98px) {
+  .catalog-master-detail {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(330px, 0.9fr);
+  }
+
+  .catalog-variety-input {
+    grid-template-columns:
+      minmax(0, 1fr) auto;
+  }
+
+  .catalog-variety-input > .btn:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .catalog-master-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-detail-panel {
+    order: 2;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .catalog-detail-panel {
+    padding: 0.85rem;
+  }
+
+  .catalog-detail-header,
+  .catalog-detail-danger-zone {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .catalog-variety-input {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-variety-input > .btn:last-child {
+    grid-column: auto;
+  }
+
+  .catalog-variety-input .btn {
+    width: 100%;
+  }
+}

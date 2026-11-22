@@ -2,9 +2,11 @@ using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Catalaog;
 using CrateSync.Platform.Api.Responses.Catalog;
+using CrateSync.Platform.Catalog.Application.Products.ActivateVariety;
 using CrateSync.Platform.Catalog.Application.Products.AddVariety;
 using CrateSync.Platform.Catalog.Application.Products.CreateProduct;
 using CrateSync.Platform.Catalog.Application.Products.DeactivateProduct;
+using CrateSync.Platform.Catalog.Application.Products.DeactivateVariety;
 using CrateSync.Platform.Catalog.Application.Products.GetProduct;
 using CrateSync.Platform.Catalog.Application.Products.SearchProducts;
 using MediatR;
@@ -46,6 +48,57 @@ public sealed class ProductsController(ISender sender) : ControllerBase
         if (result.IsFailure) return this.ToProblem(result.Error);
 
         return Created($"/api/catalog/products/{productId}/varieties/{result.Value}", new AddProductVarietyResponse(result.Value));
+    }
+
+    [HttpPatch("{productId:guid}/varieties/{varietyId:guid}/deactivate")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeactivateVariety(
+        Guid productId,
+        Guid varietyId,
+        CancellationToken cancellationToken)
+    {
+        var command =
+            new DeactivateProductVarietyCommand(
+                productId,
+                varietyId);
+
+        var result =
+            await sender.Send(
+                command,
+                cancellationToken);
+
+        if (result.IsFailure)
+            return this.ToProblem(result.Error);
+
+        return NoContent();
+    }
+
+    [HttpPatch("{productId:guid}/varieties/{varietyId:guid}/activate")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ActivateVariety(
+        Guid productId,
+        Guid varietyId,
+        CancellationToken cancellationToken)
+    {
+        var command =
+            new ActivateProductVarietyCommand(
+                productId,
+                varietyId);
+
+        var result =
+            await sender.Send(
+                command,
+                cancellationToken);
+
+        if (result.IsFailure)
+            return this.ToProblem(result.Error);
+
+        return NoContent();
     }
 
     [HttpGet("{productId:guid}")]
