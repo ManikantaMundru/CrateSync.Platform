@@ -17,6 +17,13 @@ import {
   CModalTitle,
   CSpinner,
 } from '@coreui/vue'
+import {
+  createColumnHelper,
+  createPaginatedRowModel,
+  rowPaginationFeature,
+  tableFeatures,
+  useTable,
+} from '@tanstack/vue-table'
 import { apiFetch } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -109,6 +116,84 @@ const filteredUsers = computed(() => {
     return matchesSearch && matchesRole
   })
 })
+
+const userTableFeatures = tableFeatures({
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+})
+
+const userColumnHelper =
+  createColumnHelper<
+    typeof userTableFeatures,
+    OrganisationUser
+  >()
+
+const userColumns = userColumnHelper.columns([
+  userColumnHelper.accessor('userId', {
+    header: 'User',
+  }),
+  userColumnHelper.accessor('roles', {
+    header: 'Organisation role',
+  }),
+  userColumnHelper.accessor('warehouses', {
+    header: 'Warehouse access',
+  }),
+  userColumnHelper.accessor('isActive', {
+    header: 'Status',
+  }),
+  userColumnHelper.display({
+    id: 'actions',
+    header: 'Actions',
+  }),
+])
+
+const userTable = useTable({
+  key: 'organisation-users',
+  features: userTableFeatures,
+  data: filteredUsers,
+  columns: userColumns,
+  initialState: {
+    pagination: {
+      pageIndex: 0,
+      pageSize: 10,
+    },
+  },
+})
+
+const pagination = computed(
+  () => userTable.atoms.pagination.get(),
+)
+
+const pageCount = computed(
+  () => userTable.getPageCount(),
+)
+
+const firstVisibleUser = computed(() => {
+  if (filteredUsers.value.length === 0)
+    return 0
+
+  return (
+    pagination.value.pageIndex *
+      pagination.value.pageSize +
+    1
+  )
+})
+
+const lastVisibleUser = computed(() =>
+  Math.min(
+    filteredUsers.value.length,
+    (pagination.value.pageIndex + 1) *
+      pagination.value.pageSize,
+  ),
+)
+
+function changePageSize(event: Event) {
+  const value = Number(
+    (event.target as HTMLSelectElement).value,
+  )
+
+  userTable.setPageSize(value)
+}
 
 const currentUserId = computed(
   () => auth.me?.userId ?? null,
@@ -646,34 +731,37 @@ async function copyActivationLink() {
 
           <tbody>
             <tr
-              v-for="user in filteredUsers"
-              :key="user.userId"
+              v-for="row in userTable.getRowModel().rows"
+              :key="row.id"
             >
               <td data-label="User">
+                <template v-if="row.original">
+
                 <div class="user-list-identity">
                   <div class="user-list-avatar">
-                    {{ userInitials(user) }}
+                    {{ userInitials(row.original) }}
                   </div>
 
                   <div class="user-list-copy">
                     <strong>
-                      {{ user.firstName }}
-                      {{ user.lastName }}
+                      {{ row.original.firstName }}
+                      {{ row.original.lastName }}
                     </strong>
                     <small>
                       {{
-                        user.email ??
-                        user.userName
+                        row.original.email ??
+                        row.original.userName
                       }}
                     </small>
                   </div>
                 </div>
+                </template>
               </td>
 
               <td data-label="Organisation role">
                 <div class="badge-row compact-badges">
                   <span
-                    v-for="role in user.roles"
+                    v-for="role in row.original.roles"
                     :key="role"
                     class="user-role-pill"
                     :class="{
@@ -685,7 +773,7 @@ async function copyActivationLink() {
                   </span>
 
                   <span
-                    v-if="user.roles.length === 0"
+                    v-if="row.original.roles.length === 0"
                     class="muted-value"
                   >
                     —
@@ -695,10 +783,10 @@ async function copyActivationLink() {
 
               <td data-label="Warehouse access">
                 <span
-                  v-if="warehouseAccessLabel(user)"
+                  v-if="warehouseAccessLabel(row.original)"
                   class="warehouse-summary"
                 >
-                  {{ warehouseAccessLabel(user) }}
+                  {{ warehouseAccessLabel(row.original) }}
                 </span>
 
                 <div
@@ -706,7 +794,7 @@ async function copyActivationLink() {
                   class="warehouse-list-compact"
                 >
                   <span
-                    v-for="access in user.warehouses"
+                    v-for="access in row.original.warehouses"
                     :key="access.warehouseId"
                   >
                     {{
@@ -724,7 +812,7 @@ async function copyActivationLink() {
 
               <td data-label="Status">
                 <span
-                  v-if="!user.isActive"
+                  v-if="!row.original.isActive"
                   class="user-status-pill inactive"
                 >
                   <span class="status-dot" />
@@ -732,7 +820,7 @@ async function copyActivationLink() {
                 </span>
 
                 <span
-                  v-else-if="user.requiresActivation"
+                  v-else-if="row.original.requiresActivation"
                   class="user-status-pill pending"
                 >
                   <span class="status-dot" />
@@ -758,7 +846,7 @@ async function copyActivationLink() {
                     variant="outline"
                     size="sm"
                     title="Edit access"
-                    @click="openEditModal(user)"
+                    @click="openEditModal(row.original)"
                   >
                     <i
                       class="button-icon cil-pencil"
@@ -767,65 +855,127 @@ async function copyActivationLink() {
                     Edit
                   </CButton>
 
-                  <details
-                    v-if="
-                      user.requiresActivation ||
-                      user.userId !== currentUserId ||
-                      !user.isActive
+                  <CButton
+                    v-if="row.original.requiresActivation"
+                    color="warning"
+                    variant="outline"
+                    size="sm"
+                    title="Generate activation link"
+                    @click="
+                      generateActivationLink(
+                        row.original,
+                      )
                     "
-                    class="user-actions-menu"
                   >
-                    <summary
-                      title="More actions"
-                      aria-label="More actions"
-                    >
-                      <i
-                        class="cil-options"
-                        aria-hidden="true"
-                      />
-                    </summary>
+                    <i
+                      class="button-icon cil-link"
+                      aria-hidden="true"
+                    />
+                    Activation
+                  </CButton>
 
-                    <div class="user-actions-popover">
-                      <button
-                        v-if="user.requiresActivation"
-                        type="button"
-                        @click="
-                          generateActivationLink(user)
-                        "
-                      >
-                        Generate activation link
-                      </button>
+                  <CButton
+                    v-if="
+                      row.original.isActive &&
+                      row.original.userId !==
+                        currentUserId
+                    "
+                    color="danger"
+                    variant="outline"
+                    size="sm"
+                    title="Deactivate user"
+                    @click="
+                      setUserActive(
+                        row.original,
+                        false,
+                      )
+                    "
+                  >
+                    <i
+                      class="button-icon cil-ban"
+                      aria-hidden="true"
+                    />
+                    Deactivate
+                  </CButton>
 
-                      <button
-                        v-if="
-                          user.isActive &&
-                          user.userId !== currentUserId
-                        "
-                        type="button"
-                        class="danger"
-                        @click="
-                          setUserActive(user, false)
-                        "
-                      >
-                        Deactivate
-                      </button>
-
-                      <button
-                        v-else-if="!user.isActive"
-                        type="button"
-                        @click="
-                          setUserActive(user, true)
-                        "
-                      >
-                        Activate
-                      </button>
-                    </div>
-                  </details>
+                  <CButton
+                    v-else-if="!row.original.isActive"
+                    color="success"
+                    variant="outline"
+                    size="sm"
+                    title="Activate user"
+                    @click="
+                      setUserActive(
+                        row.original,
+                        true,
+                      )
+                    "
+                  >
+                    <i
+                      class="button-icon cil-check-circle"
+                      aria-hidden="true"
+                    />
+                    Activate
+                  </CButton>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="user-grid-pagination">
+        <div class="pagination-summary">
+          Showing
+          <strong>{{ firstVisibleUser }}</strong>
+          –
+          <strong>{{ lastVisibleUser }}</strong>
+          of
+          <strong>{{ filteredUsers.length }}</strong>
+        </div>
+
+        <div class="pagination-controls">
+          <label class="page-size-control">
+            <span>Rows</span>
+            <select
+              :value="pagination.pageSize"
+              class="form-select form-select-sm"
+              aria-label="Rows per page"
+              @change="changePageSize"
+            >
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+            </select>
+          </label>
+
+          <span class="page-number">
+            Page
+            {{ pagination.pageIndex + 1 }}
+            of
+            {{ Math.max(pageCount, 1) }}
+          </span>
+
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            :disabled="!userTable.getCanPreviousPage()"
+            @click="userTable.previousPage()"
+          >
+            Previous
+          </CButton>
+
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            :disabled="!userTable.getCanNextPage()"
+            @click="userTable.nextPage()"
+          >
+            Next
+          </CButton>
+        </div>
       </div>
     </div>
 
