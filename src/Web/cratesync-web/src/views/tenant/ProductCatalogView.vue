@@ -481,6 +481,53 @@ async function saveVarieties() {
   }
 }
 
+async function setVarietyActive(
+  variety: ProductVariety,
+  active: boolean,
+) {
+  if (!selectedProduct.value)
+    return
+
+  if (
+    !active &&
+    !window.confirm(
+      `Deactivate ${variety.name}? Historical sales and inventory references will be preserved.`,
+    )
+  ) {
+    return
+  }
+
+  saving.value = true
+  detailsError.value = null
+  success.value = null
+
+  try {
+    await apiFetch(
+      `/api/catalog/products/${selectedProduct.value.id}/varieties/${variety.id}/${active ? 'activate' : 'deactivate'}`,
+      {
+        method: 'PATCH',
+      },
+    )
+
+    success.value =
+      active
+        ? `${variety.name} reactivated.`
+        : `${variety.name} deactivated.`
+
+    await Promise.all([
+      refreshSelectedProduct(),
+      loadProducts(),
+    ])
+  } catch (exception) {
+    detailsError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to update variety status.'
+  } finally {
+    saving.value = false
+  }
+}
+
 async function deactivateProduct() {
   if (!selectedProduct.value)
     return
@@ -945,6 +992,38 @@ async function deactivateProduct() {
                       : 'Inactive'
                   "
                 />
+
+                <button
+                  v-if="
+                    canManageCatalog &&
+                    selectedProduct.isActive
+                  "
+                  type="button"
+                  class="saved-variety-action"
+                  :title="
+                    variety.isActive
+                      ? 'Deactivate variety'
+                      : 'Reactivate variety'
+                  "
+                  :aria-label="
+                    variety.isActive
+                      ? `Deactivate ${variety.name}`
+                      : `Reactivate ${variety.name}`
+                  "
+                  :disabled="saving"
+                  @click="
+                    setVarietyActive(
+                      variety,
+                      !variety.isActive,
+                    )
+                  "
+                >
+                  {{
+                    variety.isActive
+                      ? '×'
+                      : '↻'
+                  }}
+                </button>
               </span>
             </div>
 
