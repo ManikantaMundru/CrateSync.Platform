@@ -21,20 +21,15 @@ import {
 import { apiFetch } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { countries } from '@/data/countries'
+import TradingPartnerTable from '@/components/trading-partners/TradingPartnerTable.vue'
+import TradingPartnerCard from '@/components/trading-partners/TradingPartnerCard.vue'
+import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
+import type {
+  PagedResponse,
+  TradingPartnerSummary,
+} from '@/types/tradingPartners'
 
-interface CustomerSummary {
-  id: string
-  name: string
-  commercialIdentifier: string | null
-  isActive: boolean
-  addressLine1: string | null
-  city: string | null
-  stateOrProvince: string | null
-  country: string | null
-  contactName: string | null
-  email: string | null
-  phone: string | null
-}
+type CustomerSummary = TradingPartnerSummary
 
 interface CustomerAddress {
   line1: string
@@ -62,6 +57,11 @@ interface CreateCustomerResponse {
 
 const auth = useAuthStore()
 const customers = ref<CustomerSummary[]>([])
+const page = ref(1)
+const pageSize = ref(10)
+const totalCount = ref(0)
+const totalPages = ref(0)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 const selectedCustomer = ref<CustomerDetails | null>(null)
 const expandedCustomerId = ref<string | null>(null)
 const isCompact = ref(false)
@@ -102,69 +102,30 @@ const canManageCustomers = computed(
     ) === true,
 )
 
-const filteredCustomers = computed(() => {
-  const term = search.value.trim().toLowerCase()
+const filteredCustomers = computed(
+  () => customers.value,
+)
 
-  return customers.value.filter((customer) => {
-    const searchable = [
-      customer.name,
-      customer.commercialIdentifier,
-      customer.addressLine1,
-      customer.city,
-      customer.stateOrProvince,
-      customer.country,
-      customer.contactName,
-      customer.email,
-      customer.phone,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
+watch(
+  [statusFilter, pageSize],
+  () => {
+    page.value = 1
+    void loadCustomers()
+  },
+)
 
-    const matchesSearch =
-      !term || searchable.includes(term)
-
-    const matchesStatus =
-      !statusFilter.value ||
-      (statusFilter.value === 'active'
-        ? customer.isActive
-        : !customer.isActive)
-
-    return matchesSearch && matchesStatus
-  })
+watch(page, () => {
+  void loadCustomers()
 })
 
-watch(filteredCustomers, async (items) => {
-  if (items.length === 0) {
-    selectedCustomer.value = null
-    expandedCustomerId.value = null
-    return
-  }
+watch(search, () => {
+  if (searchTimer)
+    clearTimeout(searchTimer)
 
-  if (isCompact.value) {
-    if (
-      expandedCustomerId.value &&
-      !items.some(
-        (customer) =>
-          customer.id === expandedCustomerId.value,
-      )
-    ) {
-      expandedCustomerId.value = null
-      selectedCustomer.value = null
-    }
-
-    return
-  }
-
-  if (
-    !selectedCustomer.value ||
-    !items.some(
-      (customer) =>
-        customer.id === selectedCustomer.value?.id,
-    )
-  ) {
-    await selectCustomer(items[0]!)
-  }
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    void loadCustomers()
+  }, 250)
 })
 
 async function loadCustomers() {
@@ -172,18 +133,50 @@ async function loadCustomers() {
   error.value = null
 
   try {
-    customers.value =
-      await apiFetch<CustomerSummary[]>(
-        '/api/Customer',
+    const params = new URLSearchParams({
+      page: String(page.value),
+      pageSize: String(pageSize.value),
+    })
+
+    const term = search.value.trim()
+    if (term)
+      params.set('search', term)
+
+    if (statusFilter.value)
+      params.set(
+        'isActive',
+        statusFilter.value === 'active'
+          ? 'true'
+          : 'false',
       )
+
+    const result =
+      await apiFetch<PagedResponse<CustomerSummary>>(
+        `/api/Customer?${params.toString()}`,
+      )
+
+    customers.value = result.items
+    totalCount.value = result.totalCount
+    totalPages.value = result.totalPages
+
+    if (
+      result.totalPages > 0 &&
+      page.value > result.totalPages
+    ) {
+      page.value = result.totalPages
+      return
+    }
 
     if (
       !isCompact.value &&
-      filteredCustomers.value.length > 0
+      customers.value.length > 0
     ) {
       await selectCustomer(
-        filteredCustomers.value[0]!,
+        customers.value[0]!,
       )
+    } else if (customers.value.length === 0) {
+      selectedCustomer.value = null
+      expandedCustomerId.value = null
     }
   } catch (exception) {
     error.value =
@@ -261,9 +254,9 @@ function syncLayout(matches: boolean) {
 
   expandedCustomerId.value = null
 
-  if (filteredCustomers.value.length > 0) {
+  if (customers.value.length > 0) {
     void selectCustomer(
-      filteredCustomers.value[0]!,
+      customers.value[0]!,
     )
   }
 }
@@ -292,6 +285,9 @@ onBeforeUnmount(() => {
     'change',
     handleMediaChange,
   )
+
+  if (searchTimer)
+    clearTimeout(searchTimer)
 })
 
 function resetForm() {
@@ -521,28 +517,6 @@ async function deactivateCustomer() {
   }
 }
 
-function customerInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-}
-
-function summaryAddress(
-  customer: CustomerSummary,
-) {
-  return [
-    customer.addressLine1,
-    customer.city,
-    customer.stateOrProvince,
-    customer.country,
-  ]
-    .filter(Boolean)
-    .join(', ') || 'No address configured'
-}
-
 async function inspectCustomer(
   customer: CustomerSummary,
 ) {
@@ -657,10 +631,7 @@ function formatAddress(
         </div>
 
         <span class="customer-result-count">
-          {{ filteredCustomers.length }}
-          of
-          {{ customers.length }}
-          customers
+          {{ totalCount }} customers
         </span>
       </div>
     </div>
@@ -675,7 +646,7 @@ function formatAddress(
 
     <CCard
       v-else-if="
-        filteredCustomers.length === 0
+        customers.length === 0
       "
       class="empty-state"
     >
@@ -706,82 +677,18 @@ function formatAddress(
       <section class="customer-list-panel">
         <div
           v-if="isCompact"
-          class="customer-card-list"
+          class="customer-card-list trading-partner-card-list"
         >
-          <article
-            v-for="customer in filteredCustomers"
+          <TradingPartnerCard
+            v-for="customer in customers"
             :key="customer.id"
-            class="customer-card"
-            :class="{
-              expanded:
-                expandedCustomerId ===
-                customer.id,
-            }"
+            :partner="customer"
+            :expanded="
+              expandedCustomerId ===
+              customer.id
+            "
+            @toggle="toggleCustomer(customer)"
           >
-            <button
-              type="button"
-              class="customer-card-trigger"
-              :aria-expanded="
-                expandedCustomerId ===
-                customer.id
-              "
-              @click="toggleCustomer(customer)"
-            >
-              <span class="customer-initials">
-                {{ customerInitials(customer.name) }}
-              </span>
-
-              <span class="customer-card-copy">
-                <strong>
-                  {{ customer.name }}
-                </strong>
-                <small>
-                  {{
-                    customer.commercialIdentifier ||
-                    'No commercial ID'
-                  }}
-                  <span v-if="customer.country">
-                    · {{ customer.country }}
-                  </span>
-                </small>
-              </span>
-
-              <span
-                v-if="customer.isActive"
-                class="user-status-pill active"
-              >
-                <span class="status-dot" />
-                Active
-              </span>
-
-              <span
-                v-else
-                class="user-status-pill inactive"
-              >
-                <span class="status-dot" />
-                Inactive
-              </span>
-
-              <span
-                class="product-accordion-chevron"
-                :class="{
-                  expanded:
-                    expandedCustomerId ===
-                    customer.id,
-                }"
-                aria-hidden="true"
-              >
-                ›
-              </span>
-            </button>
-
-            <div
-              v-if="
-                expandedCustomerId ===
-                customer.id
-              "
-              class="customer-card-detail"
-            >
               <div
                 v-if="detailsError"
                 class="status-message status-error"
@@ -877,118 +784,43 @@ function formatAddress(
                   </CButton>
                 </div>
               </template>
-            </div>
-          </article>
+
+          </TradingPartnerCard>
         </div>
 
         <div
           v-else
           class="user-table-shell trading-partner-table-shell"
         >
-          <div class="table-responsive">
-            <table class="user-table trading-partner-table">
-              <thead>
-                <tr>
-                  <th>Customer</th>
-                  <th>Commercial ID</th>
-                  <th>Location / Country</th>
-                  <th>Primary Contact</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
+          <TradingPartnerTable
+            :partners="customers"
+            entity-label="Customer"
+            @select="inspectCustomer"
+          />
 
-              <tbody>
-                <tr
-                  v-for="customer in filteredCustomers"
-                  :key="customer.id"
-                  class="trading-partner-row"
-                  tabindex="0"
-                  @click="inspectCustomer(customer)"
-                  @keydown.enter="inspectCustomer(customer)"
-                >
-                  <td>
-                    <div class="trading-partner-identity">
-                      <span class="customer-initials">
-                        {{ customerInitials(customer.name) }}
-                      </span>
-                      <span class="trading-partner-copy">
-                        <strong>{{ customer.name }}</strong>
-                        <small>{{ summaryAddress(customer) }}</small>
-                      </span>
-                    </div>
-                  </td>
-
-                  <td>
-                    <span
-                      v-if="customer.commercialIdentifier"
-                      class="trading-partner-id"
-                    >
-                      {{ customer.commercialIdentifier }}
-                    </span>
-                    <span v-else>—</span>
-                  </td>
-
-                  <td>
-                    <span class="trading-partner-stack">
-                      <strong>
-                        {{ customer.country || 'Not set' }}
-                      </strong>
-                      <small>
-                        {{
-                          [
-                            customer.city,
-                            customer.stateOrProvince,
-                          ].filter(Boolean).join(', ') ||
-                          '—'
-                        }}
-                      </small>
-                    </span>
-                  </td>
-
-                  <td>
-                    <span class="trading-partner-stack">
-                      <strong>
-                        {{ customer.contactName || 'Not set' }}
-                      </strong>
-                      <small>
-                        {{ customer.phone || customer.email || '—' }}
-                      </small>
-                    </span>
-                  </td>
-
-                  <td>
-                    <span
-                      v-if="customer.isActive"
-                      class="user-status-pill active"
-                    >
-                      <span class="status-dot" />
-                      Active
-                    </span>
-                    <span
-                      v-else
-                      class="user-status-pill inactive"
-                    >
-                      <span class="status-dot" />
-                      Inactive
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="trading-partner-table-footer">
-            <span>
-              Showing 1–{{ filteredCustomers.length }}
-              of {{ filteredCustomers.length }}
-              trading partners
-            </span>
-            <span>
-              Click any row to inspect or edit customer details
-            </span>
-          </div>
+          <TradingPartnerPager
+            :page="page"
+            :page-size="pageSize"
+            :total-count="totalCount"
+            :total-pages="totalPages"
+            @update:page="page = $event"
+            @update:page-size="
+              pageSize = $event
+            "
+          />
         </div>
       </section>
+      <TradingPartnerPager
+        v-if="isCompact"
+        :page="page"
+        :page-size="pageSize"
+        :total-count="totalCount"
+        :total-pages="totalPages"
+        @update:page="page = $event"
+        @update:page-size="
+          pageSize = $event
+        "
+      />
 
 
     </div>
