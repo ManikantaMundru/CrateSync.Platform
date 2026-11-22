@@ -665,9 +665,9 @@ async function deactivateProduct() {
 
 <template>
   <section class="page-stack users-page">
-    <div class="page-heading">
+    <div class="page-heading catalog-page-heading">
       <div>
-        <p class="eyebrow">
+        <p class="eyebrow catalog-page-eyebrow">
           Catalog
         </p>
         <h1>Products</h1>
@@ -677,6 +677,22 @@ async function deactivateProduct() {
           inventory.
         </p>
       </div>
+
+      <CButton
+        v-if="
+          isCompactCatalog &&
+          canManageCatalog
+        "
+        color="primary"
+        class="catalog-compact-add-button"
+        @click="openCreateModal"
+      >
+        <i
+          class="button-icon cil-plus"
+          aria-hidden="true"
+        />
+        Add product
+      </CButton>
     </div>
 
     <div
@@ -693,8 +709,8 @@ async function deactivateProduct() {
       {{ success }}
     </div>
 
-    <div class="tenant-toolbar users-toolbar">
-      <div>
+    <div class="tenant-toolbar users-toolbar catalog-toolbar">
+      <div class="catalog-toolbar-copy">
         <h2>Product catalog</h2>
         <p>
           {{ filteredProducts.length }}
@@ -704,8 +720,8 @@ async function deactivateProduct() {
         </p>
       </div>
 
-      <div class="users-toolbar-actions">
-        <div class="search-field">
+      <div class="users-toolbar-actions catalog-toolbar-actions">
+        <div class="search-field catalog-search-field">
           <i
             class="cil-search"
             aria-hidden="true"
@@ -719,7 +735,48 @@ async function deactivateProduct() {
           >
         </div>
 
+        <div
+          v-if="isCompactCatalog"
+          class="catalog-compact-filter-row"
+        >
+          <div
+            class="catalog-status-segmented"
+            role="group"
+            aria-label="Filter product status"
+          >
+            <button
+              type="button"
+              :class="{ active: statusFilter === '' }"
+              @click="statusFilter = ''"
+            >
+              All
+            </button>
+            <button
+              type="button"
+              :class="{ active: statusFilter === 'active' }"
+              @click="statusFilter = 'active'"
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              :class="{ active: statusFilter === 'inactive' }"
+              @click="statusFilter = 'inactive'"
+            >
+              Inactive
+            </button>
+          </div>
+
+          <span class="catalog-compact-count">
+            {{ filteredProducts.length }}
+            of
+            {{ products.length }}
+            products
+          </span>
+        </div>
+
         <select
+          v-else
           v-model="statusFilter"
           class="form-select user-role-filter"
           aria-label="Filter product status"
@@ -736,7 +793,10 @@ async function deactivateProduct() {
         </select>
 
         <CButton
-          v-if="canManageCatalog"
+          v-if="
+            !isCompactCatalog &&
+            canManageCatalog
+          "
           color="primary"
           class="users-add-button"
           @click="openCreateModal"
@@ -789,8 +849,121 @@ async function deactivateProduct() {
       class="catalog-master-detail"
     >
       <section class="catalog-list-panel">
-        <div class="user-table-shell">
-          <div class="table-responsive">
+        <div class="user-table-shell catalog-list-shell">
+          <div
+            v-if="isCompactCatalog"
+            class="product-card-list"
+          >
+            <article
+              v-for="row in visibleProductRows"
+              :key="row.id"
+              class="product-accordion-card"
+              :class="{
+                expanded:
+                  isProductExpanded(
+                    row.original.id,
+                  ),
+              }"
+            >
+              <button
+                type="button"
+                class="product-card-trigger"
+                :aria-expanded="
+                  isProductExpanded(
+                    row.original.id,
+                  )
+                "
+                @click="
+                  toggleProduct(row.original)
+                "
+              >
+                <span class="product-icon">
+                  <i
+                    class="cil-leaf"
+                    aria-hidden="true"
+                  />
+                </span>
+
+                <span class="product-card-copy">
+                  <strong>
+                    {{ row.original.name }}
+                  </strong>
+                  <small>
+                    {{ row.original.varietyCount }}
+                    {{
+                      row.original.varietyCount === 1
+                        ? 'variety'
+                        : 'varieties'
+                    }}
+                  </small>
+                </span>
+
+                <span
+                  v-if="row.original.isActive"
+                  class="user-status-pill active"
+                >
+                  <span class="status-dot" />
+                  Active
+                </span>
+
+                <span
+                  v-else
+                  class="user-status-pill inactive"
+                >
+                  <span class="status-dot" />
+                  Inactive
+                </span>
+
+                <span
+                  class="product-accordion-chevron"
+                  :class="{
+                    expanded:
+                      isProductExpanded(
+                        row.original.id,
+                      ),
+                  }"
+                  aria-hidden="true"
+                >
+                  ›
+                </span>
+              </button>
+
+              <ProductCatalogDetailPanel
+                v-if="
+                  isProductExpanded(
+                    row.original.id,
+                  )
+                "
+                compact
+                :product="selectedProduct"
+                :loading="detailsLoading"
+                :error="detailsError"
+                :can-manage-catalog="canManageCatalog"
+                :saving="saving"
+                :variety-name="varietyName"
+                :draft-varieties="draftVarieties"
+                @update:variety-name="
+                  varietyName = $event
+                "
+                @queue-variety="queueVarietyInput"
+                @remove-draft-variety="
+                  removeDraftVariety
+                "
+                @save-varieties="saveVarieties"
+                @set-variety-active="
+                  setVarietyActive
+                "
+                @deactivate-product="
+                  deactivateProduct
+                "
+              />
+            </article>
+          </div>
+
+          <div
+            v-else
+            class="table-responsive"
+          >
             <table class="user-table product-table">
               <thead>
                 <tr>
@@ -801,135 +974,73 @@ async function deactivateProduct() {
               </thead>
 
               <tbody>
-                <template
+                <tr
                   v-for="row in visibleProductRows"
                   :key="row.id"
-                >
-                  <tr
-                    class="product-select-row"
-                    :class="{
-                      selected:
-                        isProductExpanded(
-                          row.original.id,
-                        ),
-                    }"
-                    tabindex="0"
-                    :aria-expanded="
-                      isCompactCatalog
-                        ? isProductExpanded(
-                            row.original.id,
-                          )
-                        : undefined
-                    "
-                    @click="
-                      toggleProduct(row.original)
-                    "
-                    @keydown.enter="
-                      toggleProduct(row.original)
-                    "
-                  >
-                    <td data-label="Product">
-                      <div class="product-identity">
-                        <div class="product-icon">
-                          <i
-                            class="cil-leaf"
-                            aria-hidden="true"
-                          />
-                        </div>
-
-                        <strong>
-                          {{ row.original.name }}
-                        </strong>
-
-                        <span
-                          class="product-accordion-chevron"
-                          :class="{
-                            expanded:
-                              isProductExpanded(
-                                row.original.id,
-                              ),
-                          }"
-                          aria-hidden="true"
-                        >
-                          ›
-                        </span>
-                      </div>
-                    </td>
-
-                    <td data-label="Varieties">
-                      <span class="product-variety-count">
-                        {{ row.original.varietyCount }}
-                        {{
-                          row.original.varietyCount === 1
-                            ? 'variety'
-                            : 'varieties'
-                        }}
-                      </span>
-                    </td>
-
-                    <td data-label="Status">
-                      <span
-                        v-if="row.original.isActive"
-                        class="user-status-pill active"
-                      >
-                        <span class="status-dot" />
-                        Active
-                      </span>
-
-                      <span
-                        v-else
-                        class="user-status-pill inactive"
-                      >
-                        <span class="status-dot" />
-                        Inactive
-                      </span>
-                    </td>
-                  </tr>
-
-                  <tr
-                    v-if="
-                      isCompactCatalog &&
+                  class="product-select-row"
+                  :class="{
+                    selected:
                       isProductExpanded(
                         row.original.id,
-                      )
-                    "
-                    class="product-accordion-detail-row"
-                  >
-                    <td
-                      colspan="3"
-                      class="product-accordion-detail-cell"
+                      ),
+                  }"
+                  tabindex="0"
+                  @click="
+                    toggleProduct(row.original)
+                  "
+                  @keydown.enter="
+                    toggleProduct(row.original)
+                  "
+                >
+                  <td data-label="Product">
+                    <div class="product-identity">
+                      <div class="product-icon">
+                        <i
+                          class="cil-leaf"
+                          aria-hidden="true"
+                        />
+                      </div>
+
+                      <strong>
+                        {{ row.original.name }}
+                      </strong>
+                    </div>
+                  </td>
+
+                  <td data-label="Varieties">
+                    <span class="product-variety-count">
+                      {{ row.original.varietyCount }}
+                      {{
+                        row.original.varietyCount === 1
+                          ? 'variety'
+                          : 'varieties'
+                      }}
+                    </span>
+                  </td>
+
+                  <td data-label="Status">
+                    <span
+                      v-if="row.original.isActive"
+                      class="user-status-pill active"
                     >
-                      <ProductCatalogDetailPanel
-                        :product="selectedProduct"
-                        :loading="detailsLoading"
-                        :error="detailsError"
-                        :can-manage-catalog="canManageCatalog"
-                        :saving="saving"
-                        :variety-name="varietyName"
-                        :draft-varieties="draftVarieties"
-                        @update:variety-name="
-                          varietyName = $event
-                        "
-                        @queue-variety="queueVarietyInput"
-                        @remove-draft-variety="
-                          removeDraftVariety
-                        "
-                        @save-varieties="saveVarieties"
-                        @set-variety-active="
-                          setVarietyActive
-                        "
-                        @deactivate-product="
-                          deactivateProduct
-                        "
-                      />
-                    </td>
-                  </tr>
-                </template>
+                      <span class="status-dot" />
+                      Active
+                    </span>
+
+                    <span
+                      v-else
+                      class="user-status-pill inactive"
+                    >
+                      <span class="status-dot" />
+                      Inactive
+                    </span>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
 
-          <div class="user-grid-pagination">
+          <div class="user-grid-pagination catalog-pagination">
             <div class="pagination-summary">
               Showing
               <strong>
@@ -946,7 +1057,10 @@ async function deactivateProduct() {
             </div>
 
             <div class="pagination-controls">
-              <label class="page-size-control">
+              <label
+                v-if="!isCompactCatalog"
+                class="page-size-control"
+              >
                 <span>Rows</span>
                 <select
                   :value="pagination.pageSize"
@@ -967,33 +1081,40 @@ async function deactivateProduct() {
                 {{ Math.max(pageCount, 1) }}
               </span>
 
-              <CButton
-                color="secondary"
-                variant="outline"
-                size="sm"
-                :disabled="
-                  !productTable.getCanPreviousPage()
-                "
-                @click="
-                  productTable.previousPage()
+              <template
+                v-if="
+                  !isCompactCatalog ||
+                  pageCount > 1
                 "
               >
-                Previous
-              </CButton>
+                <CButton
+                  color="secondary"
+                  variant="outline"
+                  size="sm"
+                  :disabled="
+                    !productTable.getCanPreviousPage()
+                  "
+                  @click="
+                    productTable.previousPage()
+                  "
+                >
+                  Previous
+                </CButton>
 
-              <CButton
-                color="secondary"
-                variant="outline"
-                size="sm"
-                :disabled="
-                  !productTable.getCanNextPage()
-                "
-                @click="
-                  productTable.nextPage()
-                "
-              >
-                Next
-              </CButton>
+                <CButton
+                  color="secondary"
+                  variant="outline"
+                  size="sm"
+                  :disabled="
+                    !productTable.getCanNextPage()
+                  "
+                  @click="
+                    productTable.nextPage()
+                  "
+                >
+                  Next
+                </CButton>
+              </template>
             </div>
           </div>
         </div>
