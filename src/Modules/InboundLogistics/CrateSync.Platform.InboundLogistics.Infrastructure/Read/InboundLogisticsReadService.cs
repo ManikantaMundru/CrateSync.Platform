@@ -182,6 +182,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             header.CancelledAtUtc,
             header.CreatedAtUtc,
             header.UpdatedAtUtc,
+            lines,
             header.ContainerNumber,
             header.BillOfLadingNumber,
             header.PortOfLoading,
@@ -195,7 +196,6 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             header.CustomsStatus,
             header.PlantQuarantineStatus,
             header.FoodSafetyStatus,
-            lines,
             clearanceEvents,
             documents);
     }
