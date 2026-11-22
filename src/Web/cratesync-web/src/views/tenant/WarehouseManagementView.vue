@@ -4,6 +4,7 @@ import {
   onMounted,
   reactive,
   ref,
+  watch,
 } from 'vue'
 import {
   CButton,
@@ -203,6 +204,10 @@ function changePageSize(event: Event) {
 
   warehouseTable.setPageSize(value)
 }
+
+watch([search, statusFilter], () => {
+  warehouseTable.setPageIndex(0)
+})
 
 async function load() {
   loading.value = true
