@@ -42,6 +42,7 @@ internal sealed class ReceiveShipmentCommandHandler(
         var receiptId = shipment.ReceiveLine(
             ShipmentReceiptId.From(request.ReceiptId),
             ShipmentLineId.From(request.ShipmentLineId),
+            request.WarehouseId,
             new CrateQuantity(request.Quantity),
             occurredAtUtc);
 
@@ -56,7 +57,7 @@ internal sealed class ReceiveShipmentCommandHandler(
                 receiptId.Value,
                 shipment.Id.Value,
                 shipment.TenantId,
-                shipment.WarehouseId,
+                request.WarehouseId,
                 line.ProductVarietyId,
                 request.Quantity,
                 occurredAtUtc),
