@@ -24,7 +24,6 @@ import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPag
 interface ShipmentSummary {
   id: string
   supplierId: string
-  warehouseId: string
   trackingNumber: string
   originCountry: string
   status: string
@@ -60,6 +59,15 @@ interface ClearanceEvent {
   occurredAtUtc: string
 }
 
+interface ShipmentReceipt {
+  id: string
+  shipmentLineId: string
+  warehouseId: string
+  productVarietyId: string
+  quantity: number
+  receivedAtUtc: string
+}
+
 interface ShipmentDocument {
   id: string
   type: string
@@ -86,6 +94,7 @@ interface ShipmentDetails extends ShipmentSummary {
   lines: ShipmentLine[]
   clearanceEvents: ClearanceEvent[] | null
   documents: ShipmentDocument[] | null
+  receipts: ShipmentReceipt[] | null
 }
 
 interface SupplierSummary {
@@ -158,7 +167,6 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const form = reactive({
   supplierId: '',
-  warehouseId: '',
   trackingNumber: '',
   originCountry: '',
   expectedArrivalDate: '',
@@ -189,6 +197,7 @@ const documentForm = reactive({
 const receiveForm = reactive({
   receiptId: '',
   shipmentLineId: '',
+  warehouseId: '',
   batchCode: '',
   expectedQuantity: 0,
   receivedQuantity: 0,
@@ -471,7 +480,6 @@ async function loadShipment(id: string) {
 
 function resetForm() {
   form.supplierId = ''
-  form.warehouseId = ''
   form.trackingNumber = ''
   form.originCountry = ''
   form.expectedArrivalDate = ''
@@ -541,13 +549,12 @@ async function productChanged(
 async function createShipment() {
   if (
     !form.supplierId ||
-    !form.warehouseId ||
     !form.trackingNumber.trim() ||
     !form.originCountry ||
     !form.expectedArrivalDate
   ) {
     modalError.value =
-      'Supplier, warehouse, reference, origin and ETA are required.'
+      'Supplier, reference, origin and ETA are required.'
     return
   }
 
@@ -579,7 +586,6 @@ async function createShipment() {
       },
       body: JSON.stringify({
         supplierId: form.supplierId,
-        warehouseId: form.warehouseId,
         trackingNumber:
           form.trackingNumber.trim(),
         originCountry:
@@ -715,6 +721,7 @@ function openReceive(
   receiveForm.receiptId =
     crypto.randomUUID()
   receiveForm.shipmentLineId = line.id
+  receiveForm.warehouseId = ''
   receiveForm.batchCode = line.batchCode
   receiveForm.expectedQuantity =
     line.expectedQuantity
@@ -734,6 +741,12 @@ async function receiveStock() {
   const remaining =
     receiveForm.expectedQuantity -
     receiveForm.receivedQuantity
+
+  if (!receiveForm.warehouseId) {
+    modalError.value =
+      'Select the destination warehouse.'
+    return
+  }
 
   if (
     receiveForm.quantity <= 0 ||
@@ -761,6 +774,8 @@ async function receiveStock() {
             receiveForm.receiptId,
           shipmentLineId:
             receiveForm.shipmentLineId,
+          warehouseId:
+            receiveForm.warehouseId,
           quantity: Number(
             receiveForm.quantity,
           ),
@@ -1043,7 +1058,6 @@ onMounted(async () => {
                 <th>Shipment</th>
                 <th>Supplier</th>
                 <th>ETA</th>
-                <th>Warehouse</th>
                 <th>Logistics</th>
                 <th>Clearance</th>
               </tr>
@@ -1068,7 +1082,6 @@ onMounted(async () => {
                 </td>
                 <td>{{ supplierName(shipment.supplierId) }}</td>
                 <td>{{ formatDate(shipment.expectedArrivalAtUtc) }}</td>
-                <td>{{ warehouseName(shipment.warehouseId) }}</td>
                 <td>
                   <span class="shipment-status-pill">
                     {{ friendlyStatus(shipment.status) }}
@@ -1141,8 +1154,7 @@ onMounted(async () => {
                 {{ supplierName(selectedShipment.supplierId) }}
                 ·
                 {{ countryName(selectedShipment.originCountry) }}
-                →
-                {{ warehouseName(selectedShipment.warehouseId) }}
+
               </p>
             </div>
 
@@ -1314,6 +1326,37 @@ onMounted(async () => {
           <section class="shipment-detail-section">
             <div class="section-heading">
               <div>
+                <h3>Warehouse allocations</h3>
+                <p>Confirmed receipt destinations</p>
+              </div>
+            </div>
+
+            <div
+              v-if="selectedShipment.receipts?.length"
+              class="shipment-documents"
+            >
+              <div
+                v-for="receipt in selectedShipment.receipts"
+                :key="receipt.id"
+                class="shipment-document-row"
+              >
+                <div>
+                  <strong>{{ warehouseName(receipt.warehouseId) }}</strong>
+                  <small>
+                    {{ receipt.quantity }} crates · {{ formatDate(receipt.receivedAtUtc) }}
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <p v-else class="shipment-muted">
+              No warehouse allocations recorded yet.
+            </p>
+          </section>
+
+          <section class="shipment-detail-section">
+            <div class="section-heading">
+              <div>
                 <h3>Clearance timeline</h3>
                 <p>Operational authority history</p>
               </div>
@@ -1421,20 +1464,6 @@ onMounted(async () => {
                 :value="supplier.id"
               >
                 {{ supplier.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="form-field">
-            <span>Warehouse *</span>
-            <select v-model="form.warehouseId" class="form-select">
-              <option value="">Select warehouse</option>
-              <option
-                v-for="warehouse in warehouses"
-                :key="warehouse.id"
-                :value="warehouse.id"
-              >
-                {{ warehouse.name }} ({{ warehouse.code }})
               </option>
             </select>
           </label>
@@ -1770,6 +1799,25 @@ onMounted(async () => {
             </strong>
           </div>
         </div>
+
+        <label class="form-field mt-3">
+          <span>Destination warehouse *</span>
+          <select
+            v-model="receiveForm.warehouseId"
+            class="form-select"
+          >
+            <option value="">
+              Select warehouse
+            </option>
+            <option
+              v-for="warehouse in warehouses"
+              :key="warehouse.id"
+              :value="warehouse.id"
+            >
+              {{ warehouse.name }} ({{ warehouse.code }})
+            </option>
+          </select>
+        </label>
 
         <label class="form-field mt-3">
           <span>Quantity received now *</span>
