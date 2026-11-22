@@ -204,17 +204,24 @@ public sealed class TenantUserManagementService(
 
             dbContext.UserTenantMemberships.Add(
                 membership);
+
+            ReplaceAccess(
+                membership,
+                roles,
+                warehouses,
+                now);
         }
         else
         {
             membership.Activate(now);
-        }
 
-        ReplaceAccess(
-            membership,
-            roles,
-            warehouses,
-            now);
+            await ReconcilePersistedAccessAsync(
+                membership,
+                roles,
+                warehouses,
+                now,
+                cancellationToken);
+        }
 
         await dbContext.SaveChangesAsync(
             cancellationToken);
@@ -278,8 +285,6 @@ public sealed class TenantUserManagementService(
 
         var membership =
             await dbContext.UserTenantMemberships
-                .Include(x => x.Roles)
-                .Include(x => x.WarehouseAssignments)
                 .SingleOrDefaultAsync(
                     x =>
                         x.UserId == userId &&
@@ -289,11 +294,12 @@ public sealed class TenantUserManagementService(
         if (membership is null)
             return false;
 
-        ReplaceAccess(
+        await ReconcilePersistedAccessAsync(
             membership,
             roles,
             warehouses,
-            timeProvider.GetUtcNow());
+            timeProvider.GetUtcNow(),
+            cancellationToken);
 
         await dbContext.SaveChangesAsync(
             cancellationToken);
@@ -342,6 +348,121 @@ public sealed class TenantUserManagementService(
             cancellationToken);
 
         return true;
+    }
+
+    private async Task ReconcilePersistedAccessAsync(
+        UserTenantMembership membership,
+        IReadOnlyCollection<TenantRole> roles,
+        IReadOnlyCollection<WarehouseAccessInput> warehouses,
+        DateTimeOffset occurredAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var desiredRoles =
+            roles
+                .Distinct()
+                .ToHashSet();
+
+        var existingRoles =
+            await dbContext.UserTenantRoles
+                .Where(
+                    x =>
+                        x.MembershipId ==
+                        membership.Id)
+                .ToListAsync(cancellationToken);
+
+        var rolesToRemove =
+            existingRoles
+                .Where(
+                    x =>
+                        !desiredRoles.Contains(
+                            x.Role))
+                .ToArray();
+
+        if (rolesToRemove.Length > 0)
+        {
+            dbContext.UserTenantRoles
+                .RemoveRange(rolesToRemove);
+        }
+
+        var existingRoleValues =
+            existingRoles
+                .Select(x => x.Role)
+                .ToHashSet();
+
+        foreach (var role in desiredRoles)
+        {
+            if (existingRoleValues.Contains(role))
+                continue;
+
+            dbContext.UserTenantRoles.Add(
+                UserTenantRole.Create(
+                    membership.Id,
+                    role,
+                    occurredAtUtc));
+        }
+
+        var desiredWarehouses =
+            warehouses
+                .GroupBy(x => x.WarehouseId)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.Last().Role);
+
+        var existingWarehouses =
+            await dbContext.UserWarehouseAssignments
+                .Where(
+                    x =>
+                        x.MembershipId ==
+                        membership.Id)
+                .ToListAsync(cancellationToken);
+
+        var warehousesToRemove =
+            existingWarehouses
+                .Where(
+                    x =>
+                        !desiredWarehouses.ContainsKey(
+                            x.WarehouseId))
+                .ToArray();
+
+        if (warehousesToRemove.Length > 0)
+        {
+            dbContext.UserWarehouseAssignments
+                .RemoveRange(
+                    warehousesToRemove);
+        }
+
+        var existingWarehousesById =
+            existingWarehouses
+                .ToDictionary(
+                    x => x.WarehouseId);
+
+        foreach (var warehouse in desiredWarehouses)
+        {
+            if (existingWarehousesById.TryGetValue(
+                    warehouse.Key,
+                    out var existing))
+            {
+                if (existing.Role != warehouse.Value)
+                {
+                    existing.ChangeRole(
+                        warehouse.Value,
+                        occurredAtUtc);
+                }
+
+                continue;
+            }
+
+            dbContext.UserWarehouseAssignments.Add(
+                UserWarehouseAssignment.Create(
+                    membership.Id,
+                    warehouse.Key,
+                    warehouse.Value,
+                    occurredAtUtc));
+        }
+
+        dbContext.Entry(membership)
+            .Property(x => x.UpdatedAtUtc)
+            .CurrentValue = occurredAtUtc;
     }
 
     private static void ReplaceAccess(
