@@ -280,3 +280,15 @@ The Product detail modal now supports multi-add variety pills:
 - successfully persisted varieties render as compact saved pills
 
 Persisted varieties are display-only because the backend currently has no variety delete/deactivate command.
+
+
+### Responsive product catalog
+
+The Products workspace uses different interaction patterns by viewport:
+
+- Desktop (`>= 992px`): master-detail layout. The first visible product is selected automatically and details render in the right panel.
+- Tablet/mobile (`< 992px`): accordion layout. No product is opened automatically; the user taps a product row to expand it inline.
+- Only one product can be expanded at a time on compact layouts.
+- Tapping the open product again collapses it.
+- Search, status filters and pagination close an expanded product if it is no longer in the visible result set.
+- Switching from compact to desktop selects the first visible product; switching from desktop to compact starts collapsed.
