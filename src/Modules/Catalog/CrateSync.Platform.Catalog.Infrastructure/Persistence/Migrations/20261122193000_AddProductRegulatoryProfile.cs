@@ -1,3 +1,4 @@
+using System;
 using CrateSync.Platform.Catalog.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
