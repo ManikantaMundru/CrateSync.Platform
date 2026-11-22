@@ -267,6 +267,7 @@ public sealed class InboundShipmentController(
             return accessResult;
 
         var command = new ReceiveShipmentCommand(
+            request.ReceiptId,
             shipmentId,
             request.ShipmentLineId,
             request.Quantity);
