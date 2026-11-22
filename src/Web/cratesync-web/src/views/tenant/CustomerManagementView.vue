@@ -684,7 +684,7 @@ function formatAddress(
             >
               <span class="customer-icon">
                 <i
-                  class="cil-truck"
+                  class="cil-people"
                   aria-hidden="true"
                 />
               </span>
@@ -887,7 +887,7 @@ function formatAddress(
                     <div class="customer-identity">
                       <span class="customer-icon">
                         <i
-                          class="cil-truck"
+                          class="cil-people"
                           aria-hidden="true"
                         />
                       </span>
