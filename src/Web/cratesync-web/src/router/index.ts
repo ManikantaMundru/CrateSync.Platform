@@ -72,6 +72,18 @@ export const router = createRouter({
           },
         },
         {
+          path: 'tenant/:tenantId/products',
+          name: 'products',
+          component: () =>
+            import(
+              '@/views/tenant/ProductCatalogView.vue'
+            ),
+          meta: {
+            requiresTenant: true,
+            title: 'Products',
+          },
+        },
+        {
           path: 'tenant/:tenantId/warehouses',
           name: 'warehouses',
           component: () =>
