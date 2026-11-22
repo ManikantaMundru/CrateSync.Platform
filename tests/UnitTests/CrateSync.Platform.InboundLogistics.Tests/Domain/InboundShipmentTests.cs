@@ -217,6 +217,50 @@ public sealed class InboundShipmentTests
     }
 
     [Fact]
+    public void ReceiveLine_Should_Be_Idempotent_For_Same_Receipt_Id()
+    {
+        var shipment = CreateArrivedShipment();
+        var line = shipment.Lines.Single();
+        var receiptId = ShipmentReceiptId.New();
+
+        shipment.ReceiveLine(
+            receiptId,
+            line.Id,
+            new CrateQuantity(40),
+            Now.AddDays(2));
+
+        shipment.ReceiveLine(
+            receiptId,
+            line.Id,
+            new CrateQuantity(40),
+            Now.AddDays(2));
+
+        line.ReceivedQuantity.Value.ShouldBe(40);
+        shipment.Receipts.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ReceiveLine_Should_Reject_Reused_Receipt_Id_With_Different_Quantity()
+    {
+        var shipment = CreateArrivedShipment();
+        var line = shipment.Lines.Single();
+        var receiptId = ShipmentReceiptId.New();
+
+        shipment.ReceiveLine(
+            receiptId,
+            line.Id,
+            new CrateQuantity(40),
+            Now.AddDays(2));
+
+        Should.Throw<InvalidOperationException>(() =>
+            shipment.ReceiveLine(
+                receiptId,
+                line.Id,
+                new CrateQuantity(20),
+                Now.AddDays(2)));
+    }
+
+    [Fact]
     public void Cancel_Should_Cancel_Draft_Shipment()
     {
         var shipment = CreateShipment();
