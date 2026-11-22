@@ -5,7 +5,6 @@ namespace CrateSync.Platform.InboundLogistics.Application.Shipments.CreateShipme
 
 public sealed record CreateShipmentCommand(
     Guid SupplierId,
-    Guid WarehouseId,
     string TrackingNumber,
     string OriginCountry,
     DateTimeOffset ExpectedArrivalAtUtc) : ICommand<Result<Guid>>;
