@@ -8,7 +8,6 @@ public sealed record ShipmentReceivedIntegrationEvent : IIntegrationEvent
         Guid shipmentId,
         Guid tenantId,
         Guid supplierId,
-        Guid warehouseId,
         IReadOnlyCollection<ShipmentReceivedLineContract> lines,
         DateTimeOffset occurredAtUtc)
     {
@@ -16,7 +15,6 @@ public sealed record ShipmentReceivedIntegrationEvent : IIntegrationEvent
         ShipmentId = shipmentId;
         TenantId = tenantId;
         SupplierId = supplierId;
-        WarehouseId = warehouseId;
         Lines = lines;
         OccurredAtUtc = occurredAtUtc;
     }
@@ -30,8 +28,6 @@ public sealed record ShipmentReceivedIntegrationEvent : IIntegrationEvent
     public Guid TenantId { get; }
 
     public Guid SupplierId { get; }
-
-    public Guid WarehouseId { get; }
 
     public IReadOnlyCollection<ShipmentReceivedLineContract> Lines { get; }
 }
