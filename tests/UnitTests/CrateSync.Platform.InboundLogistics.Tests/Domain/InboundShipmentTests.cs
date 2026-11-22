@@ -144,6 +144,7 @@ public sealed class InboundShipmentTests
         var line = shipment.Lines.Single();
 
         shipment.ReceiveLine(
+            ShipmentReceiptId.New(),
             line.Id,
             new CrateQuantity(40),
             Now.AddDays(2));
@@ -164,6 +165,7 @@ public sealed class InboundShipmentTests
         var receivedAt = Now.AddDays(2);
 
         shipment.ReceiveLine(
+            ShipmentReceiptId.New(),
             line.Id,
             new CrateQuantity(100),
             receivedAt);
@@ -184,11 +186,13 @@ public sealed class InboundShipmentTests
         var line = shipment.Lines.Single();
 
         shipment.ReceiveLine(
+            ShipmentReceiptId.New(),
             line.Id,
             new CrateQuantity(40),
             Now.AddDays(2));
 
         shipment.ReceiveLine(
+            ShipmentReceiptId.New(),
             line.Id,
             new CrateQuantity(60),
             Now.AddDays(3));
@@ -206,7 +210,8 @@ public sealed class InboundShipmentTests
 
         Should.Throw<InvalidOperationException>(() =>
             shipment.ReceiveLine(
-                line.Id,
+            ShipmentReceiptId.New(),
+            line.Id,
                 new CrateQuantity(101),
                 Now.AddDays(2)));
     }
@@ -235,6 +240,7 @@ public sealed class InboundShipmentTests
         var line = shipment.Lines.Single();
 
         shipment.ReceiveLine(
+            ShipmentReceiptId.New(),
             line.Id,
             new CrateQuantity(10),
             Now.AddDays(2));
