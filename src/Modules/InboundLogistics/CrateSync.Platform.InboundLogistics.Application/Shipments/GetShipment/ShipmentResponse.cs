@@ -28,7 +28,8 @@ public sealed record ShipmentResponse(
     string PlantQuarantineStatus = "NotRequired",
     string FoodSafetyStatus = "NotRequired",
     IReadOnlyCollection<ShipmentClearanceEventResponse>? ClearanceEvents = null,
-    IReadOnlyCollection<ShipmentDocumentResponse>? Documents = null);
+    IReadOnlyCollection<ShipmentDocumentResponse>? Documents = null,
+    IReadOnlyCollection<ShipmentReceiptResponse>? Receipts = null);
 
 public sealed record ShipmentLineResponse(
     Guid Id,
@@ -56,3 +57,12 @@ public sealed record ShipmentDocumentResponse(
     string? ReferenceNumber,
     string? Notes,
     DateTimeOffset CreatedAtUtc);
+
+
+public sealed record ShipmentReceiptResponse(
+    Guid Id,
+    Guid ShipmentLineId,
+    Guid WarehouseId,
+    Guid ProductVarietyId,
+    int Quantity,
+    DateTimeOffset ReceivedAtUtc);
