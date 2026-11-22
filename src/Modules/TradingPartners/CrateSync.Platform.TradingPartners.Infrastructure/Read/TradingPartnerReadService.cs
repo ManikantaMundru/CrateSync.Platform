@@ -71,12 +71,26 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
                 Id,
                 Name,
                 CommercialIdentifier,
-                IsActive
+                IsActive,
+                AddressLine1,
+                City,
+                StateOrProvince,
+                Country,
+                ContactName,
+                Email,
+                Phone
             FROM partners.Customers
             WHERE TenantId = @TenantId
               AND (@SearchTerm IS NULL
                    OR Name LIKE '%' + @SearchTerm + '%'
-                   OR CommercialIdentifier LIKE '%' + @SearchTerm + '%')
+                   OR CommercialIdentifier LIKE '%' + @SearchTerm + '%'
+                   OR AddressLine1 LIKE '%' + @SearchTerm + '%'
+                   OR City LIKE '%' + @SearchTerm + '%'
+                   OR StateOrProvince LIKE '%' + @SearchTerm + '%'
+                   OR Country LIKE '%' + @SearchTerm + '%'
+                   OR ContactName LIKE '%' + @SearchTerm + '%'
+                   OR Email LIKE '%' + @SearchTerm + '%'
+                   OR Phone LIKE '%' + @SearchTerm + '%')
               AND (@IsActive IS NULL OR IsActive = @IsActive)
             ORDER BY Name;
             """;
@@ -158,12 +172,26 @@ internal sealed class TradingPartnersReadService(ISqlConnectionFactory connectio
                 Id,
                 Name,
                 CommercialIdentifier,
-                IsActive
+                IsActive,
+                AddressLine1,
+                City,
+                StateOrProvince,
+                Country,
+                ContactName,
+                Email,
+                Phone
             FROM partners.Suppliers
             WHERE TenantId = @TenantId
               AND (@SearchTerm IS NULL
                    OR Name LIKE '%' + @SearchTerm + '%'
-                   OR CommercialIdentifier LIKE '%' + @SearchTerm + '%')
+                   OR CommercialIdentifier LIKE '%' + @SearchTerm + '%'
+                   OR AddressLine1 LIKE '%' + @SearchTerm + '%'
+                   OR City LIKE '%' + @SearchTerm + '%'
+                   OR StateOrProvince LIKE '%' + @SearchTerm + '%'
+                   OR Country LIKE '%' + @SearchTerm + '%'
+                   OR ContactName LIKE '%' + @SearchTerm + '%'
+                   OR Email LIKE '%' + @SearchTerm + '%'
+                   OR Phone LIKE '%' + @SearchTerm + '%')
               AND (@IsActive IS NULL OR IsActive = @IsActive)
             ORDER BY Name;
             """;
