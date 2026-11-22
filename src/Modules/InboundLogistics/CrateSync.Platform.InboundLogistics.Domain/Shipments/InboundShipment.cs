@@ -17,7 +17,6 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         InboundShipmentId id,
         Guid tenantId,
         Guid supplierId,
-        Guid warehouseId,
         TrackingNumber trackingNumber,
         CountryCode originCountry,
         DateTimeOffset expectedArrivalAtUtc,
@@ -26,11 +25,9 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("Tenant ID cannot be empty.", nameof(tenantId));
         if (supplierId == Guid.Empty) throw new ArgumentException("Supplier ID cannot be empty.", nameof(supplierId));
-        if (warehouseId == Guid.Empty) throw new ArgumentException("Warehouse ID cannot be empty.", nameof(warehouseId));
 
         TenantId = tenantId;
         SupplierId = supplierId;
-        WarehouseId = warehouseId;
         TrackingNumber = trackingNumber ?? throw new ArgumentNullException(nameof(trackingNumber));
         OriginCountry = originCountry ?? throw new ArgumentNullException(nameof(originCountry));
         ExpectedArrivalAtUtc = expectedArrivalAtUtc;
@@ -45,8 +42,6 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     public Guid TenantId { get; private set; }
 
     public Guid SupplierId { get; private set; }
-
-    public Guid WarehouseId { get; private set; }
 
     public TrackingNumber TrackingNumber { get; private set; } = null!;
 
@@ -108,7 +103,6 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     public static InboundShipment Create(
         Guid tenantId,
         Guid supplierId,
-        Guid warehouseId,
         TrackingNumber trackingNumber,
         CountryCode originCountry,
         DateTimeOffset expectedArrivalAtUtc,
@@ -118,7 +112,6 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             InboundShipmentId.New(),
             tenantId,
             supplierId,
-            warehouseId,
             trackingNumber,
             originCountry,
             expectedArrivalAtUtc,
@@ -129,7 +122,6 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 shipment.Id,
                 shipment.TenantId,
                 shipment.SupplierId,
-                shipment.WarehouseId,
                 occurredOnUtc));
 
         return shipment;
@@ -278,12 +270,13 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         ArrivedAtUtc = occurredOnUtc;
         UpdatedAtUtc = occurredOnUtc;
 
-        RaiseDomainEvent(new ShipmentArrivedDomainEvent(Id, TenantId, WarehouseId, occurredOnUtc));
+        RaiseDomainEvent(new ShipmentArrivedDomainEvent(Id, TenantId, occurredOnUtc));
     }
 
     public ShipmentReceiptId ReceiveLine(
         ShipmentReceiptId receiptId,
         ShipmentLineId shipmentLineId,
+        Guid warehouseId,
         CrateQuantity quantity,
         DateTimeOffset occurredOnUtc)
     {
@@ -295,6 +288,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         {
             if (
                 existingReceipt.ShipmentLineId != shipmentLineId ||
+                existingReceipt.WarehouseId != warehouseId ||
                 existingReceipt.Quantity != quantity.Value)
             {
                 throw new InvalidOperationException(
@@ -332,6 +326,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         var receipt = new ShipmentReceipt(
             receiptId,
             line.Id,
+            warehouseId,
             line.ProductVarietyId,
             quantity.Value,
             occurredOnUtc);
@@ -349,7 +344,6 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                     Id,
                     TenantId,
                     SupplierId,
-                    WarehouseId,
                     occurredOnUtc));
 
             return receipt.Id;
