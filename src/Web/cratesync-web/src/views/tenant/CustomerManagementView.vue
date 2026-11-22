@@ -105,7 +105,11 @@ const canManageCustomers = computed(
 watch(
   [statusFilter, pageSize],
   () => {
-    page.value = 1
+    if (page.value !== 1) {
+      page.value = 1
+      return
+    }
+
     void loadCustomers()
   },
 )
@@ -119,7 +123,11 @@ watch(search, () => {
     clearTimeout(searchTimer)
 
   searchTimer = setTimeout(() => {
-    page.value = 1
+    if (page.value !== 1) {
+      page.value = 1
+      return
+    }
+
     void loadCustomers()
   }, 250)
 })
@@ -154,6 +162,19 @@ async function loadCustomers() {
     customers.value = result.items
     totalCount.value = result.totalCount
     totalPages.value = result.totalPages
+
+    if (
+      isCompact.value &&
+      expandedCustomerId.value &&
+      !customers.value.some(
+        (customer) =>
+          customer.id ===
+          expandedCustomerId.value,
+      )
+    ) {
+      expandedCustomerId.value = null
+      selectedCustomer.value = null
+    }
 
     if (
       result.totalPages > 0 &&
