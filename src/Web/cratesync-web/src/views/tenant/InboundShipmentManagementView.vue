@@ -149,6 +149,8 @@ const modalError = ref<string | null>(null)
 const search = ref('')
 const statusFilter = ref('')
 const createVisible = ref(false)
+const clearanceVisible = ref(false)
+const documentVisible = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -168,6 +170,78 @@ const form = reactive({
 })
 
 const lines = ref<DraftLine[]>([])
+
+const clearanceForm = reactive({
+  authority: 'Customs',
+  status: 'NotStarted',
+  referenceNumber: '',
+  remarks: '',
+})
+
+const documentForm = reactive({
+  type: 'BillOfLading',
+  documentName: '',
+  referenceNumber: '',
+  notes: '',
+})
+
+const clearanceStatuses: Record<
+  string,
+  string[]
+> = {
+  Customs: [
+    'NotStarted',
+    'BillOfEntryFiled',
+    'Assessment',
+    'Examination',
+    'QueryRaised',
+    'Held',
+    'Cleared',
+    'OutOfCharge',
+    'Rejected',
+  ],
+  PlantQuarantine: [
+    'NotRequired',
+    'Pending',
+    'DocumentsSubmitted',
+    'InspectionScheduled',
+    'UnderInspection',
+    'Sampling',
+    'TreatmentRequired',
+    'Cleared',
+    'Rejected',
+  ],
+  FoodSafety: [
+    'NotRequired',
+    'Pending',
+    'Referred',
+    'DocumentScrutiny',
+    'InspectionScheduled',
+    'VisualInspection',
+    'Sampling',
+    'LabTesting',
+    'NocIssued',
+    'NonConformance',
+    'Rejected',
+  ],
+  Port: ['Pending', 'Cleared', 'Held'],
+  Other: ['Pending', 'Cleared'],
+}
+
+const documentTypes = [
+  'BillOfLading',
+  'CommercialInvoice',
+  'PackingList',
+  'BillOfEntry',
+  'CertificateOfOrigin',
+  'PhytosanitaryCertificate',
+  'ImportPermit',
+  'FoodSafetyNoc',
+  'PlantQuarantineRelease',
+  'CustomsOutOfCharge',
+  'TreatmentCertificate',
+  'Other',
+]
 
 const filteredShipments = computed(() =>
   statusFilter.value
@@ -221,6 +295,15 @@ const warehouseById = computed(
 watch([statusFilter, pageSize], () => {
   page.value = 1
 })
+
+watch(
+  () => clearanceForm.authority,
+  (authority) => {
+    clearanceForm.status =
+      clearanceStatuses[authority]?.[0] ??
+      'Pending'
+  },
+)
 
 watch(search, () => {
   if (searchTimer)
@@ -590,6 +673,131 @@ async function createShipment() {
   }
 }
 
+function openClearance() {
+  if (!selectedShipment.value)
+    return
+
+  clearanceForm.authority = 'Customs'
+  clearanceForm.status =
+    selectedShipment.value.customsStatus
+  clearanceForm.referenceNumber = ''
+  clearanceForm.remarks = ''
+  modalError.value = null
+  clearanceVisible.value = true
+}
+
+async function saveClearanceEvent() {
+  if (!selectedShipment.value)
+    return
+
+  saving.value = true
+  modalError.value = null
+
+  try {
+    await apiFetch(
+      `/api/InboundShipment/${selectedShipment.value.id}/clearance-events`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          authority:
+            clearanceForm.authority,
+          status: clearanceForm.status,
+          referenceNumber:
+            clearanceForm.referenceNumber.trim() ||
+            null,
+          remarks:
+            clearanceForm.remarks.trim() ||
+            null,
+        }),
+      },
+    )
+
+    clearanceVisible.value = false
+    success.value =
+      'Clearance status updated.'
+
+    await Promise.all([
+      loadShipments(),
+      loadShipment(
+        selectedShipment.value.id,
+      ),
+    ])
+  } catch (exception) {
+    modalError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to record clearance update.'
+  } finally {
+    saving.value = false
+  }
+}
+
+function openDocument() {
+  documentForm.type = 'BillOfLading'
+  documentForm.documentName = ''
+  documentForm.referenceNumber = ''
+  documentForm.notes = ''
+  modalError.value = null
+  documentVisible.value = true
+}
+
+async function saveDocument() {
+  if (!selectedShipment.value)
+    return
+
+  if (!documentForm.documentName.trim()) {
+    modalError.value =
+      'Document name is required.'
+    return
+  }
+
+  saving.value = true
+  modalError.value = null
+
+  try {
+    await apiFetch(
+      `/api/InboundShipment/${selectedShipment.value.id}/documents`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          type: documentForm.type,
+          documentName:
+            documentForm.documentName.trim(),
+          referenceNumber:
+            documentForm.referenceNumber.trim() ||
+            null,
+          notes:
+            documentForm.notes.trim() ||
+            null,
+        }),
+      },
+    )
+
+    documentVisible.value = false
+    success.value =
+      'Document reference added.'
+
+    await loadShipment(
+      selectedShipment.value.id,
+    )
+  } catch (exception) {
+    modalError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to add document reference.'
+  } finally {
+    saving.value = false
+  }
+}
+
 async function transition(
   action: 'ship' | 'arrive',
 ) {
@@ -884,6 +1092,14 @@ onMounted(async () => {
                 <h3>Clearance</h3>
                 <p>Current regulatory position</p>
               </div>
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                @click="openClearance"
+              >
+                Update clearance
+              </CButton>
             </div>
 
             <div class="clearance-cards">
@@ -978,6 +1194,14 @@ onMounted(async () => {
                 <h3>Documents</h3>
                 <p>Reference register</p>
               </div>
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                @click="openDocument"
+              >
+                Add reference
+              </CButton>
             </div>
 
             <div
@@ -1237,6 +1461,183 @@ onMounted(async () => {
             class="me-2"
           />
           Create shipment
+        </CButton>
+      </CModalFooter>
+    </CModal>
+
+    <CModal
+      :visible="clearanceVisible"
+      @close="clearanceVisible = false"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          Record clearance update
+        </CModalTitle>
+      </CModalHeader>
+      <CModalBody>
+        <div
+          v-if="modalError"
+          class="status-message status-error"
+        >
+          {{ modalError }}
+        </div>
+
+        <div class="shipment-modal-fields">
+          <label class="form-field">
+            <span>Authority</span>
+            <select
+              v-model="clearanceForm.authority"
+              class="form-select"
+            >
+              <option value="Customs">
+                Customs
+              </option>
+              <option value="PlantQuarantine">
+                Plant Quarantine
+              </option>
+              <option value="FoodSafety">
+                Food Safety
+              </option>
+              <option value="Port">
+                Port
+              </option>
+              <option value="Other">
+                Other
+              </option>
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Status</span>
+            <select
+              v-model="clearanceForm.status"
+              class="form-select"
+            >
+              <option
+                v-for="status in clearanceStatuses[
+                  clearanceForm.authority
+                ]"
+                :key="status"
+                :value="status"
+              >
+                {{ friendlyStatus(status) }}
+              </option>
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Reference number</span>
+            <input
+              v-model="clearanceForm.referenceNumber"
+              class="form-control"
+              placeholder="e.g. Bill of Entry / NOC reference"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Remarks</span>
+            <textarea
+              v-model="clearanceForm.remarks"
+              class="form-control"
+              rows="3"
+            />
+          </label>
+        </div>
+      </CModalBody>
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="clearanceVisible = false"
+        >
+          Cancel
+        </CButton>
+        <CButton
+          color="primary"
+          :disabled="saving"
+          @click="saveClearanceEvent"
+        >
+          Save update
+        </CButton>
+      </CModalFooter>
+    </CModal>
+
+    <CModal
+      :visible="documentVisible"
+      @close="documentVisible = false"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          Add document reference
+        </CModalTitle>
+      </CModalHeader>
+      <CModalBody>
+        <div
+          v-if="modalError"
+          class="status-message status-error"
+        >
+          {{ modalError }}
+        </div>
+
+        <div class="shipment-modal-fields">
+          <label class="form-field">
+            <span>Document type</span>
+            <select
+              v-model="documentForm.type"
+              class="form-select"
+            >
+              <option
+                v-for="type in documentTypes"
+                :key="type"
+                :value="type"
+              >
+                {{ friendlyStatus(type) }}
+              </option>
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Document name *</span>
+            <input
+              v-model="documentForm.documentName"
+              class="form-control"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Reference number</span>
+            <input
+              v-model="documentForm.referenceNumber"
+              class="form-control"
+            >
+          </label>
+
+          <label class="form-field">
+            <span>Notes</span>
+            <textarea
+              v-model="documentForm.notes"
+              class="form-control"
+              rows="3"
+            />
+          </label>
+        </div>
+      </CModalBody>
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="documentVisible = false"
+        >
+          Cancel
+        </CButton>
+        <CButton
+          color="primary"
+          :disabled="saving"
+          @click="saveDocument"
+        >
+          Add reference
         </CButton>
       </CModalFooter>
     </CModal>
