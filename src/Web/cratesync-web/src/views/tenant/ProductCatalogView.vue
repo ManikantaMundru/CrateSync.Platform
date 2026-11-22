@@ -2,6 +2,7 @@
 import {
   computed,
   nextTick,
+  onBeforeUnmount,
   onMounted,
   reactive,
   ref,
@@ -27,6 +28,7 @@ import {
 } from '@tanstack/vue-table'
 import { apiFetch } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import ProductCatalogDetailPanel from './ProductCatalogDetailPanel.vue'
 
 interface ProductSummary {
   id: string
@@ -70,6 +72,9 @@ const createForm = reactive({
 const detailsLoading = ref(false)
 const detailsError = ref<string | null>(null)
 const selectedProduct = ref<ProductDetails | null>(null)
+const isCompactCatalog = ref(false)
+const expandedProductId = ref<string | null>(null)
+let compactCatalogMedia: MediaQueryList | null = null
 const varietyName = ref('')
 const draftVarieties = ref<string[]>([])
 
@@ -190,6 +195,24 @@ watch(
 
     if (rows.length === 0) {
       selectedProduct.value = null
+      expandedProductId.value = null
+      return
+    }
+
+    if (isCompactCatalog.value) {
+      const expandedIsVisible =
+        expandedProductId.value &&
+        rows.some(
+          (row) =>
+            row.original.id ===
+            expandedProductId.value,
+        )
+
+      if (!expandedIsVisible) {
+        expandedProductId.value = null
+        selectedProduct.value = null
+      }
+
       return
     }
 
@@ -228,6 +251,7 @@ async function loadProducts() {
     await nextTick()
 
     if (
+      !isCompactCatalog.value &&
       !selectedProduct.value &&
       visibleProductRows.value.length > 0
     ) {
@@ -245,7 +269,59 @@ async function loadProducts() {
   }
 }
 
-onMounted(loadProducts)
+async function syncCatalogLayout(
+  matches: boolean,
+) {
+  isCompactCatalog.value = matches
+
+  if (matches) {
+    expandedProductId.value = null
+    selectedProduct.value = null
+    ++productSelectionRequest
+    detailsLoading.value = false
+    return
+  }
+
+  expandedProductId.value = null
+
+  if (
+    visibleProductRows.value.length > 0 &&
+    !selectedProduct.value
+  ) {
+    await selectProduct(
+      visibleProductRows.value[0]!.original,
+    )
+  }
+}
+
+function handleCatalogMediaChange(
+  event: MediaQueryListEvent,
+) {
+  void syncCatalogLayout(event.matches)
+}
+
+onMounted(async () => {
+  compactCatalogMedia = window.matchMedia(
+    '(max-width: 991.98px)',
+  )
+
+  isCompactCatalog.value =
+    compactCatalogMedia.matches
+
+  compactCatalogMedia.addEventListener(
+    'change',
+    handleCatalogMediaChange,
+  )
+
+  await loadProducts()
+})
+
+onBeforeUnmount(() => {
+  compactCatalogMedia?.removeEventListener(
+    'change',
+    handleCatalogMediaChange,
+  )
+})
 
 function openCreateModal() {
   createModalError.value = null
@@ -286,12 +362,15 @@ async function createProduct() {
       'Product created successfully.'
 
     await loadProducts()
-    await selectProduct({
-      id: response.id,
-      name: createForm.name.trim(),
-      isActive: true,
-      varietyCount: 0,
-    })
+
+    if (!isCompactCatalog.value) {
+      await selectProduct({
+        id: response.id,
+        name: createForm.name.trim(),
+        isActive: true,
+        varietyCount: 0,
+      })
+    }
   } catch (exception) {
     createModalError.value =
       exception instanceof Error
@@ -342,6 +421,35 @@ async function selectProduct(
       detailsLoading.value = false
     }
   }
+}
+
+async function toggleProduct(
+  product: ProductSummary,
+) {
+  if (!isCompactCatalog.value) {
+    await selectProduct(product)
+    return
+  }
+
+  if (expandedProductId.value === product.id) {
+    expandedProductId.value = null
+    selectedProduct.value = null
+    detailsError.value = null
+    detailsLoading.value = false
+    ++productSelectionRequest
+    return
+  }
+
+  expandedProductId.value = product.id
+  await selectProduct(product)
+}
+
+function isProductExpanded(
+  productId: string,
+) {
+  return isCompactCatalog.value
+    ? expandedProductId.value === productId
+    : selectedProduct.value?.id === productId
 }
 
 async function refreshSelectedProduct() {
@@ -405,20 +513,6 @@ function queueVarietyInput() {
   }
 
   varietyName.value = ''
-}
-
-function handleVarietyKeydown(
-  event: KeyboardEvent,
-) {
-  if (
-    event.key !== 'Enter' &&
-    event.key !== ','
-  ) {
-    return
-  }
-
-  event.preventDefault()
-  queueVarietyInput()
 }
 
 function removeDraftVariety(index: number) {
@@ -707,67 +801,130 @@ async function deactivateProduct() {
               </thead>
 
               <tbody>
-                <tr
+                <template
                   v-for="row in visibleProductRows"
                   :key="row.id"
-                  class="product-select-row"
-                  :class="{
-                    selected:
-                      row.original.id ===
-                      selectedProduct?.id,
-                  }"
-                  tabindex="0"
-                  @click="
-                    selectProduct(row.original)
-                  "
-                  @keydown.enter="
-                    selectProduct(row.original)
-                  "
                 >
-                  <td data-label="Product">
-                    <div class="product-identity">
-                      <div class="product-icon">
-                        <i
-                          class="cil-leaf"
+                  <tr
+                    class="product-select-row"
+                    :class="{
+                      selected:
+                        isProductExpanded(
+                          row.original.id,
+                        ),
+                    }"
+                    tabindex="0"
+                    :aria-expanded="
+                      isCompactCatalog
+                        ? isProductExpanded(
+                            row.original.id,
+                          )
+                        : undefined
+                    "
+                    @click="
+                      toggleProduct(row.original)
+                    "
+                    @keydown.enter="
+                      toggleProduct(row.original)
+                    "
+                  >
+                    <td data-label="Product">
+                      <div class="product-identity">
+                        <div class="product-icon">
+                          <i
+                            class="cil-leaf"
+                            aria-hidden="true"
+                          />
+                        </div>
+
+                        <strong>
+                          {{ row.original.name }}
+                        </strong>
+
+                        <span
+                          class="product-accordion-chevron"
+                          :class="{
+                            expanded:
+                              isProductExpanded(
+                                row.original.id,
+                              ),
+                          }"
                           aria-hidden="true"
-                        />
+                        >
+                          ›
+                        </span>
                       </div>
+                    </td>
 
-                      <strong>
-                        {{ row.original.name }}
-                      </strong>
-                    </div>
-                  </td>
+                    <td data-label="Varieties">
+                      <span class="product-variety-count">
+                        {{ row.original.varietyCount }}
+                        {{
+                          row.original.varietyCount === 1
+                            ? 'variety'
+                            : 'varieties'
+                        }}
+                      </span>
+                    </td>
 
-                  <td data-label="Varieties">
-                    <span class="product-variety-count">
-                      {{ row.original.varietyCount }}
-                      {{
-                        row.original.varietyCount === 1
-                          ? 'variety'
-                          : 'varieties'
-                      }}
-                    </span>
-                  </td>
+                    <td data-label="Status">
+                      <span
+                        v-if="row.original.isActive"
+                        class="user-status-pill active"
+                      >
+                        <span class="status-dot" />
+                        Active
+                      </span>
 
-                  <td data-label="Status">
-                    <span
-                      v-if="row.original.isActive"
-                      class="user-status-pill active"
+                      <span
+                        v-else
+                        class="user-status-pill inactive"
+                      >
+                        <span class="status-dot" />
+                        Inactive
+                      </span>
+                    </td>
+                  </tr>
+
+                  <tr
+                    v-if="
+                      isCompactCatalog &&
+                      isProductExpanded(
+                        row.original.id,
+                      )
+                    "
+                    class="product-accordion-detail-row"
+                  >
+                    <td
+                      colspan="3"
+                      class="product-accordion-detail-cell"
                     >
-                      <span class="status-dot" />
-                      Active
-                    </span>
-
-                    <span
-                      v-else
-                      class="user-status-pill inactive"
-                    >
-                      <span class="status-dot" />
-                      Inactive
-                    </span>
-                  </td>
-                </tr>
+                      <ProductCatalogDetailPanel
+                        :product="selectedProduct"
+                        :loading="detailsLoading"
+                        :error="detailsError"
+                        :can-manage-catalog="canManageCatalog"
+                        :saving="saving"
+                        :variety-name="varietyName"
+                        :draft-varieties="draftVarieties"
+                        @update:variety-name="
+                          varietyName = $event
+                        "
+                        @queue-variety="queueVarietyInput"
+                        @remove-draft-variety="
+                          removeDraftVariety
+                        "
+                        @save-varieties="saveVarieties"
+                        @set-variety-active="
+                          setVarietyActive
+                        "
+                        @deactivate-product="
+                          deactivateProduct
+                        "
+                      />
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -842,239 +999,30 @@ async function deactivateProduct() {
         </div>
       </section>
 
-      <aside
-        class="catalog-detail-panel"
-        aria-live="polite"
-      >
-        <div
-          v-if="detailsError"
-          class="status-message status-error modal-status-message"
-        >
-          {{ detailsError }}
-        </div>
-
-        <div
-          v-if="detailsLoading"
-          class="loading-state catalog-detail-loading"
-        >
-          <CSpinner />
-          Loading product…
-        </div>
-
-        <template v-else-if="selectedProduct">
-          <div class="catalog-detail-header">
-            <div>
-              <p class="eyebrow">
-                Product
-              </p>
-              <h2>
-                {{ selectedProduct.name }}
-              </h2>
-            </div>
-
-            <span
-              v-if="selectedProduct.isActive"
-              class="user-status-pill active"
-            >
-              <span class="status-dot" />
-              Active
-            </span>
-
-            <span
-              v-else
-              class="user-status-pill inactive"
-            >
-              <span class="status-dot" />
-              Inactive
-            </span>
-          </div>
-
-          <div class="product-varieties-section">
-            <div class="section-heading product-detail-heading">
-              <div>
-                <h3>Varieties</h3>
-                <p>
-                  {{
-                    selectedProduct.varieties.length
-                  }}
-                  configured
-                </p>
-              </div>
-            </div>
-
-            <div
-              v-if="
-                canManageCatalog &&
-                selectedProduct.isActive
-              "
-              class="variety-editor"
-            >
-              <div class="variety-input-row catalog-variety-input">
-                <input
-                  v-model="varietyName"
-                  class="form-control"
-                  maxlength="150"
-                  placeholder="Type a variety"
-                  @keydown="handleVarietyKeydown"
-                >
-
-                <CButton
-                  color="secondary"
-                  variant="outline"
-                  type="button"
-                  :disabled="
-                    saving ||
-                    !varietyName.trim()
-                  "
-                  @click="queueVarietyInput"
-                >
-                  <i
-                    class="button-icon cil-plus"
-                    aria-hidden="true"
-                  />
-                  Add variety
-                </CButton>
-
-                <CButton
-                  color="primary"
-                  type="button"
-                  :disabled="
-                    saving ||
-                    draftVarieties.length === 0
-                  "
-                  @click="saveVarieties"
-                >
-                  Save varieties
-                </CButton>
-              </div>
-
-              <div
-                v-if="draftVarieties.length"
-                class="variety-pill-group draft"
-              >
-                <span
-                  v-for="(name, index) in draftVarieties"
-                  :key="`${name}-${index}`"
-                  class="variety-pill draft"
-                >
-                  {{ name }}
-                  <button
-                    type="button"
-                    aria-label="Remove draft variety"
-                    @click="removeDraftVariety(index)"
-                  >
-                    ×
-                  </button>
-                </span>
-              </div>
-            </div>
-
-            <div
-              v-if="
-                selectedProduct.varieties.length
-              "
-              class="variety-pill-group saved"
-            >
-              <span
-                v-for="variety in selectedProduct.varieties"
-                :key="variety.id"
-                class="variety-pill saved"
-                :class="{
-                  inactive: !variety.isActive,
-                }"
-              >
-                {{ variety.name }}
-                <span
-                  class="variety-pill-status"
-                  :title="
-                    variety.isActive
-                      ? 'Active'
-                      : 'Inactive'
-                  "
-                />
-
-                <button
-                  v-if="
-                    canManageCatalog &&
-                    selectedProduct.isActive
-                  "
-                  type="button"
-                  class="saved-variety-action"
-                  :title="
-                    variety.isActive
-                      ? 'Deactivate variety'
-                      : 'Reactivate variety'
-                  "
-                  :aria-label="
-                    variety.isActive
-                      ? `Deactivate ${variety.name}`
-                      : `Reactivate ${variety.name}`
-                  "
-                  :disabled="saving"
-                  @click="
-                    setVarietyActive(
-                      variety,
-                      !variety.isActive,
-                    )
-                  "
-                >
-                  {{
-                    variety.isActive
-                      ? '×'
-                      : '↻'
-                  }}
-                </button>
-              </span>
-            </div>
-
-            <div
-              v-else
-              class="catalog-empty-inline"
-            >
-              No varieties configured yet.
-            </div>
-          </div>
-
-          <div
-            v-if="
-              canManageCatalog &&
-              selectedProduct.isActive
-            "
-            class="catalog-detail-danger-zone"
-          >
-            <div>
-              <strong>
-                Deactivate product
-              </strong>
-              <p>
-                Keeps historical references intact
-                while preventing new operational use.
-              </p>
-            </div>
-
-            <CButton
-              color="danger"
-              variant="outline"
-              size="sm"
-              :disabled="saving"
-              @click="deactivateProduct"
-            >
-              <i
-                class="button-icon cil-ban"
-                aria-hidden="true"
-              />
-              Deactivate
-            </CButton>
-          </div>
-        </template>
-
-        <div
-          v-else
-          class="catalog-empty-inline"
-        >
-          Select a product to view its details.
-        </div>
-      </aside>
+      <ProductCatalogDetailPanel
+        v-if="!isCompactCatalog"
+        :product="selectedProduct"
+        :loading="detailsLoading"
+        :error="detailsError"
+        :can-manage-catalog="canManageCatalog"
+        :saving="saving"
+        :variety-name="varietyName"
+        :draft-varieties="draftVarieties"
+        @update:variety-name="
+          varietyName = $event
+        "
+        @queue-variety="queueVarietyInput"
+        @remove-draft-variety="
+          removeDraftVariety
+        "
+        @save-varieties="saveVarieties"
+        @set-variety-active="
+          setVarietyActive
+        "
+        @deactivate-product="
+          deactivateProduct
+        "
+      />
     </div>
 
     <CModal
