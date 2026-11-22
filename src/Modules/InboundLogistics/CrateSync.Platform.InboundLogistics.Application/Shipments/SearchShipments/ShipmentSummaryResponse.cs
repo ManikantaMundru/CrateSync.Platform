@@ -9,4 +9,10 @@ public sealed record ShipmentSummaryResponse(
     string Status,
     DateTimeOffset ExpectedArrivalAtUtc,
     int TotalExpectedCrates,
-    int TotalReceivedCrates);
+    int TotalReceivedCrates,
+    string? ContainerNumber,
+    string? BillOfLadingNumber,
+    string? BillOfEntryNumber,
+    string CustomsStatus,
+    string PlantQuarantineStatus,
+    string FoodSafetyStatus);
