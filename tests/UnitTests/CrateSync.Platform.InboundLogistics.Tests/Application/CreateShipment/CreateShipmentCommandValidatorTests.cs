@@ -36,21 +36,6 @@ public sealed class CreateShipmentCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_Should_Fail_When_WarehouseId_Is_Empty()
-    {
-        var command = CreateValidCommand() with
-        {
-            WarehouseId = Guid.Empty
-        };
-
-        var result = await _validator.ValidateAsync(
-            command,
-            TestContext.Current.CancellationToken);
-
-        result.IsValid.ShouldBeFalse();
-    }
-
-    [Fact]
     public async Task Validate_Should_Fail_When_TrackingNumber_Is_Empty()
     {
         var command = CreateValidCommand() with
@@ -82,7 +67,6 @@ public sealed class CreateShipmentCommandValidatorTests
 
     private static CreateShipmentCommand CreateValidCommand() =>
         new(
-            Guid.NewGuid(),
             Guid.NewGuid(),
             "TRACK-001",
             "ZA",
