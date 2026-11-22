@@ -6,6 +6,5 @@ namespace CrateSync.Platform.InboundLogistics.Application.Shipments.SearchShipme
 public sealed record SearchShipmentsQuery(
     string? SearchTerm,
     ShipmentStatus? Status,
-    Guid? SupplierId,
-    Guid? WarehouseId)
+    Guid? SupplierId)
     : IQuery<IReadOnlyCollection<ShipmentSummaryResponse>>;
