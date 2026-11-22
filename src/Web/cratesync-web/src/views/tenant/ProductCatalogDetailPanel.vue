@@ -25,6 +25,7 @@ const props = defineProps<{
   saving: boolean
   varietyName: string
   draftVarieties: string[]
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -85,7 +86,10 @@ function handleVarietyKeydown(
     </div>
 
     <template v-else-if="props.product">
-      <div class="catalog-detail-header">
+      <div
+        v-if="!props.compact"
+        class="catalog-detail-header"
+      >
         <div>
           <p class="eyebrow">
             Product
@@ -113,14 +117,26 @@ function handleVarietyKeydown(
       </div>
 
       <div class="product-varieties-section">
-        <div class="section-heading product-detail-heading">
+        <div
+          class="section-heading product-detail-heading"
+          :class="{ compact: props.compact }"
+        >
           <div>
             <h3>Varieties</h3>
-            <p>
-              {{ props.product.varieties.length }}
-              configured
-            </p>
           </div>
+
+          <span
+            v-if="props.compact"
+            class="catalog-variety-configured-count"
+          >
+            {{ props.product.varieties.length }}
+            configured
+          </span>
+
+          <p v-else>
+            {{ props.product.varieties.length }}
+            configured
+          </p>
         </div>
 
         <div
