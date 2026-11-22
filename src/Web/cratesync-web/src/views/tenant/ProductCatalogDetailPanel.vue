@@ -40,6 +40,15 @@ const emit = defineEmits<{
   (event: 'deactivate-product'): void
 }>()
 
+function handleVarietyInput(
+  event: Event,
+) {
+  emit(
+    'update:varietyName',
+    (event.target as HTMLInputElement).value,
+  )
+}
+
 function handleVarietyKeydown(
   event: KeyboardEvent,
 ) {
@@ -127,12 +136,7 @@ function handleVarietyKeydown(
               class="form-control"
               maxlength="150"
               placeholder="Type a variety"
-              @input="
-                emit(
-                  'update:varietyName',
-                  ($event.target as HTMLInputElement).value,
-                )
-              "
+              @input="handleVarietyInput"
               @keydown="handleVarietyKeydown"
             >
 
