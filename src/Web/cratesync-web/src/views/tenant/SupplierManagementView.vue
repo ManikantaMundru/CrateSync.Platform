@@ -27,6 +27,13 @@ interface SupplierSummary {
   name: string
   commercialIdentifier: string | null
   isActive: boolean
+  addressLine1: string | null
+  city: string | null
+  stateOrProvince: string | null
+  country: string | null
+  contactName: string | null
+  email: string | null
+  phone: string | null
 }
 
 interface SupplierAddress {
@@ -99,12 +106,23 @@ const filteredSuppliers = computed(() => {
   const term = search.value.trim().toLowerCase()
 
   return suppliers.value.filter((supplier) => {
+    const searchable = [
+      supplier.name,
+      supplier.commercialIdentifier,
+      supplier.addressLine1,
+      supplier.city,
+      supplier.stateOrProvince,
+      supplier.country,
+      supplier.contactName,
+      supplier.email,
+      supplier.phone,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
     const matchesSearch =
-      !term ||
-      supplier.name.toLowerCase().includes(term) ||
-      supplier.commercialIdentifier
-        ?.toLowerCase()
-        .includes(term) === true
+      !term || searchable.includes(term)
 
     const matchesStatus =
       !statusFilter.value ||
@@ -507,6 +525,37 @@ async function setSupplierActive(
   }
 }
 
+function supplierInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+}
+
+function summaryAddress(
+  supplier: SupplierSummary,
+) {
+  return [
+    supplier.addressLine1,
+    supplier.city,
+    supplier.stateOrProvince,
+    supplier.country,
+  ]
+    .filter(Boolean)
+    .join(', ') || 'No address configured'
+}
+
+async function inspectSupplier(
+  supplier: SupplierSummary,
+) {
+  await selectSupplier(supplier)
+
+  if (selectedSupplier.value?.id === supplier.id)
+    openEdit()
+}
+
 function formatAddress(
   address: SupplierAddress | null,
 ) {
@@ -578,7 +627,7 @@ function formatAddress(
           v-model="search"
           class="form-control tenant-search"
           type="search"
-          placeholder="Search suppliers..."
+          placeholder="Search by supplier, ID, country, or contact..."
           aria-label="Search suppliers"
         >
       </div>
@@ -683,11 +732,8 @@ function formatAddress(
               "
               @click="toggleSupplier(supplier)"
             >
-              <span class="supplier-icon">
-                <i
-                  class="cil-truck"
-                  aria-hidden="true"
-                />
+              <span class="supplier-initials">
+                {{ supplierInitials(supplier.name) }}
               </span>
 
               <span class="supplier-card-copy">
@@ -699,6 +745,9 @@ function formatAddress(
                     supplier.commercialIdentifier ||
                     'No commercial ID'
                   }}
+                  <span v-if="supplier.country">
+                    · {{ supplier.country }}
+                  </span>
                 </small>
               </span>
 
@@ -854,14 +903,16 @@ function formatAddress(
 
         <div
           v-else
-          class="user-table-shell"
+          class="user-table-shell trading-partner-table-shell"
         >
           <div class="table-responsive">
-            <table class="user-table supplier-table">
+            <table class="user-table trading-partner-table">
               <thead>
                 <tr>
                   <th>Supplier</th>
                   <th>Commercial ID</th>
+                  <th>Location / Country</th>
+                  <th>Primary Contact</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -870,39 +921,59 @@ function formatAddress(
                 <tr
                   v-for="supplier in filteredSuppliers"
                   :key="supplier.id"
-                  class="product-select-row"
-                  :class="{
-                    selected:
-                      selectedSupplier?.id ===
-                      supplier.id,
-                  }"
+                  class="trading-partner-row"
                   tabindex="0"
-                  @click="
-                    selectSupplier(supplier)
-                  "
-                  @keydown.enter="
-                    selectSupplier(supplier)
-                  "
+                  @click="inspectSupplier(supplier)"
+                  @keydown.enter="inspectSupplier(supplier)"
                 >
                   <td>
-                    <div class="supplier-identity">
-                      <span class="supplier-icon">
-                        <i
-                          class="cil-truck"
-                          aria-hidden="true"
-                        />
+                    <div class="trading-partner-identity">
+                      <span class="supplier-initials">
+                        {{ supplierInitials(supplier.name) }}
                       </span>
-                      <strong>
-                        {{ supplier.name }}
-                      </strong>
+                      <span class="trading-partner-copy">
+                        <strong>{{ supplier.name }}</strong>
+                        <small>{{ summaryAddress(supplier) }}</small>
+                      </span>
                     </div>
                   </td>
 
                   <td>
-                    {{
-                      supplier.commercialIdentifier ||
-                      '—'
-                    }}
+                    <span
+                      v-if="supplier.commercialIdentifier"
+                      class="trading-partner-id"
+                    >
+                      {{ supplier.commercialIdentifier }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
+
+                  <td>
+                    <span class="trading-partner-stack">
+                      <strong>
+                        {{ supplier.country || 'Not set' }}
+                      </strong>
+                      <small>
+                        {{
+                          [
+                            supplier.city,
+                            supplier.stateOrProvince,
+                          ].filter(Boolean).join(', ') ||
+                          '—'
+                        }}
+                      </small>
+                    </span>
+                  </td>
+
+                  <td>
+                    <span class="trading-partner-stack">
+                      <strong>
+                        {{ supplier.contactName || 'Not set' }}
+                      </strong>
+                      <small>
+                        {{ supplier.phone || supplier.email || '—' }}
+                      </small>
+                    </span>
                   </td>
 
                   <td>
@@ -925,161 +996,21 @@ function formatAddress(
               </tbody>
             </table>
           </div>
+
+          <div class="trading-partner-table-footer">
+            <span>
+              Showing 1–{{ filteredSuppliers.length }}
+              of {{ filteredSuppliers.length }}
+              trading partners
+            </span>
+            <span>
+              Click any row to inspect or edit supplier details
+            </span>
+          </div>
         </div>
       </section>
 
-      <aside
-        v-if="!isCompact"
-        class="catalog-detail-panel supplier-detail-panel"
-        aria-live="polite"
-      >
-        <div
-          v-if="detailsError"
-          class="status-message status-error"
-        >
-          {{ detailsError }}
-        </div>
 
-        <div
-          v-if="detailsLoading"
-          class="loading-state catalog-detail-loading"
-        >
-          <CSpinner />
-          Loading supplier…
-        </div>
-
-        <template v-else-if="selectedSupplier">
-          <div class="catalog-detail-header">
-            <div>
-              <p class="eyebrow">
-                Supplier
-              </p>
-              <h2>
-                {{ selectedSupplier.name }}
-              </h2>
-              <small>
-                {{
-                  selectedSupplier.commercialIdentifier ||
-                  'No commercial identifier'
-                }}
-              </small>
-            </div>
-
-            <span
-              v-if="selectedSupplier.isActive"
-              class="user-status-pill active"
-            >
-              <span class="status-dot" />
-              Active
-            </span>
-            <span
-              v-else
-              class="user-status-pill inactive"
-            >
-              <span class="status-dot" />
-              Inactive
-            </span>
-          </div>
-
-          <div class="supplier-detail-grid">
-            <div class="supplier-detail-wide">
-              <span>Address</span>
-              <strong>
-                {{
-                  formatAddress(
-                    selectedSupplier.address,
-                  )
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Country</span>
-              <strong>
-                {{
-                  selectedSupplier.address
-                    ?.country ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Contact</span>
-              <strong>
-                {{
-                  selectedSupplier.contactDetails
-                    ?.contactName ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Email</span>
-              <strong>
-                {{
-                  selectedSupplier.contactDetails
-                    ?.email ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Phone</span>
-              <strong>
-                {{
-                  selectedSupplier.contactDetails
-                    ?.phone ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-          </div>
-
-          <div
-            v-if="canManageSuppliers"
-            class="supplier-detail-actions"
-          >
-            <CButton
-              color="secondary"
-              variant="outline"
-              :disabled="saving"
-              @click="openEdit"
-            >
-              Edit supplier
-            </CButton>
-
-            <CButton
-              v-if="selectedSupplier.isActive"
-              color="danger"
-              variant="outline"
-              :disabled="saving"
-              @click="setSupplierActive(false)"
-            >
-              Deactivate
-            </CButton>
-
-            <CButton
-              v-else
-              color="success"
-              variant="outline"
-              :disabled="saving"
-              @click="setSupplierActive(true)"
-            >
-              Reactivate
-            </CButton>
-          </div>
-        </template>
-
-        <div
-          v-else
-          class="catalog-empty-inline"
-        >
-          Select a supplier to view details.
-        </div>
-      </aside>
     </div>
 
     <CModal

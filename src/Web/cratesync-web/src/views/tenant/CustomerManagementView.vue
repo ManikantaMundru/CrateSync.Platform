@@ -27,6 +27,13 @@ interface CustomerSummary {
   name: string
   commercialIdentifier: string | null
   isActive: boolean
+  addressLine1: string | null
+  city: string | null
+  stateOrProvince: string | null
+  country: string | null
+  contactName: string | null
+  email: string | null
+  phone: string | null
 }
 
 interface CustomerAddress {
@@ -99,12 +106,23 @@ const filteredCustomers = computed(() => {
   const term = search.value.trim().toLowerCase()
 
   return customers.value.filter((customer) => {
+    const searchable = [
+      customer.name,
+      customer.commercialIdentifier,
+      customer.addressLine1,
+      customer.city,
+      customer.stateOrProvince,
+      customer.country,
+      customer.contactName,
+      customer.email,
+      customer.phone,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
     const matchesSearch =
-      !term ||
-      customer.name.toLowerCase().includes(term) ||
-      customer.commercialIdentifier
-        ?.toLowerCase()
-        .includes(term) === true
+      !term || searchable.includes(term)
 
     const matchesStatus =
       !statusFilter.value ||
@@ -503,6 +521,37 @@ async function deactivateCustomer() {
   }
 }
 
+function customerInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+}
+
+function summaryAddress(
+  customer: CustomerSummary,
+) {
+  return [
+    customer.addressLine1,
+    customer.city,
+    customer.stateOrProvince,
+    customer.country,
+  ]
+    .filter(Boolean)
+    .join(', ') || 'No address configured'
+}
+
+async function inspectCustomer(
+  customer: CustomerSummary,
+) {
+  await selectCustomer(customer)
+
+  if (selectedCustomer.value?.id === customer.id)
+    openEdit()
+}
+
 function formatAddress(
   address: CustomerAddress | null,
 ) {
@@ -573,7 +622,7 @@ function formatAddress(
           v-model="search"
           class="form-control tenant-search"
           type="search"
-          placeholder="Search customers..."
+          placeholder="Search by customer, ID, country, or contact..."
           aria-label="Search customers"
         >
       </div>
@@ -678,11 +727,8 @@ function formatAddress(
               "
               @click="toggleCustomer(customer)"
             >
-              <span class="customer-icon">
-                <i
-                  class="cil-people"
-                  aria-hidden="true"
-                />
+              <span class="customer-initials">
+                {{ customerInitials(customer.name) }}
               </span>
 
               <span class="customer-card-copy">
@@ -694,6 +740,9 @@ function formatAddress(
                     customer.commercialIdentifier ||
                     'No commercial ID'
                   }}
+                  <span v-if="customer.country">
+                    · {{ customer.country }}
+                  </span>
                 </small>
               </span>
 
@@ -834,14 +883,16 @@ function formatAddress(
 
         <div
           v-else
-          class="user-table-shell"
+          class="user-table-shell trading-partner-table-shell"
         >
           <div class="table-responsive">
-            <table class="user-table customer-table">
+            <table class="user-table trading-partner-table">
               <thead>
                 <tr>
                   <th>Customer</th>
                   <th>Commercial ID</th>
+                  <th>Location / Country</th>
+                  <th>Primary Contact</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -850,39 +901,59 @@ function formatAddress(
                 <tr
                   v-for="customer in filteredCustomers"
                   :key="customer.id"
-                  class="product-select-row"
-                  :class="{
-                    selected:
-                      selectedCustomer?.id ===
-                      customer.id,
-                  }"
+                  class="trading-partner-row"
                   tabindex="0"
-                  @click="
-                    selectCustomer(customer)
-                  "
-                  @keydown.enter="
-                    selectCustomer(customer)
-                  "
+                  @click="inspectCustomer(customer)"
+                  @keydown.enter="inspectCustomer(customer)"
                 >
                   <td>
-                    <div class="customer-identity">
-                      <span class="customer-icon">
-                        <i
-                          class="cil-people"
-                          aria-hidden="true"
-                        />
+                    <div class="trading-partner-identity">
+                      <span class="customer-initials">
+                        {{ customerInitials(customer.name) }}
                       </span>
-                      <strong>
-                        {{ customer.name }}
-                      </strong>
+                      <span class="trading-partner-copy">
+                        <strong>{{ customer.name }}</strong>
+                        <small>{{ summaryAddress(customer) }}</small>
+                      </span>
                     </div>
                   </td>
 
                   <td>
-                    {{
-                      customer.commercialIdentifier ||
-                      '—'
-                    }}
+                    <span
+                      v-if="customer.commercialIdentifier"
+                      class="trading-partner-id"
+                    >
+                      {{ customer.commercialIdentifier }}
+                    </span>
+                    <span v-else>—</span>
+                  </td>
+
+                  <td>
+                    <span class="trading-partner-stack">
+                      <strong>
+                        {{ customer.country || 'Not set' }}
+                      </strong>
+                      <small>
+                        {{
+                          [
+                            customer.city,
+                            customer.stateOrProvince,
+                          ].filter(Boolean).join(', ') ||
+                          '—'
+                        }}
+                      </small>
+                    </span>
+                  </td>
+
+                  <td>
+                    <span class="trading-partner-stack">
+                      <strong>
+                        {{ customer.contactName || 'Not set' }}
+                      </strong>
+                      <small>
+                        {{ customer.phone || customer.email || '—' }}
+                      </small>
+                    </span>
                   </td>
 
                   <td>
@@ -905,152 +976,21 @@ function formatAddress(
               </tbody>
             </table>
           </div>
+
+          <div class="trading-partner-table-footer">
+            <span>
+              Showing 1–{{ filteredCustomers.length }}
+              of {{ filteredCustomers.length }}
+              trading partners
+            </span>
+            <span>
+              Click any row to inspect or edit customer details
+            </span>
+          </div>
         </div>
       </section>
 
-      <aside
-        v-if="!isCompact"
-        class="catalog-detail-panel customer-detail-panel"
-        aria-live="polite"
-      >
-        <div
-          v-if="detailsError"
-          class="status-message status-error"
-        >
-          {{ detailsError }}
-        </div>
 
-        <div
-          v-if="detailsLoading"
-          class="loading-state catalog-detail-loading"
-        >
-          <CSpinner />
-          Loading customer…
-        </div>
-
-        <template v-else-if="selectedCustomer">
-          <div class="catalog-detail-header">
-            <div>
-              <p class="eyebrow">
-                Customer
-              </p>
-              <h2>
-                {{ selectedCustomer.name }}
-              </h2>
-              <small>
-                {{
-                  selectedCustomer.commercialIdentifier ||
-                  'No commercial identifier'
-                }}
-              </small>
-            </div>
-
-            <span
-              v-if="selectedCustomer.isActive"
-              class="user-status-pill active"
-            >
-              <span class="status-dot" />
-              Active
-            </span>
-            <span
-              v-else
-              class="user-status-pill inactive"
-            >
-              <span class="status-dot" />
-              Inactive
-            </span>
-          </div>
-
-          <div class="customer-detail-grid">
-            <div class="customer-detail-wide">
-              <span>Address</span>
-              <strong>
-                {{
-                  formatAddress(
-                    selectedCustomer.address,
-                  )
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Country</span>
-              <strong>
-                {{
-                  selectedCustomer.address
-                    ?.country ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Contact</span>
-              <strong>
-                {{
-                  selectedCustomer.contactDetails
-                    ?.contactName ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Email</span>
-              <strong>
-                {{
-                  selectedCustomer.contactDetails
-                    ?.email ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-
-            <div>
-              <span>Phone</span>
-              <strong>
-                {{
-                  selectedCustomer.contactDetails
-                    ?.phone ||
-                  'Not set'
-                }}
-              </strong>
-            </div>
-          </div>
-
-          <div
-            v-if="canManageCustomers"
-            class="customer-detail-actions"
-          >
-            <CButton
-              color="secondary"
-              variant="outline"
-              :disabled="saving"
-              @click="openEdit"
-            >
-              Edit customer
-            </CButton>
-
-            <CButton
-                    v-if="selectedCustomer.isActive"
-                    color="danger"
-                    variant="outline"
-                    size="sm"
-                    :disabled="saving"
-                    @click="deactivateCustomer"
-                  >
-                    Deactivate
-                  </CButton>
-          </div>
-        </template>
-
-        <div
-          v-else
-          class="catalog-empty-inline"
-        >
-          Select a customer to view details.
-        </div>
-      </aside>
     </div>
 
     <CModal
