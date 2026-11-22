@@ -6,6 +6,5 @@ public sealed record ShipmentCreatedDomainEvent(
     InboundShipmentId ShipmentId,
     Guid TenantId,
     Guid SupplierId,
-    Guid WarehouseId,
     DateTimeOffset OccurredOnUtc)
     : DomainEvent(OccurredOnUtc);
