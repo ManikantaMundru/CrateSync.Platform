@@ -102,10 +102,6 @@ const canManageCustomers = computed(
     ) === true,
 )
 
-const filteredCustomers = computed(
-  () => customers.value,
-)
-
 watch(
   [statusFilter, pageSize],
   () => {
