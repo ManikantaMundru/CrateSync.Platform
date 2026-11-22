@@ -71,11 +71,11 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
             product.Id,
             product.Name,
             product.IsActive,
+            varieties,
             product.CustomsTariffCode,
             product.ScientificName,
             product.RegulatoryCategory,
-            product.DefaultUnitOfMeasure,
-            varieties);
+            product.DefaultUnitOfMeasure);
     }
 
     public async Task<IReadOnlyCollection<ProductSearchResponse>> SearchAsync(
