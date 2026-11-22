@@ -38,6 +38,12 @@ internal sealed class ActivateProductVarietyCommandHandler(
                 ProductErrors.NotFound(productId));
         }
 
+        if (!product.IsActive)
+        {
+            return Result.Failure(
+                ProductErrors.Inactive(productId));
+        }
+
         if (!product.Varieties.Any(
                 x => x.Id == varietyId))
         {
