@@ -1956,6 +1956,32 @@ a {
   outline-offset: -2px;
 }
 
+
+.product-accordion-chevron {
+  display: none;
+  margin-left: auto;
+  color: #667085;
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.product-accordion-chevron.open {
+  transform: rotate(90deg);
+}
+
+.catalog-detail-desktop-target {
+  min-width: 0;
+}
+
+.product-accordion-detail-row {
+  display: none;
+}
+
+.product-accordion-detail-target {
+  min-width: 0;
+}
+
 .catalog-variety-input {
   grid-template-columns:
     minmax(0, 1fr) auto auto;
@@ -2071,15 +2097,102 @@ a {
 
 @media (max-width: 991.98px) {
   .catalog-master-detail {
-    grid-template-columns: 1fr;
+    display: block;
   }
 
-  .catalog-detail-panel {
-    order: 2;
+  .catalog-detail-desktop-target {
+    display: none;
+  }
+
+  .product-accordion-chevron {
+    display: inline-block;
+  }
+
+  .product-select-row.selected {
+    background: #f8fafc;
+    box-shadow: none;
+  }
+
+  .product-accordion-detail-row {
+    display: table-row;
+  }
+
+  .product-accordion-detail-row > td {
+    padding: 0;
+    border-bottom: 1px solid #e0e7e4;
+    background: #f8fafc;
+  }
+
+  .product-accordion-detail-row
+    .catalog-detail-panel {
+    margin: 0.6rem;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  [data-coreui-theme="dark"]
+    .product-select-row.selected {
+    background: #1b2824;
+    box-shadow: none;
+  }
+
+  [data-coreui-theme="dark"]
+    .product-accordion-detail-row > td {
+    background: #111b18;
+    border-bottom-color: #2b3b37;
   }
 }
 
 @media (max-width: 767.98px) {
+  .product-table .product-select-row {
+    position: relative;
+    padding: 0.75rem;
+  }
+
+  .product-table .product-select-row td {
+    grid-template-columns:
+      105px minmax(0, 1fr);
+  }
+
+  .product-table .product-select-row
+    td:first-child {
+    display: block;
+    padding-bottom: 0.6rem;
+  }
+
+  .product-table .product-select-row
+    td:first-child::before {
+    display: none;
+  }
+
+  .product-table .product-identity {
+    min-width: 0;
+  }
+
+  .product-table .product-accordion-detail-row {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .product-table
+    .product-accordion-detail-row > td {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+  }
+
+  .product-table
+    .product-accordion-detail-row > td::before {
+    display: none;
+  }
+
+  .product-accordion-detail-row
+    .catalog-detail-panel {
+    margin: 0 0 0.75rem;
+  }
+
   .catalog-detail-panel {
     padding: 0.85rem;
   }
