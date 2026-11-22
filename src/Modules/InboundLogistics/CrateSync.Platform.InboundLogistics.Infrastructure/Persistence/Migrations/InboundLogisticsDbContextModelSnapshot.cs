@@ -206,6 +206,35 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.ToTable("ShipmentDocuments", "logistics");
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductVarietyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ReceivedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ShipmentLineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShipmentId");
+
+                    b.HasIndex("ShipmentLineId");
+
+                    b.ToTable("ShipmentReceipts", "logistics");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentLine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -258,6 +287,15 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                 {
                     b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
                         .WithMany("Documents")
+                        .HasForeignKey("ShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentReceipt", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
+                        .WithMany("Receipts")
                         .HasForeignKey("ShipmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -321,6 +359,8 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Navigation("Documents");
 
                     b.Navigation("Lines");
+
+                    b.Navigation("Receipts");
                 });
 #pragma warning restore 612, 618
         }
