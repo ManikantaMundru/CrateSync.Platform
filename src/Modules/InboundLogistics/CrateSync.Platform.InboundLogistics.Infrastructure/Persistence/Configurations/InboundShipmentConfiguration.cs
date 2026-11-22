@@ -137,5 +137,13 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
 
         builder.Navigation(x => x.Documents)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(x => x.Receipts)
+            .WithOne()
+            .HasForeignKey("ShipmentId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(x => x.Receipts)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

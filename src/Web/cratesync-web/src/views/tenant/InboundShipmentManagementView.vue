@@ -151,6 +151,7 @@ const statusFilter = ref('')
 const createVisible = ref(false)
 const clearanceVisible = ref(false)
 const documentVisible = ref(false)
+const receiveVisible = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -183,6 +184,15 @@ const documentForm = reactive({
   documentName: '',
   referenceNumber: '',
   notes: '',
+})
+
+const receiveForm = reactive({
+  receiptId: '',
+  shipmentLineId: '',
+  batchCode: '',
+  expectedQuantity: 0,
+  receivedQuantity: 0,
+  quantity: 0,
 })
 
 const clearanceStatuses: Record<
@@ -673,6 +683,111 @@ async function createShipment() {
   }
 }
 
+function remainingQuantity(
+  line: ShipmentLine,
+) {
+  return Math.max(
+    0,
+    line.expectedQuantity -
+      line.receivedQuantity,
+  )
+}
+
+function canReceiveLine(
+  line: ShipmentLine,
+) {
+  return (
+    selectedShipment.value !== null &&
+    [
+      'Arrived',
+      'Receiving',
+      'PartiallyReceived',
+    ].includes(
+      selectedShipment.value.status,
+    ) &&
+    remainingQuantity(line) > 0
+  )
+}
+
+function openReceive(
+  line: ShipmentLine,
+) {
+  receiveForm.receiptId =
+    crypto.randomUUID()
+  receiveForm.shipmentLineId = line.id
+  receiveForm.batchCode = line.batchCode
+  receiveForm.expectedQuantity =
+    line.expectedQuantity
+  receiveForm.receivedQuantity =
+    line.receivedQuantity
+  receiveForm.quantity =
+    remainingQuantity(line)
+
+  modalError.value = null
+  receiveVisible.value = true
+}
+
+async function receiveStock() {
+  if (!selectedShipment.value)
+    return
+
+  const remaining =
+    receiveForm.expectedQuantity -
+    receiveForm.receivedQuantity
+
+  if (
+    receiveForm.quantity <= 0 ||
+    receiveForm.quantity > remaining
+  ) {
+    modalError.value =
+      `Enter a quantity between 1 and ${remaining}.`
+    return
+  }
+
+  saving.value = true
+  modalError.value = null
+
+  try {
+    await apiFetch(
+      `/api/InboundShipment/${selectedShipment.value.id}/receive`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json',
+        },
+        body: JSON.stringify({
+          receiptId:
+            receiveForm.receiptId,
+          shipmentLineId:
+            receiveForm.shipmentLineId,
+          quantity: Number(
+            receiveForm.quantity,
+          ),
+        }),
+      },
+    )
+
+    receiveVisible.value = false
+    success.value =
+      'Stock received and inventory updated.'
+
+    await Promise.all([
+      loadShipments(),
+      loadShipment(
+        selectedShipment.value.id,
+      ),
+    ])
+  } catch (exception) {
+    modalError.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to receive stock.'
+  } finally {
+    saving.value = false
+  }
+}
+
 function openClearance() {
   if (!selectedShipment.value)
     return
@@ -1136,16 +1251,61 @@ onMounted(async () => {
               <div
                 v-for="line in selectedShipment.lines"
                 :key="line.id"
-                class="shipment-line-row"
+                class="shipment-line-row shipment-receive-row"
               >
-                <div>
+                <div class="shipment-line-main">
                   <strong>{{ line.batchCode }}</strong>
                   <small>
-                    {{ line.expectedQuantity }} crates · {{ line.packSizeKg }} kg
+                    {{ line.packSizeKg }} kg pack
                   </small>
+
+                  <div class="shipment-receipt-progress">
+                    <span>
+                      Received
+                      {{ line.receivedQuantity }}
+                      / {{ line.expectedQuantity }}
+                    </span>
+                    <span>
+                      {{ remainingQuantity(line) }}
+                      remaining
+                    </span>
+                  </div>
+
+                  <div class="shipment-progress-track">
+                    <span
+                      :style="{
+                        width:
+                          line.expectedQuantity > 0
+                            ? `${Math.min(
+                                100,
+                                (line.receivedQuantity /
+                                  line.expectedQuantity) *
+                                  100,
+                              )}%`
+                            : '0%',
+                      }"
+                    />
+                  </div>
                 </div>
-                <span>
-                  {{ line.receivedQuantity }}/{{ line.expectedQuantity }}
+
+                <CButton
+                  v-if="canReceiveLine(line)"
+                  color="primary"
+                  variant="outline"
+                  size="sm"
+                  @click="openReceive(line)"
+                >
+                  Receive
+                </CButton>
+
+                <span
+                  v-else-if="
+                    line.receivedQuantity ===
+                    line.expectedQuantity
+                  "
+                  class="shipment-received-complete"
+                >
+                  Complete
                 </span>
               </div>
             </div>
@@ -1559,6 +1719,97 @@ onMounted(async () => {
           @click="saveClearanceEvent"
         >
           Save update
+        </CButton>
+      </CModalFooter>
+    </CModal>
+
+    <CModal
+      :visible="receiveVisible"
+      @close="receiveVisible = false"
+    >
+      <CModalHeader>
+        <CModalTitle>
+          Receive shipment stock
+        </CModalTitle>
+      </CModalHeader>
+
+      <CModalBody>
+        <div
+          v-if="modalError"
+          class="status-message status-error"
+        >
+          {{ modalError }}
+        </div>
+
+        <div class="shipment-receive-summary">
+          <div>
+            <small>Batch</small>
+            <strong>
+              {{ receiveForm.batchCode }}
+            </strong>
+          </div>
+          <div>
+            <small>Expected</small>
+            <strong>
+              {{ receiveForm.expectedQuantity }}
+            </strong>
+          </div>
+          <div>
+            <small>Already received</small>
+            <strong>
+              {{ receiveForm.receivedQuantity }}
+            </strong>
+          </div>
+          <div>
+            <small>Remaining</small>
+            <strong>
+              {{
+                receiveForm.expectedQuantity -
+                receiveForm.receivedQuantity
+              }}
+            </strong>
+          </div>
+        </div>
+
+        <label class="form-field mt-3">
+          <span>Quantity received now *</span>
+          <input
+            v-model.number="receiveForm.quantity"
+            class="form-control"
+            type="number"
+            min="1"
+            :max="
+              receiveForm.expectedQuantity -
+              receiveForm.receivedQuantity
+            "
+          >
+          <small class="shipment-muted">
+            This quantity is added to inventory immediately.
+          </small>
+        </label>
+      </CModalBody>
+
+      <CModalFooter>
+        <CButton
+          color="secondary"
+          variant="outline"
+          :disabled="saving"
+          @click="receiveVisible = false"
+        >
+          Cancel
+        </CButton>
+
+        <CButton
+          color="primary"
+          :disabled="saving"
+          @click="receiveStock"
+        >
+          <CSpinner
+            v-if="saving"
+            size="sm"
+            class="me-2"
+          />
+          Confirm receipt
         </CButton>
       </CModalFooter>
     </CModal>

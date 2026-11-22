@@ -327,4 +327,35 @@ public sealed class InventoryBalanceTests
 
         return balance;
     }
+    [Fact]
+    public void Receive_Should_Not_Double_Count_Same_Shipment_Receipt()
+    {
+        var balance = InventoryBalance.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Now);
+
+        var receiptId = Guid.NewGuid();
+        var reference =
+            StockReference.ShipmentReceipt(
+                receiptId);
+
+        var first = balance.Receive(
+            new CrateQuantity(40),
+            reference,
+            Now);
+
+        var second = balance.Receive(
+            new CrateQuantity(40),
+            reference,
+            Now.AddMinutes(1));
+
+        first.ShouldBeTrue();
+        second.ShouldBeFalse();
+        balance.OnHand.Value.ShouldBe(40);
+        balance.Movements.Count.ShouldBe(1);
+    }
+
+
 }

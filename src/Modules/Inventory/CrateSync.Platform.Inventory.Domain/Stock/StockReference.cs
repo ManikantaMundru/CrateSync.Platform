@@ -15,6 +15,7 @@ public sealed record StockReference
     public Guid Id { get; private set; }
 
     public static StockReference Shipment(Guid id) => new("Shipment", id);
+    public static StockReference ShipmentReceipt(Guid id) => new("ShipmentReceipt", id);
     public static StockReference SalesOrder(Guid id) => new("SalesOrder", id);
     public static StockReference Adjustment(Guid id) => new("Adjustment", id);
 }

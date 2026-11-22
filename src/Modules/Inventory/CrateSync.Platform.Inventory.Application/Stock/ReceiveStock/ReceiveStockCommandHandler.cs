@@ -33,12 +33,20 @@ internal sealed class ReceiveStockCommandHandler(
             repository.Add(balance);
         }
 
-        balance.Receive(
+        var reference =
+            request.ReceiptId.HasValue
+                ? StockReference.ShipmentReceipt(
+                    request.ReceiptId.Value)
+                : StockReference.Shipment(
+                    request.ShipmentId);
+
+        var changed = balance.Receive(
             new CrateQuantity(request.Quantity),
-            StockReference.Shipment(request.ShipmentId),
+            reference,
             now);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        if (changed)
+            await unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Success();
     }
 }

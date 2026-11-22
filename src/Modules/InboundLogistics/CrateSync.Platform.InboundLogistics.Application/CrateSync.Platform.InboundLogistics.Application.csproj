@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\CrateSync.Platform.BuildingBlocks.Application\CrateSync.Platform.BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\CrateSync.Platform.InboundLogistics.Domain\CrateSync.Platform.InboundLogistics.Domain.csproj" />
+    <ProjectReference Include="..\CrateSync.Platform.InboundLogistics.Contracts\CrateSync.Platform.InboundLogistics.Contracts.csproj" />
   </ItemGroup>
 	<ItemGroup>
 		<InternalsVisibleTo Include="CrateSync.Platform.InboundLogistics.Tests" />

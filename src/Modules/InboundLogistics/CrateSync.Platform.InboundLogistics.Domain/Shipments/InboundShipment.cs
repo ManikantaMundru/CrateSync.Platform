@@ -9,6 +9,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     private readonly List<ShipmentLine> _lines = [];
     private readonly List<ShipmentClearanceEvent> _clearanceEvents = [];
     private readonly List<ShipmentDocument> _documents = [];
+    private readonly List<ShipmentReceipt> _receipts = [];
 
     private InboundShipment() { }
 
@@ -100,6 +101,9 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 
     public IReadOnlyCollection<ShipmentDocument> Documents =>
         _documents.AsReadOnly();
+
+    public IReadOnlyCollection<ShipmentReceipt> Receipts =>
+        _receipts.AsReadOnly();
 
     public static InboundShipment Create(
         Guid tenantId,
@@ -277,11 +281,29 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         RaiseDomainEvent(new ShipmentArrivedDomainEvent(Id, TenantId, WarehouseId, occurredOnUtc));
     }
 
-    public void ReceiveLine(
+    public ShipmentReceiptId ReceiveLine(
+        ShipmentReceiptId receiptId,
         ShipmentLineId shipmentLineId,
         CrateQuantity quantity,
         DateTimeOffset occurredOnUtc)
     {
+        var existingReceipt =
+            _receipts.SingleOrDefault(
+                x => x.Id == receiptId);
+
+        if (existingReceipt is not null)
+        {
+            if (
+                existingReceipt.ShipmentLineId != shipmentLineId ||
+                existingReceipt.Quantity != quantity.Value)
+            {
+                throw new InvalidOperationException(
+                    "Receipt ID has already been used for a different receipt.");
+            }
+
+            return existingReceipt.Id;
+        }
+
         if (Status is not ShipmentStatus.Arrived and
             not ShipmentStatus.Receiving and
             not ShipmentStatus.PartiallyReceived)
@@ -306,6 +328,15 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         }
 
         line.Receive(quantity);
+
+        var receipt = new ShipmentReceipt(
+            receiptId,
+            line.Id,
+            line.ProductVarietyId,
+            quantity.Value,
+            occurredOnUtc);
+
+        _receipts.Add(receipt);
         UpdatedAtUtc = occurredOnUtc;
 
         if (_lines.All(x => x.IsFullyReceived))
@@ -321,7 +352,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                     WarehouseId,
                     occurredOnUtc));
 
-            return;
+            return receipt.Id;
         }
 
         Status = ShipmentStatus.PartiallyReceived;
@@ -331,6 +362,8 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 Id,
                 TenantId,
                 occurredOnUtc));
+
+        return receipt.Id;
     }
 
     public void Cancel(DateTimeOffset occurredOnUtc)
