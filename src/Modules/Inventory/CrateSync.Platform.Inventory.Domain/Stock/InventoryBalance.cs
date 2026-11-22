@@ -49,8 +49,17 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         return new InventoryBalance(InventoryBalanceId.New(), tenantId, warehouseId, productVarietyId, createdAtUtc);
     }
 
-    public void Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc)
+    public bool Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc)
     {
+        if (
+            _movements.Any(
+                x =>
+                    x.Type == StockMovementType.Received &&
+                    x.Reference == reference))
+        {
+            return false;
+        }
+
         OnHand = new StockQuantity(OnHand.Value + quantity.Value);
         UpdatedAtUtc = occurredAtUtc;
 
@@ -58,6 +67,8 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
 
         RaiseDomainEvent(new StockReceivedDomainEvent(
             Id, TenantId, WarehouseId, ProductVarietyId, quantity.Value, reference.Id, occurredAtUtc));
+
+        return true;
     }
 
     public bool ReserveForOrder(Guid salesOrderId, CrateQuantity quantity, DateTimeOffset occurredAtUtc)
