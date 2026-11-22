@@ -12,6 +12,13 @@ export const useAuthStore =
     const initialized = ref(false)
     const loading = ref(false)
 
+
+    authService.onUserLoaded(
+      (loadedUser) => {
+        user.value = loadedUser
+      },
+    )
+
     const isAuthenticated = computed(
       () =>
         user.value !== null &&

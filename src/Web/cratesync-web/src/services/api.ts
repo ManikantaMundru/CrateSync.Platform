@@ -5,7 +5,8 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const user = await authService.getUser()
+  const user =
+    await authService.getValidUser()
 
   if (!user || user.expired) {
     throw new Error(

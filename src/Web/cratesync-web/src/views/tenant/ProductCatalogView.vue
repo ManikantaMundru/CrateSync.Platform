@@ -71,6 +71,7 @@ const detailsLoading = ref(false)
 const detailsError = ref<string | null>(null)
 const selectedProduct = ref<ProductDetails | null>(null)
 const varietyName = ref('')
+const draftVarieties = ref<string[]>([])
 
 const canManageCatalog = computed(
   () =>
@@ -269,6 +270,7 @@ async function openDetails(
   detailsError.value = null
   selectedProduct.value = null
   varietyName.value = ''
+  draftVarieties.value = []
 
   try {
     selectedProduct.value =
@@ -291,6 +293,7 @@ function closeDetailsModal() {
     detailsError.value = null
     selectedProduct.value = null
     varietyName.value = ''
+    draftVarieties.value = []
   }
 }
 
@@ -306,48 +309,130 @@ async function refreshSelectedProduct() {
     )
 }
 
-async function addVariety() {
+function queueVarietyInput() {
+  if (!selectedProduct.value)
+    return
+
+  const candidates =
+    varietyName.value
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean)
+
+  if (candidates.length === 0)
+    return
+
+  const existingNames =
+    new Set(
+      selectedProduct.value.varieties
+        .map((variety) =>
+          variety.name.toLowerCase(),
+        ),
+    )
+
+  const draftNames =
+    new Set(
+      draftVarieties.value.map((name) =>
+        name.toLowerCase(),
+      ),
+    )
+
+  for (const candidate of candidates) {
+    if (candidate.length > 150) {
+      detailsError.value =
+        'Variety names cannot exceed 150 characters.'
+      continue
+    }
+
+    const normalized = candidate.toLowerCase()
+
+    if (
+      existingNames.has(normalized) ||
+      draftNames.has(normalized)
+    ) {
+      continue
+    }
+
+    draftVarieties.value.push(candidate)
+    draftNames.add(normalized)
+  }
+
+  varietyName.value = ''
+}
+
+function handleVarietyKeydown(
+  event: KeyboardEvent,
+) {
   if (
-    !selectedProduct.value ||
-    !varietyName.value.trim()
+    event.key !== 'Enter' &&
+    event.key !== ','
   ) {
     return
   }
+
+  event.preventDefault()
+  queueVarietyInput()
+}
+
+function removeDraftVariety(index: number) {
+  draftVarieties.value.splice(index, 1)
+}
+
+async function saveVarieties() {
+  if (!selectedProduct.value)
+    return
+
+  queueVarietyInput()
+
+  if (draftVarieties.value.length === 0)
+    return
 
   saving.value = true
   detailsError.value = null
   success.value = null
 
+  const pending = [...draftVarieties.value]
+  let savedCount = 0
+
   try {
-    await apiFetch(
-      `/api/catalog/products/${selectedProduct.value.id}/varieties`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json',
+    for (const name of pending) {
+      await apiFetch(
+        `/api/catalog/products/${selectedProduct.value.id}/varieties`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({ name }),
         },
-        body: JSON.stringify({
-          name: varietyName.value.trim(),
-        }),
-      },
-    )
+      )
 
-    varietyName.value = ''
+      savedCount += 1
+    }
+
+    draftVarieties.value = []
     success.value =
-      'Variety added successfully.'
-
-    await Promise.all([
-      refreshSelectedProduct(),
-      loadProducts(),
-    ])
+      savedCount === 1
+        ? 'Variety added successfully.'
+        : `${savedCount} varieties added successfully.`
   } catch (exception) {
+    draftVarieties.value =
+      pending.slice(savedCount)
+
     detailsError.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to add variety.'
+        : 'Unable to save all varieties.'
   } finally {
-    saving.value = false
+    try {
+      await Promise.all([
+        refreshSelectedProduct(),
+        loadProducts(),
+      ])
+    } finally {
+      saving.value = false
+    }
   }
 }
 
@@ -820,69 +905,84 @@ async function deactivateProduct() {
               </div>
             </div>
 
-            <form
+            <div
               v-if="
                 canManageCatalog &&
                 selectedProduct.isActive
               "
-              class="add-variety-form"
-              @submit.prevent="addVariety"
+              class="variety-editor"
             >
-              <input
-                v-model.trim="varietyName"
-                class="form-control"
-                required
-                maxlength="150"
-                placeholder="e.g. Gala"
-              >
+              <div class="variety-input-row">
+                <input
+                  v-model="varietyName"
+                  class="form-control"
+                  maxlength="150"
+                  placeholder="Type a variety and press Enter or comma"
+                  @keydown="handleVarietyKeydown"
+                  @blur="queueVarietyInput"
+                >
 
-              <CButton
-                color="primary"
-                type="submit"
-                :disabled="
-                  saving ||
-                  !varietyName.trim()
-                "
+                <CButton
+                  color="primary"
+                  type="button"
+                  :disabled="
+                    saving ||
+                    (
+                      draftVarieties.length === 0 &&
+                      !varietyName.trim()
+                    )
+                  "
+                  @click="saveVarieties"
+                >
+                  Save varieties
+                </CButton>
+              </div>
+
+              <div
+                v-if="draftVarieties.length"
+                class="variety-pill-group draft"
               >
-                <i
-                  class="button-icon cil-plus"
-                  aria-hidden="true"
-                />
-                Add variety
-              </CButton>
-            </form>
+                <span
+                  v-for="(name, index) in draftVarieties"
+                  :key="`${name}-${index}`"
+                  class="variety-pill draft"
+                >
+                  {{ name }}
+                  <button
+                    type="button"
+                    aria-label="Remove draft variety"
+                    @click="removeDraftVariety(index)"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            </div>
 
             <div
               v-if="
                 selectedProduct.varieties.length
               "
-              class="variety-list"
+              class="variety-pill-group saved"
             >
-              <div
+              <span
                 v-for="variety in selectedProduct.varieties"
                 :key="variety.id"
-                class="variety-row"
+                class="variety-pill saved"
+                :class="{
+                  inactive: !variety.isActive,
+                }"
               >
-                <strong>
-                  {{ variety.name }}
-                </strong>
-
+                {{ variety.name }}
                 <span
-                  v-if="variety.isActive"
-                  class="user-status-pill active"
-                >
-                  <span class="status-dot" />
-                  Active
-                </span>
-
-                <span
-                  v-else
-                  class="user-status-pill inactive"
-                >
-                  <span class="status-dot" />
-                  Inactive
-                </span>
-              </div>
+                  class="variety-pill-status"
+                  :title="
+                    variety.isActive
+                      ? 'Active'
+                      : 'Inactive'
+                  "
+                />
+              </span>
             </div>
 
             <div

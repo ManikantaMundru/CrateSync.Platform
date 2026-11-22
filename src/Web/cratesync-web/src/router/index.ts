@@ -25,6 +25,14 @@ export const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/auth/silent-callback',
+      component: () =>
+        import(
+          '@/views/auth/SilentCallbackView.vue'
+        ),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () =>
         import('@/layouts/AppLayout.vue'),
