@@ -3,6 +3,7 @@ import {
   computed,
   nextTick,
   onMounted,
+  onUnmounted,
   reactive,
   ref,
   watch,
@@ -70,8 +71,61 @@ const createForm = reactive({
 const detailsLoading = ref(false)
 const detailsError = ref<string | null>(null)
 const selectedProduct = ref<ProductDetails | null>(null)
+const selectedProductId = ref<string | null>(null)
+const isCompactLayout = ref(false)
 const varietyName = ref('')
 const draftVarieties = ref<string[]>([])
+
+let compactLayoutQuery: MediaQueryList | null = null
+
+const detailTeleportTarget = computed(() => {
+  if (
+    isCompactLayout.value &&
+    selectedProductId.value
+  ) {
+    return `#catalog-product-detail-${selectedProductId.value}`
+  }
+
+  return '#catalog-product-detail-desktop'
+})
+
+async function applyLayoutMode(
+  compact: boolean,
+) {
+  const changed =
+    isCompactLayout.value !== compact
+
+  isCompactLayout.value = compact
+
+  if (!changed)
+    return
+
+  varietyName.value = ''
+  draftVarieties.value = []
+  detailsError.value = null
+
+  if (compact) {
+    selectedProductId.value = null
+    selectedProduct.value = null
+    ++productSelectionRequest
+    detailsLoading.value = false
+    return
+  }
+
+  await nextTick()
+
+  const firstRow = visibleProductRows.value[0]
+
+  if (firstRow) {
+    await selectProduct(firstRow.original)
+  }
+}
+
+function handleLayoutChange(
+  event: MediaQueryListEvent,
+) {
+  void applyLayoutMode(event.matches)
+}
 
 const canManageCatalog = computed(
   () =>
@@ -189,19 +243,31 @@ watch(
     const rows = visibleProductRows.value
 
     if (rows.length === 0) {
+      selectedProductId.value = null
       selectedProduct.value = null
       return
     }
 
     const selectedIsVisible =
-      selectedProduct.value &&
+      selectedProductId.value &&
       rows.some(
         (row) =>
           row.original.id ===
-          selectedProduct.value?.id,
+          selectedProductId.value,
       )
 
-    if (!selectedIsVisible) {
+    if (
+      selectedProductId.value &&
+      !selectedIsVisible
+    ) {
+      selectedProductId.value = null
+      selectedProduct.value = null
+    }
+
+    if (
+      !isCompactLayout.value &&
+      !selectedProductId.value
+    ) {
       await selectProduct(rows[0]!.original)
     }
   },
@@ -228,7 +294,8 @@ async function loadProducts() {
     await nextTick()
 
     if (
-      !selectedProduct.value &&
+      !isCompactLayout.value &&
+      !selectedProductId.value &&
       visibleProductRows.value.length > 0
     ) {
       await selectProduct(
@@ -245,7 +312,29 @@ async function loadProducts() {
   }
 }
 
-onMounted(loadProducts)
+onMounted(() => {
+  compactLayoutQuery =
+    window.matchMedia(
+      '(max-width: 991.98px)',
+    )
+
+  isCompactLayout.value =
+    compactLayoutQuery.matches
+
+  compactLayoutQuery.addEventListener(
+    'change',
+    handleLayoutChange,
+  )
+
+  void loadProducts()
+})
+
+onUnmounted(() => {
+  compactLayoutQuery?.removeEventListener(
+    'change',
+    handleLayoutChange,
+  )
+})
 
 function openCreateModal() {
   createModalError.value = null
@@ -286,12 +375,15 @@ async function createProduct() {
       'Product created successfully.'
 
     await loadProducts()
-    await selectProduct({
-      id: response.id,
-      name: createForm.name.trim(),
-      isActive: true,
-      varietyCount: 0,
-    })
+
+    if (!isCompactLayout.value) {
+      await selectProduct({
+        id: response.id,
+        name: createForm.name.trim(),
+        isActive: true,
+        varietyCount: 0,
+      })
+    }
   } catch (exception) {
     createModalError.value =
       exception instanceof Error
@@ -310,6 +402,7 @@ async function selectProduct(
   const requestId =
     ++productSelectionRequest
 
+  selectedProductId.value = product.id
   detailsLoading.value = true
   detailsError.value = null
   varietyName.value = ''
@@ -342,6 +435,26 @@ async function selectProduct(
       detailsLoading.value = false
     }
   }
+}
+
+async function toggleProduct(
+  product: ProductSummary,
+) {
+  if (
+    isCompactLayout.value &&
+    selectedProductId.value === product.id
+  ) {
+    ++productSelectionRequest
+    selectedProductId.value = null
+    selectedProduct.value = null
+    detailsLoading.value = false
+    detailsError.value = null
+    varietyName.value = ''
+    draftVarieties.value = []
+    return
+  }
+
+  await selectProduct(product)
 }
 
 async function refreshSelectedProduct() {
@@ -707,67 +820,104 @@ async function deactivateProduct() {
               </thead>
 
               <tbody>
-                <tr
+                <template
                   v-for="row in visibleProductRows"
                   :key="row.id"
-                  class="product-select-row"
-                  :class="{
-                    selected:
-                      row.original.id ===
-                      selectedProduct?.id,
-                  }"
-                  tabindex="0"
-                  @click="
-                    selectProduct(row.original)
-                  "
-                  @keydown.enter="
-                    selectProduct(row.original)
-                  "
                 >
-                  <td data-label="Product">
-                    <div class="product-identity">
-                      <div class="product-icon">
-                        <i
-                          class="cil-leaf"
+                  <tr
+                    class="product-select-row"
+                    :class="{
+                      selected:
+                        row.original.id ===
+                        selectedProductId,
+                    }"
+                    tabindex="0"
+                    :aria-expanded="
+                      isCompactLayout
+                        ? row.original.id ===
+                          selectedProductId
+                        : undefined
+                    "
+                    @click="
+                      toggleProduct(row.original)
+                    "
+                    @keydown.enter="
+                      toggleProduct(row.original)
+                    "
+                  >
+                    <td data-label="Product">
+                      <div class="product-identity">
+                        <div class="product-icon">
+                          <i
+                            class="cil-leaf"
+                            aria-hidden="true"
+                          />
+                        </div>
+
+                        <strong>
+                          {{ row.original.name }}
+                        </strong>
+
+                        <span
+                          class="product-accordion-chevron"
+                          :class="{
+                            open:
+                              row.original.id ===
+                              selectedProductId,
+                          }"
                           aria-hidden="true"
-                        />
+                        >
+                          ›
+                        </span>
                       </div>
+                    </td>
 
-                      <strong>
-                        {{ row.original.name }}
-                      </strong>
-                    </div>
-                  </td>
+                    <td data-label="Varieties">
+                      <span class="product-variety-count">
+                        {{ row.original.varietyCount }}
+                        {{
+                          row.original.varietyCount === 1
+                            ? 'variety'
+                            : 'varieties'
+                        }}
+                      </span>
+                    </td>
 
-                  <td data-label="Varieties">
-                    <span class="product-variety-count">
-                      {{ row.original.varietyCount }}
-                      {{
-                        row.original.varietyCount === 1
-                          ? 'variety'
-                          : 'varieties'
-                      }}
-                    </span>
-                  </td>
+                    <td data-label="Status">
+                      <span
+                        v-if="row.original.isActive"
+                        class="user-status-pill active"
+                      >
+                        <span class="status-dot" />
+                        Active
+                      </span>
 
-                  <td data-label="Status">
-                    <span
-                      v-if="row.original.isActive"
-                      class="user-status-pill active"
-                    >
-                      <span class="status-dot" />
-                      Active
-                    </span>
+                      <span
+                        v-else
+                        class="user-status-pill inactive"
+                      >
+                        <span class="status-dot" />
+                        Inactive
+                      </span>
+                    </td>
+                  </tr>
 
-                    <span
-                      v-else
-                      class="user-status-pill inactive"
-                    >
-                      <span class="status-dot" />
-                      Inactive
-                    </span>
-                  </td>
-                </tr>
+                  <tr
+                    v-if="
+                      isCompactLayout &&
+                      row.original.id ===
+                        selectedProductId
+                    "
+                    class="product-accordion-detail-row"
+                  >
+                    <td colspan="3">
+                      <div
+                        :id="`catalog-product-detail-${row.original.id}`"
+                        class="product-accordion-detail-target"
+                      />
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -843,6 +993,18 @@ async function deactivateProduct() {
       </section>
 
       <aside
+        id="catalog-product-detail-desktop"
+        class="catalog-detail-desktop-target"
+        aria-live="polite"
+      />
+    </div>
+
+    <Teleport
+      v-if="selectedProductId"
+      defer
+      :to="detailTeleportTarget"
+    >
+      <div
         class="catalog-detail-panel"
         aria-live="polite"
       >
@@ -1074,8 +1236,9 @@ async function deactivateProduct() {
         >
           Select a product to view its details.
         </div>
-      </aside>
-    </div>
+
+      </div>
+    </Teleport>
 
     <CModal
       :visible="createModalVisible"
