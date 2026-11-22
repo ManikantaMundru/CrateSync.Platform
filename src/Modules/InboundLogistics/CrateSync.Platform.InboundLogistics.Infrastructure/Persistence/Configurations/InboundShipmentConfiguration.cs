@@ -25,9 +25,6 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
         builder.Property(x => x.SupplierId)
             .IsRequired();
 
-        builder.Property(x => x.WarehouseId)
-            .IsRequired();
-
         builder.Property(x => x.TrackingNumber)
             .HasConversion(
                 trackingNumber => trackingNumber.Value,
@@ -109,8 +106,6 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
         builder.HasIndex(x => new { x.TenantId, x.Status });
 
         builder.HasIndex(x => new { x.TenantId, x.SupplierId });
-
-        builder.HasIndex(x => new { x.TenantId, x.WarehouseId });
 
         builder.HasIndex(x => new { x.TenantId, x.ExpectedArrivalAtUtc });
 
