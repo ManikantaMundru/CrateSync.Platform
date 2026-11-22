@@ -2,6 +2,7 @@
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 400;
   color: #17211f;
   background: #f4f7f6;
   font-synthesis: none;
@@ -326,6 +327,23 @@ a {
   gap: 1.6rem;
 }
 
+.users-page {
+  gap: 1rem;
+}
+
+.users-page .page-heading {
+  margin-bottom: 0.1rem;
+}
+
+.users-page .page-heading h1 {
+  margin-top: 0.1rem;
+  margin-bottom: 0.2rem;
+}
+
+.users-page .page-heading p {
+  font-size: 0.9rem;
+}
+
 .page-heading {
   display: flex;
   align-items: flex-start;
@@ -485,7 +503,7 @@ a {
 }
 
 .tenant-search {
-  width: min(100%, 360px);
+  width: min(100%, 320px);
 }
 
 
@@ -497,8 +515,23 @@ a {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.65rem;
+  gap: 0.5rem;
   margin-left: auto;
+}
+
+.users-page .tenant-toolbar {
+  margin-top: 0.1rem;
+}
+
+.users-page .tenant-toolbar h2 {
+  color: #101828;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.users-page .tenant-toolbar p {
+  color: #667085;
+  font-size: 0.76rem;
 }
 
 .user-role-filter {
@@ -523,11 +556,11 @@ a {
 
 
 .user-table-shell {
-  overflow: hidden;
-  border: 1px solid #e0e8e5;
-  border-radius: 14px;
+  overflow: visible;
+  border: 1px solid #d9e2df;
+  border-radius: 12px;
   background: #fff;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .user-table {
@@ -537,18 +570,18 @@ a {
 
 .user-table th,
 .user-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid #edf1ef;
+  padding: 0.72rem 0.95rem;
+  border-bottom: 1px solid #e8eeec;
   vertical-align: middle;
   text-align: left;
 }
 
 .user-table th {
-  color: #667671;
-  background: #f8faf9;
+  color: #344054;
+  background: #f8fafc;
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.015em;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -569,9 +602,9 @@ a {
 }
 
 .user-list-avatar {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -589,7 +622,9 @@ a {
 
 .user-list-identity strong {
   overflow: hidden;
+  color: #101828;
   font-size: 0.9rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -597,8 +632,9 @@ a {
 .user-list-identity small,
 .muted-value,
 .warehouse-summary {
-  color: #7d8c87;
+  color: #667085;
   font-size: 0.78rem;
+  font-weight: 400;
 }
 
 .compact-badges {
@@ -629,8 +665,8 @@ a {
 .warehouse-list-compact {
   min-width: 180px;
   display: grid;
-  gap: 0.2rem;
-  color: #5f6f6a;
+  gap: 0.15rem;
+  color: #667085;
   font-size: 0.77rem;
 }
 
@@ -1379,4 +1415,54 @@ a {
 
 [data-coreui-theme="dark"] .warehouse-role-row {
   border-top-color: #2b3b37;
+}
+
+
+.users-page .form-control,
+.users-page .form-select {
+  min-height: 38px;
+  border-color: #d0d5dd;
+  border-radius: 8px;
+  color: #344054;
+  background-color: #fff;
+  font-size: 0.82rem;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.users-page .form-control:focus,
+.users-page .form-select:focus {
+  border-color: #98a2b3;
+  box-shadow: 0 0 0 3px rgba(152, 162, 179, 0.12);
+}
+
+.users-page .users-add-button {
+  min-height: 38px;
+  padding-inline: 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.users-page .user-row-actions .btn {
+  min-height: 34px;
+  padding: 0.3rem 0.65rem;
+  border-radius: 7px;
+  font-size: 0.78rem;
+}
+
+.users-page .user-role-pill,
+.users-page .user-status-pill {
+  font-weight: 600;
+}
+
+[data-coreui-theme="dark"] .users-page .user-list-identity strong,
+[data-coreui-theme="dark"] .users-page .tenant-toolbar h2 {
+  color: #f2f4f7;
+}
+
+[data-coreui-theme="dark"] .users-page .form-control,
+[data-coreui-theme="dark"] .users-page .form-select {
+  color: #e8eeec;
+  background: #111b18;
+  border-color: #344641;
 }

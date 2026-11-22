@@ -1,3 +1,7 @@
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
 import { createApp } from 'vue'
 import '@coreui/coreui/dist/css/coreui.min.css'
 import '@coreui/icons/css/free.min.css'
