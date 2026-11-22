@@ -2,6 +2,7 @@ using CrateSync.Platform.BuildingBlocks.Application;
 using CrateSync.Platform.BuildingBlocks.Application.Commands;
 using CrateSync.Platform.BuildingBlocks.Application.Common;
 using CrateSync.Platform.TradingPartners.Application.Abstractions;
+using CrateSync.Platform.TradingPartners.Application.Customers.Common;
 using CrateSync.Platform.TradingPartners.Domain.Customers;
 
 namespace CrateSync.Platform.TradingPartners.Application.Customers.ActivateCustomer;
