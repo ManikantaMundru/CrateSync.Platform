@@ -9,6 +9,7 @@ using CrateSync.Platform.Catalog.Application.Products.DeactivateProduct;
 using CrateSync.Platform.Catalog.Application.Products.DeactivateVariety;
 using CrateSync.Platform.Catalog.Application.Products.GetProduct;
 using CrateSync.Platform.Catalog.Application.Products.SearchProducts;
+using CrateSync.Platform.Catalog.Application.Products.UpdateRegulatoryProfile;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,34 @@ public sealed class ProductsController(ISender sender) : ControllerBase
         if (result.IsFailure) return this.ToProblem(result.Error);
 
         return CreatedAtAction(nameof(GetById), new { productId = result.Value }, new CreateProductResponse(result.Value));
+    }
+
+
+    [HttpPut("{productId:guid}/regulatory-profile")]
+    [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateRegulatoryProfile(
+        Guid productId,
+        [FromBody] UpdateProductRegulatoryProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command =
+            new UpdateProductRegulatoryProfileCommand(
+                productId,
+                request.CustomsTariffCode,
+                request.ScientificName,
+                request.RegulatoryCategory,
+                request.DefaultUnitOfMeasure);
+
+        var result = await sender.Send(
+            command,
+            cancellationToken);
+
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpPost("{productId:guid}/varieties")]

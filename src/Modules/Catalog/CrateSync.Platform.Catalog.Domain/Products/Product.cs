@@ -31,6 +31,14 @@ public sealed class Product : AggregateRoot<ProductId>
 
     public bool IsActive { get; private set; }
 
+    public string? CustomsTariffCode { get; private set; }
+
+    public string? ScientificName { get; private set; }
+
+    public string? RegulatoryCategory { get; private set; }
+
+    public string? DefaultUnitOfMeasure { get; private set; }
+
     public IReadOnlyCollection<ProductVariety> Varieties =>
         _varieties.AsReadOnly();
 
@@ -57,6 +65,18 @@ public sealed class Product : AggregateRoot<ProductId>
     public void Rename(string name)
     {
         Name = ValidateName(name);
+    }
+
+    public void UpdateRegulatoryProfile(
+        string? customsTariffCode,
+        string? scientificName,
+        string? regulatoryCategory,
+        string? defaultUnitOfMeasure)
+    {
+        CustomsTariffCode = NormalizeOptional(customsTariffCode, 20, nameof(customsTariffCode));
+        ScientificName = NormalizeOptional(scientificName, 200, nameof(scientificName));
+        RegulatoryCategory = NormalizeOptional(regulatoryCategory, 100, nameof(regulatoryCategory));
+        DefaultUnitOfMeasure = NormalizeOptional(defaultUnitOfMeasure, 50, nameof(defaultUnitOfMeasure));
     }
 
     public ProductVarietyId AddVariety(string name, DateTimeOffset occurredAtUtc)
@@ -174,6 +194,24 @@ public sealed class Product : AggregateRoot<ProductId>
             throw new InvalidOperationException(
                 "An inactive product cannot be modified.");
         }
+    }
+
+    private static string? NormalizeOptional(
+        string? value,
+        int maxLength,
+        string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+
+        if (trimmed.Length > maxLength)
+            throw new ArgumentException(
+                $"Value cannot exceed {maxLength} characters.",
+                parameterName);
+
+        return trimmed;
     }
 
     private static string ValidateName(string name)

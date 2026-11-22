@@ -243,6 +243,85 @@ public sealed class InboundShipmentTests
             shipment.Cancel(Now.AddDays(3)));
     }
 
+    [Fact]
+    public void Create_Should_Initialize_Clearance_Tracks()
+    {
+        var shipment = CreateShipment();
+
+        shipment.CustomsStatus.ShouldBe(
+            CustomsClearanceStatus.NotStarted);
+
+        shipment.PlantQuarantineStatus.ShouldBe(
+            PlantQuarantineStatus.NotRequired);
+
+        shipment.FoodSafetyStatus.ShouldBe(
+            FoodSafetyStatus.NotRequired);
+    }
+
+    [Fact]
+    public void RecordClearanceEvent_Should_Update_Customs_Status_And_History()
+    {
+        var shipment = CreateShipment();
+        var occurredAt = Now.AddDays(1);
+
+        var eventId = shipment.RecordClearanceEvent(
+            ClearanceAuthority.Customs,
+            nameof(CustomsClearanceStatus.BillOfEntryFiled),
+            "BE-123",
+            "Filed with customs",
+            occurredAt);
+
+        shipment.CustomsStatus.ShouldBe(
+            CustomsClearanceStatus.BillOfEntryFiled);
+
+        shipment.BillOfEntryNumber.ShouldBe("BE-123");
+        shipment.BillOfEntryDate.ShouldBe(occurredAt);
+
+        var clearanceEvent =
+            shipment.ClearanceEvents.ShouldHaveSingleItem();
+
+        clearanceEvent.Id.ShouldBe(eventId);
+        clearanceEvent.Authority.ShouldBe(
+            ClearanceAuthority.Customs);
+    }
+
+    [Fact]
+    public void RecordClearanceEvent_Should_Update_FoodSafety_Status()
+    {
+        var shipment = CreateShipment();
+
+        shipment.RecordClearanceEvent(
+            ClearanceAuthority.FoodSafety,
+            nameof(FoodSafetyStatus.LabTesting),
+            null,
+            null,
+            Now.AddDays(1));
+
+        shipment.FoodSafetyStatus.ShouldBe(
+            FoodSafetyStatus.LabTesting);
+    }
+
+    [Fact]
+    public void AddDocument_Should_Add_Document_Reference()
+    {
+        var shipment = CreateShipment();
+
+        var documentId = shipment.AddDocument(
+            ShipmentDocumentType.PhytosanitaryCertificate,
+            "Phytosanitary certificate",
+            "PHYTO-001",
+            null,
+            Now.AddDays(1));
+
+        var document =
+            shipment.Documents.ShouldHaveSingleItem();
+
+        document.Id.ShouldBe(documentId);
+        document.Type.ShouldBe(
+            ShipmentDocumentType.PhytosanitaryCertificate);
+        document.ReferenceNumber.ShouldBe("PHYTO-001");
+    }
+
     private static InboundShipment CreateShipment()
     {
         return InboundShipment.Create(

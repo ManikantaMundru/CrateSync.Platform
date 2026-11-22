@@ -27,6 +27,18 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(x => x.IsActive).IsRequired();
 
+        builder.Property(x => x.CustomsTariffCode)
+            .HasMaxLength(20);
+
+        builder.Property(x => x.ScientificName)
+            .HasMaxLength(200);
+
+        builder.Property(x => x.RegulatoryCategory)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.DefaultUnitOfMeasure)
+            .HasMaxLength(50);
+
         builder.HasIndex(x => new
         {
             x.TenantId,

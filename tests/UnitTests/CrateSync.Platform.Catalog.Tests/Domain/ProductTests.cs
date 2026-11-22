@@ -225,6 +225,40 @@ public sealed class ProductTests
     }
 
     [Fact]
+    public void UpdateRegulatoryProfile_Should_Set_Optional_Metadata()
+    {
+        var product = Product.Create(Guid.NewGuid(), "Apple", Now);
+
+        product.UpdateRegulatoryProfile(
+            "08081000",
+            "Malus domestica",
+            "Fresh fruit",
+            "Carton");
+
+        product.CustomsTariffCode.ShouldBe("08081000");
+        product.ScientificName.ShouldBe("Malus domestica");
+        product.RegulatoryCategory.ShouldBe("Fresh fruit");
+        product.DefaultUnitOfMeasure.ShouldBe("Carton");
+    }
+
+    [Fact]
+    public void UpdateRegulatoryProfile_Should_Clear_Whitespace_Values()
+    {
+        var product = Product.Create(Guid.NewGuid(), "Apple", Now);
+
+        product.UpdateRegulatoryProfile(
+            " ",
+            null,
+            "  ",
+            null);
+
+        product.CustomsTariffCode.ShouldBeNull();
+        product.ScientificName.ShouldBeNull();
+        product.RegulatoryCategory.ShouldBeNull();
+        product.DefaultUnitOfMeasure.ShouldBeNull();
+    }
+
+    [Fact]
     public void ClearDomainEvents_Should_Remove_All_DomainEvents()
     {
         var product = Product.Create(Guid.NewGuid(), "Apple", Now);

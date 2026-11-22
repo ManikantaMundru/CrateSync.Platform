@@ -7,6 +7,8 @@ namespace CrateSync.Platform.InboundLogistics.Domain.Shipments;
 public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 {
     private readonly List<ShipmentLine> _lines = [];
+    private readonly List<ShipmentClearanceEvent> _clearanceEvents = [];
+    private readonly List<ShipmentDocument> _documents = [];
 
     private InboundShipment() { }
 
@@ -32,6 +34,9 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         OriginCountry = originCountry ?? throw new ArgumentNullException(nameof(originCountry));
         ExpectedArrivalAtUtc = expectedArrivalAtUtc;
         Status = ShipmentStatus.Draft;
+        CustomsStatus = CustomsClearanceStatus.NotStarted;
+        PlantQuarantineStatus = PlantQuarantineStatus.NotRequired;
+        FoodSafetyStatus = FoodSafetyStatus.NotRequired;
         CreatedAtUtc = occurredOnUtc;
         UpdatedAtUtc = occurredOnUtc;
     }
@@ -62,7 +67,39 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 
     public ShipmentStatus Status { get; private set; }
 
+    public string? ContainerNumber { get; private set; }
+
+    public string? BillOfLadingNumber { get; private set; }
+
+    public string? PortOfLoading { get; private set; }
+
+    public string? PortOfDischarge { get; private set; }
+
+    public string? VesselName { get; private set; }
+
+    public string? VoyageNumber { get; private set; }
+
+    public string? CustomsBrokerName { get; private set; }
+
+    public string? BillOfEntryNumber { get; private set; }
+
+    public DateTimeOffset? BillOfEntryDate { get; private set; }
+
+    public DateTimeOffset? OutOfChargeAtUtc { get; private set; }
+
+    public CustomsClearanceStatus CustomsStatus { get; private set; }
+
+    public PlantQuarantineStatus PlantQuarantineStatus { get; private set; }
+
+    public FoodSafetyStatus FoodSafetyStatus { get; private set; }
+
     public IReadOnlyCollection<ShipmentLine> Lines => _lines.AsReadOnly();
+
+    public IReadOnlyCollection<ShipmentClearanceEvent> ClearanceEvents =>
+        _clearanceEvents.AsReadOnly();
+
+    public IReadOnlyCollection<ShipmentDocument> Documents =>
+        _documents.AsReadOnly();
 
     public static InboundShipment Create(
         Guid tenantId,
@@ -92,6 +129,96 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 occurredOnUtc));
 
         return shipment;
+    }
+
+    public void UpdateShippingAndCustomsReferences(
+        string? containerNumber,
+        string? billOfLadingNumber,
+        string? portOfLoading,
+        string? portOfDischarge,
+        string? vesselName,
+        string? voyageNumber,
+        string? customsBrokerName,
+        string? billOfEntryNumber,
+        DateTimeOffset? billOfEntryDate,
+        DateTimeOffset? outOfChargeAtUtc,
+        DateTimeOffset occurredOnUtc)
+    {
+        ContainerNumber = NormalizeOptional(containerNumber, 50, nameof(containerNumber));
+        BillOfLadingNumber = NormalizeOptional(billOfLadingNumber, 100, nameof(billOfLadingNumber));
+        PortOfLoading = NormalizeOptional(portOfLoading, 150, nameof(portOfLoading));
+        PortOfDischarge = NormalizeOptional(portOfDischarge, 150, nameof(portOfDischarge));
+        VesselName = NormalizeOptional(vesselName, 150, nameof(vesselName));
+        VoyageNumber = NormalizeOptional(voyageNumber, 100, nameof(voyageNumber));
+        CustomsBrokerName = NormalizeOptional(customsBrokerName, 150, nameof(customsBrokerName));
+        BillOfEntryNumber = NormalizeOptional(billOfEntryNumber, 100, nameof(billOfEntryNumber));
+        BillOfEntryDate = billOfEntryDate;
+        OutOfChargeAtUtc = outOfChargeAtUtc;
+        UpdatedAtUtc = occurredOnUtc;
+    }
+
+    public ShipmentClearanceEventId RecordClearanceEvent(
+        ClearanceAuthority authority,
+        string status,
+        string? referenceNumber,
+        string? remarks,
+        DateTimeOffset occurredOnUtc)
+    {
+        ApplyClearanceStatus(authority, status, occurredOnUtc);
+
+        if (
+            authority == ClearanceAuthority.Customs &&
+            Enum.TryParse<CustomsClearanceStatus>(
+                status,
+                true,
+                out var customsStatus) &&
+            customsStatus == CustomsClearanceStatus.BillOfEntryFiled)
+        {
+            if (!string.IsNullOrWhiteSpace(referenceNumber))
+            {
+                BillOfEntryNumber =
+                    NormalizeOptional(
+                        referenceNumber,
+                        100,
+                        nameof(referenceNumber));
+            }
+
+            BillOfEntryDate ??= occurredOnUtc;
+        }
+
+        var clearanceEvent = new ShipmentClearanceEvent(
+            ShipmentClearanceEventId.New(),
+            authority,
+            status,
+            referenceNumber,
+            remarks,
+            occurredOnUtc);
+
+        _clearanceEvents.Add(clearanceEvent);
+        UpdatedAtUtc = occurredOnUtc;
+
+        return clearanceEvent.Id;
+    }
+
+    public ShipmentDocumentId AddDocument(
+        ShipmentDocumentType type,
+        string documentName,
+        string? referenceNumber,
+        string? notes,
+        DateTimeOffset occurredOnUtc)
+    {
+        var document = new ShipmentDocument(
+            ShipmentDocumentId.New(),
+            type,
+            documentName,
+            referenceNumber,
+            notes,
+            occurredOnUtc);
+
+        _documents.Add(document);
+        UpdatedAtUtc = occurredOnUtc;
+
+        return document.Id;
     }
 
     public ShipmentLineId AddLine(
@@ -219,6 +346,89 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         UpdatedAtUtc = occurredOnUtc;
 
         RaiseDomainEvent(new ShipmentCancelledDomainEvent(Id, TenantId, occurredOnUtc));
+    }
+
+    private void ApplyClearanceStatus(
+        ClearanceAuthority authority,
+        string status,
+        DateTimeOffset occurredOnUtc)
+    {
+        switch (authority)
+        {
+            case ClearanceAuthority.Customs:
+                if (!Enum.TryParse<CustomsClearanceStatus>(
+                        status,
+                        true,
+                        out var customsStatus))
+                {
+                    throw new ArgumentException(
+                        $"'{status}' is not a valid customs clearance status.",
+                        nameof(status));
+                }
+
+                CustomsStatus = customsStatus;
+
+                if (customsStatus == CustomsClearanceStatus.OutOfCharge)
+                    OutOfChargeAtUtc ??= occurredOnUtc;
+
+                break;
+
+            case ClearanceAuthority.PlantQuarantine:
+                if (!Enum.TryParse<PlantQuarantineStatus>(
+                        status,
+                        true,
+                        out var plantQuarantineStatus))
+                {
+                    throw new ArgumentException(
+                        $"'{status}' is not a valid plant quarantine status.",
+                        nameof(status));
+                }
+
+                PlantQuarantineStatus = plantQuarantineStatus;
+                break;
+
+            case ClearanceAuthority.FoodSafety:
+                if (!Enum.TryParse<FoodSafetyStatus>(
+                        status,
+                        true,
+                        out var foodSafetyStatus))
+                {
+                    throw new ArgumentException(
+                        $"'{status}' is not a valid food safety status.",
+                        nameof(status));
+                }
+
+                FoodSafetyStatus = foodSafetyStatus;
+                break;
+
+            case ClearanceAuthority.Port:
+            case ClearanceAuthority.Other:
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(authority),
+                    authority,
+                    null);
+        }
+    }
+
+    private static string? NormalizeOptional(
+        string? value,
+        int maxLength,
+        string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+
+        if (trimmed.Length > maxLength)
+            throw new ArgumentException(
+                $"Value cannot exceed {maxLength} characters.",
+                parameterName);
+
+        return trimmed;
     }
 
     private void EnsureDraft()

@@ -46,6 +46,46 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
             .HasConversion<int>()
             .IsRequired();
 
+        builder.Property(x => x.CustomsStatus)
+            .HasConversion<int>()
+            .IsRequired();
+
+        builder.Property(x => x.PlantQuarantineStatus)
+            .HasConversion<int>()
+            .IsRequired();
+
+        builder.Property(x => x.FoodSafetyStatus)
+            .HasConversion<int>()
+            .IsRequired();
+
+        builder.Property(x => x.ContainerNumber)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.BillOfLadingNumber)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.PortOfLoading)
+            .HasMaxLength(150);
+
+        builder.Property(x => x.PortOfDischarge)
+            .HasMaxLength(150);
+
+        builder.Property(x => x.VesselName)
+            .HasMaxLength(150);
+
+        builder.Property(x => x.VoyageNumber)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.CustomsBrokerName)
+            .HasMaxLength(150);
+
+        builder.Property(x => x.BillOfEntryNumber)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.BillOfEntryDate);
+
+        builder.Property(x => x.OutOfChargeAtUtc);
+
         builder.Property(x => x.ExpectedArrivalAtUtc)
             .IsRequired();
 
@@ -80,6 +120,22 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Navigation(x => x.Lines)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(x => x.ClearanceEvents)
+            .WithOne()
+            .HasForeignKey("ShipmentId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(x => x.ClearanceEvents)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.HasMany(x => x.Documents)
+            .WithOne()
+            .HasForeignKey("ShipmentId")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(x => x.Documents)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

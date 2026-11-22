@@ -18,7 +18,11 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
                             SELECT
                                 p.Id,
                                 p.Name,
-                                p.IsActive
+                                p.IsActive,
+                                p.CustomsTariffCode,
+                                p.ScientificName,
+                                p.RegulatoryCategory,
+                                p.DefaultUnitOfMeasure
                             FROM catalog.Products p
                             WHERE
                                 p.TenantId = @TenantId
@@ -67,7 +71,11 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
             product.Id,
             product.Name,
             product.IsActive,
-            varieties);
+            varieties,
+            product.CustomsTariffCode,
+            product.ScientificName,
+            product.RegulatoryCategory,
+            product.DefaultUnitOfMeasure);
     }
 
     public async Task<IReadOnlyCollection<ProductSearchResponse>> SearchAsync(
@@ -87,7 +95,10 @@ internal sealed class ProductReadService(ISqlConnectionFactory connectionFactory
                                 ON pv.ProductId = p.Id
                             WHERE
                                 p.TenantId = @TenantId
-                                AND (@SearchTerm IS NULL OR p.Name LIKE '%' + @SearchTerm + '%')
+                                AND (@SearchTerm IS NULL
+                                     OR p.Name LIKE '%' + @SearchTerm + '%'
+                                     OR p.CustomsTariffCode LIKE '%' + @SearchTerm + '%'
+                                     OR p.ScientificName LIKE '%' + @SearchTerm + '%')
                                 AND (@IsActive IS NULL OR p.IsActive = @IsActive)
                             GROUP BY
                                 p.Id,
