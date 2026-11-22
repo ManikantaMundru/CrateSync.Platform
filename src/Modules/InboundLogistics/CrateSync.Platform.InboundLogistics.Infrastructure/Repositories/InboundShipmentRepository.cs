@@ -18,6 +18,7 @@ internal sealed class InboundShipmentRepository(InboundLogisticsDbContext dbCont
             .Include(x => x.Lines)
             .Include(x => x.ClearanceEvents)
             .Include(x => x.Documents)
+            .Include(x => x.Receipts)
             .SingleOrDefaultAsync(
                 x => x.Id == shipmentId && x.TenantId == tenantId,
                 cancellationToken);
