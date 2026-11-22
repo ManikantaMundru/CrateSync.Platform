@@ -3,6 +3,8 @@ using CrateSync.Platform.BuildingBlocks.Application.Commands;
 using CrateSync.Platform.BuildingBlocks.Application.Common;
 using CrateSync.Platform.InboundLogistics.Application.Abstractions;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.Common;
+using CrateSync.Platform.InboundLogistics.Contracts;
+using MediatR;
 using CrateSync.Platform.InboundLogistics.Domain.Shipments;
 using CrateSync.Platform.InboundLogistics.Domain.ValueObjects;
 
@@ -12,13 +14,15 @@ internal sealed class ReceiveShipmentCommandHandler(
     IInboundShipmentRepository repository,
     IInboundLogisticsUnitOfWork unitOfWork,
     ITenantContext tenantContext,
-    TimeProvider timeProvider) :
+    TimeProvider timeProvider,
+    IPublisher publisher) :
     ICommandHandler<ReceiveShipmentCommand, Result>
 {
     private readonly IInboundShipmentRepository _repository = repository;
     private readonly IInboundLogisticsUnitOfWork _unitOfWork = unitOfWork;
     private readonly ITenantContext _tenantContext = tenantContext;
     private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly IPublisher _publisher = publisher;
 
     public async Task<Result> Handle(
         ReceiveShipmentCommand request,
@@ -32,12 +36,31 @@ internal sealed class ReceiveShipmentCommandHandler(
         if (shipment is null)
             return Result.Failure(ShipmentErrors.NotFound(request.ShipmentId));
 
-        shipment.ReceiveLine(
+        var occurredAtUtc =
+            _timeProvider.GetUtcNow();
+
+        var receiptId = shipment.ReceiveLine(
+            ShipmentReceiptId.From(request.ReceiptId),
             ShipmentLineId.From(request.ShipmentLineId),
             new CrateQuantity(request.Quantity),
-            _timeProvider.GetUtcNow());
+            occurredAtUtc);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var line = shipment.Lines.Single(
+            x => x.Id == ShipmentLineId.From(
+                request.ShipmentLineId));
+
+        await _publisher.Publish(
+            new ShipmentLineReceivedIntegrationEvent(
+                receiptId.Value,
+                shipment.Id.Value,
+                shipment.TenantId,
+                shipment.WarehouseId,
+                line.ProductVarietyId,
+                request.Quantity,
+                occurredAtUtc),
+            cancellationToken);
 
         return Result.Success();
     }
