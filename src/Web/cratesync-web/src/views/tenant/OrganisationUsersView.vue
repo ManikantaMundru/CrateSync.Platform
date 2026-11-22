@@ -6,7 +6,6 @@ import {
   ref,
 } from 'vue'
 import {
-  CBadge,
   CButton,
   CCard,
   CCardBody,
