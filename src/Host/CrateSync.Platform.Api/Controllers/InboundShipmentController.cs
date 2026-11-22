@@ -34,8 +34,7 @@ public sealed class InboundShipmentController(
         [FromBody] CreateInboundShipmentRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.CanOperateWarehouseAsync(
-                request.WarehouseId,
+        if (!await accessService.HasTenantAccessAsync(
                 cancellationToken))
         {
             return Forbid();
@@ -43,7 +42,6 @@ public sealed class InboundShipmentController(
 
         var command = new CreateShipmentCommand(
             request.SupplierId,
-            request.WarehouseId,
             request.TrackingNumber,
             request.OriginCountry,
             request.ExpectedArrivalAtUtc);
@@ -258,18 +256,18 @@ public sealed class InboundShipmentController(
         [FromBody] ReceiveShipmentRequest request,
         CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
-
-        if (accessResult is not null)
-            return accessResult;
+        if (!await accessService.CanOperateWarehouseAsync(
+                request.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
 
         var command = new ReceiveShipmentCommand(
             request.ReceiptId,
             shipmentId,
             request.ShipmentLineId,
+            request.WarehouseId,
             request.Quantity);
 
         var result = await sender.Send(
@@ -316,14 +314,10 @@ public sealed class InboundShipmentController(
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        if (!await accessService.CanReadWarehouseAsync(
-                result.Value.WarehouseId,
-                cancellationToken))
-        {
-            return Forbid();
-        }
-
-        return Ok(result.Value);
+        return await accessService.HasTenantAccessAsync(
+                cancellationToken)
+            ? Ok(result.Value)
+            : Forbid();
     }
 
     [HttpGet]
@@ -331,12 +325,9 @@ public sealed class InboundShipmentController(
         [FromQuery] string? searchTerm,
         [FromQuery] ShipmentStatus? status,
         [FromQuery] Guid? supplierId,
-        [FromQuery] Guid? warehouseId,
         CancellationToken cancellationToken)
     {
-        if (warehouseId.HasValue &&
-            !await accessService.CanReadWarehouseAsync(
-                warehouseId.Value,
+        if (!await accessService.HasTenantAccessAsync(
                 cancellationToken))
         {
             return Forbid();
@@ -346,26 +337,10 @@ public sealed class InboundShipmentController(
             new SearchShipmentsQuery(
                 searchTerm,
                 status,
-                supplierId,
-                warehouseId),
+                supplierId),
             cancellationToken);
 
-        if (warehouseId.HasValue ||
-            await accessService.HasTenantWideReadAsync(
-                cancellationToken))
-        {
-            return Ok(result);
-        }
-
-        var assignedWarehouseIds =
-            await accessService.GetAssignedWarehouseIdsAsync(
-                cancellationToken);
-
-        return Ok(
-            result.Where(
-                x =>
-                    assignedWarehouseIds.Contains(
-                        x.WarehouseId)));
+        return Ok(result);
     }
 
     private async Task<IActionResult?>
@@ -383,8 +358,7 @@ public sealed class InboundShipmentController(
             return this.ToProblem(
                 shipment.Error);
 
-        return await accessService.CanOperateWarehouseAsync(
-                shipment.Value.WarehouseId,
+        return await accessService.HasTenantAccessAsync(
                 cancellationToken)
             ? null
             : Forbid();
