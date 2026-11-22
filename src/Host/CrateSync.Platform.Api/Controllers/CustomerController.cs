@@ -2,6 +2,7 @@ using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Customers;
 using CrateSync.Platform.Api.Responses.Customers;
+using CrateSync.Platform.TradingPartners.Application.Customers.ActivateCustomer;
 using CrateSync.Platform.TradingPartners.Application.Customers.CreateCustomer;
 using CrateSync.Platform.TradingPartners.Application.Customers.DeactivateCustomer;
 using CrateSync.Platform.TradingPartners.Application.Customers.GetCustomer;
@@ -111,6 +112,24 @@ namespace CrateSync.Platform.Api.Controllers
                 cancellationToken);
 
             return Ok(result);
+        }
+
+
+        [HttpPatch("{customerId:guid}/activate")]
+        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Activate(
+            Guid customerId,
+            CancellationToken cancellationToken)
+        {
+            var result = await _sender.Send(
+                new ActivateCustomerCommand(customerId),
+                cancellationToken);
+
+            if (result.IsFailure) return this.ToProblem(result.Error);
+
+            return NoContent();
         }
 
         [HttpPatch("{customerId:guid}/deactivate")]
