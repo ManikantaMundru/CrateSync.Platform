@@ -2,6 +2,7 @@ using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.InboundShipments;
 using CrateSync.Platform.Api.Responses.InboundShipments;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.AddShipmentDocument;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.AddShipmentLine;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.CancelShipment;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.CreateShipment;
@@ -9,7 +10,9 @@ using CrateSync.Platform.InboundLogistics.Application.Shipments.GetShipment;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentArrived;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentShipped;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.ReceiveShipment;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.RecordClearanceEvent;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.SearchShipments;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.UpdateShipmentReferences;
 using CrateSync.Platform.InboundLogistics.Domain.Shipments;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -96,6 +99,111 @@ public sealed class InboundShipmentController(
         return StatusCode(
             StatusCodes.Status201Created,
             new AddShipmentLineResponse(result.Value));
+    }
+
+
+    [HttpPut("{shipmentId:guid}/references")]
+    public async Task<IActionResult> UpdateReferences(
+        Guid shipmentId,
+        [FromBody] UpdateShipmentReferencesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
+        var command = new UpdateShipmentReferencesCommand(
+            shipmentId,
+            request.ContainerNumber,
+            request.BillOfLadingNumber,
+            request.PortOfLoading,
+            request.PortOfDischarge,
+            request.VesselName,
+            request.VoyageNumber,
+            request.CustomsBrokerName,
+            request.BillOfEntryNumber,
+            request.BillOfEntryDate,
+            request.OutOfChargeAtUtc);
+
+        var result = await sender.Send(
+            command,
+            cancellationToken);
+
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
+    }
+
+    [HttpPost("{shipmentId:guid}/clearance-events")]
+    [ProducesResponseType<CreateShipmentClearanceEventResponse>(
+        StatusCodes.Status201Created)]
+    public async Task<IActionResult> RecordClearanceEvent(
+        Guid shipmentId,
+        [FromBody] RecordClearanceEventRequest request,
+        CancellationToken cancellationToken)
+    {
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
+        var result = await sender.Send(
+            new RecordClearanceEventCommand(
+                shipmentId,
+                request.Authority,
+                request.Status,
+                request.ReferenceNumber,
+                request.Remarks),
+            cancellationToken);
+
+        if (result.IsFailure)
+            return this.ToProblem(result.Error);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            new CreateShipmentClearanceEventResponse(
+                result.Value));
+    }
+
+    [HttpPost("{shipmentId:guid}/documents")]
+    [ProducesResponseType<CreateShipmentDocumentResponse>(
+        StatusCodes.Status201Created)]
+    public async Task<IActionResult> AddDocument(
+        Guid shipmentId,
+        [FromBody] AddShipmentDocumentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var accessResult =
+            await EnsureShipmentOperationAccessAsync(
+                shipmentId,
+                cancellationToken);
+
+        if (accessResult is not null)
+            return accessResult;
+
+        var result = await sender.Send(
+            new AddShipmentDocumentCommand(
+                shipmentId,
+                request.Type,
+                request.DocumentName,
+                request.ReferenceNumber,
+                request.Notes),
+            cancellationToken);
+
+        if (result.IsFailure)
+            return this.ToProblem(result.Error);
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            new CreateShipmentDocumentResponse(
+                result.Value));
     }
 
     [HttpPatch("{shipmentId:guid}/ship")]
