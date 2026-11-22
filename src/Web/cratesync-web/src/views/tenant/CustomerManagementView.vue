@@ -451,14 +451,11 @@ async function saveCustomer() {
   }
 }
 
-async function setCustomerActive(
-  active: boolean,
-) {
+async function deactivateCustomer() {
   if (!selectedCustomer.value)
     return
 
   if (
-    !active &&
     !window.confirm(
       `Deactivate ${selectedCustomer.value.name}? Historical references will be preserved.`,
     )
@@ -474,15 +471,14 @@ async function setCustomerActive(
 
   try {
     await apiFetch(
-      `/api/Customer/${id}/${active ? 'activate' : 'deactivate'}`,
+      `/api/Customer/${id}/deactivate`,
       {
         method: 'PATCH',
       },
     )
 
-    success.value = active
-      ? 'Customer reactivated.'
-      : 'Customer deactivated.'
+    success.value =
+      'Customer deactivated.'
 
     await loadCustomers()
 
@@ -501,7 +497,7 @@ async function setCustomerActive(
     detailsError.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to update customer status.'
+        : 'Unable to deactivate customer.'
   } finally {
     saving.value = false
   }
@@ -826,24 +822,9 @@ function formatAddress(
                     variant="outline"
                     size="sm"
                     :disabled="saving"
-                    @click="
-                      setCustomerActive(false)
-                    "
+                    @click="deactivateCustomer"
                   >
                     Deactivate
-                  </CButton>
-
-                  <CButton
-                    v-else
-                    color="success"
-                    variant="outline"
-                    size="sm"
-                    :disabled="saving"
-                    @click="
-                      setCustomerActive(true)
-                    "
-                  >
-                    Reactivate
                   </CButton>
                 </div>
               </template>
@@ -1051,24 +1032,15 @@ function formatAddress(
             </CButton>
 
             <CButton
-              v-if="selectedCustomer.isActive"
-              color="danger"
-              variant="outline"
-              :disabled="saving"
-              @click="setCustomerActive(false)"
-            >
-              Deactivate
-            </CButton>
-
-            <CButton
-              v-else
-              color="success"
-              variant="outline"
-              :disabled="saving"
-              @click="setCustomerActive(true)"
-            >
-              Reactivate
-            </CButton>
+                    v-if="selectedCustomer.isActive"
+                    color="danger"
+                    variant="outline"
+                    size="sm"
+                    :disabled="saving"
+                    @click="deactivateCustomer"
+                  >
+                    Deactivate
+                  </CButton>
           </div>
         </template>
 
