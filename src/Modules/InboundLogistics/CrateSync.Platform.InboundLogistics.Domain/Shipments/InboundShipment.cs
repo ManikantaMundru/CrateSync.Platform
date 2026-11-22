@@ -166,6 +166,26 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     {
         ApplyClearanceStatus(authority, status, occurredOnUtc);
 
+        if (
+            authority == ClearanceAuthority.Customs &&
+            Enum.TryParse<CustomsClearanceStatus>(
+                status,
+                true,
+                out var customsStatus) &&
+            customsStatus == CustomsClearanceStatus.BillOfEntryFiled)
+        {
+            if (!string.IsNullOrWhiteSpace(referenceNumber))
+            {
+                BillOfEntryNumber =
+                    NormalizeOptional(
+                        referenceNumber,
+                        100,
+                        nameof(referenceNumber));
+            }
+
+            BillOfEntryDate ??= occurredOnUtc;
+        }
+
         var clearanceEvent = new ShipmentClearanceEvent(
             ShipmentClearanceEventId.New(),
             authority,
