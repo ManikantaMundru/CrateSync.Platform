@@ -141,6 +141,17 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             FROM logistics.ShipmentDocuments
             WHERE ShipmentId = @ShipmentId
             ORDER BY CreatedAtUtc DESC;
+
+            SELECT
+                Id,
+                ShipmentLineId,
+                WarehouseId,
+                ProductVarietyId,
+                Quantity,
+                ReceivedAtUtc
+            FROM logistics.ShipmentReceipts
+            WHERE ShipmentId = @ShipmentId
+            ORDER BY ReceivedAtUtc DESC;
             """;
 
         await using var connection =
@@ -166,6 +177,8 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             (await result.ReadAsync<ShipmentClearanceEventResponse>()).AsList();
         var documents =
             (await result.ReadAsync<ShipmentDocumentResponse>()).AsList();
+        var receipts =
+            (await result.ReadAsync<ShipmentReceiptResponse>()).AsList();
 
         return new ShipmentResponse(
             header.Id,
@@ -195,7 +208,8 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             header.PlantQuarantineStatus,
             header.FoodSafetyStatus,
             clearanceEvents,
-            documents);
+            documents,
+            receipts);
     }
 
     public async Task<IReadOnlyCollection<ShipmentSummaryResponse>> SearchAsync(
