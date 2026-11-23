@@ -111,7 +111,6 @@ public sealed class AddShipmentLineCommandHandlerTests
         InboundShipment.Create(
             tenantId,
             Guid.NewGuid(),
-            Guid.NewGuid(),
             new TrackingNumber("TRACK-001"),
             new CountryCode("ZA"),
             _timeProvider.GetUtcNow().AddDays(5),

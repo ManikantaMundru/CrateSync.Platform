@@ -16,6 +16,5 @@ public interface IInboundLogisticsReadService
         string? searchTerm,
         ShipmentStatus? status,
         Guid? supplierId,
-        Guid? warehouseId,
         CancellationToken cancellationToken = default);
 }

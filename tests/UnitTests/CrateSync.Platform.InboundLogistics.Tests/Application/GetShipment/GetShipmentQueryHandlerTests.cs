@@ -26,7 +26,6 @@ public sealed class GetShipmentQueryHandlerTests
         var response = new ShipmentResponse(
             shipmentId,
             Guid.NewGuid(),
-            Guid.NewGuid(),
             "TRACK-001",
             "ZA",
             "Draft",

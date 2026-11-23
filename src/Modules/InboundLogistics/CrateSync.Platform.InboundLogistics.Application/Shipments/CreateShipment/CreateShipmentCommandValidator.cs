@@ -9,9 +9,6 @@ internal sealed class CreateShipmentCommandValidator : AbstractValidator<CreateS
         RuleFor(x => x.SupplierId)
             .NotEmpty();
 
-        RuleFor(x => x.WarehouseId)
-            .NotEmpty();
-
         RuleFor(x => x.TrackingNumber)
             .NotEmpty()
             .MaximumLength(100);

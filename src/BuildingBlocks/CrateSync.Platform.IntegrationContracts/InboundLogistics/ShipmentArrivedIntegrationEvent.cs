@@ -7,13 +7,11 @@ public sealed record ShipmentArrivedIntegrationEvent : IIntegrationEvent
     public ShipmentArrivedIntegrationEvent(
         Guid shipmentId,
         Guid tenantId,
-        Guid warehouseId,
         DateTimeOffset occurredAtUtc)
     {
         Id = Guid.NewGuid();
         ShipmentId = shipmentId;
         TenantId = tenantId;
-        WarehouseId = warehouseId;
         OccurredAtUtc = occurredAtUtc;
     }
 
@@ -24,6 +22,4 @@ public sealed record ShipmentArrivedIntegrationEvent : IIntegrationEvent
     public Guid ShipmentId { get; }
 
     public Guid TenantId { get; }
-
-    public Guid WarehouseId { get; }
 }

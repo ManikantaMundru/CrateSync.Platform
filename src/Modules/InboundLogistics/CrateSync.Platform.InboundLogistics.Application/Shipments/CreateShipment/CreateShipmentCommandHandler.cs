@@ -39,7 +39,6 @@ internal sealed class CreateShipmentCommandHandler(
         var shipment = InboundShipment.Create(
             tenantId,
             request.SupplierId,
-            request.WarehouseId,
             new TrackingNumber(trackingNumber),
             new CountryCode(request.OriginCountry),
             request.ExpectedArrivalAtUtc,

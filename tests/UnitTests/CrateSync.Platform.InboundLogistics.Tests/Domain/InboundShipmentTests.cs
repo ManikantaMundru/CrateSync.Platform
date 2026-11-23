@@ -22,7 +22,6 @@ public sealed class InboundShipmentTests
 
         shipment.TenantId.ShouldBe(TenantId);
         shipment.SupplierId.ShouldBe(SupplierId);
-        shipment.WarehouseId.ShouldBe(WarehouseId);
         shipment.Status.ShouldBe(ShipmentStatus.Draft);
         shipment.CreatedAtUtc.ShouldBe(Now);
         shipment.UpdatedAtUtc.ShouldBe(Now);
@@ -146,6 +145,7 @@ public sealed class InboundShipmentTests
         shipment.ReceiveLine(
             ShipmentReceiptId.New(),
             line.Id,
+            WarehouseId,
             new CrateQuantity(40),
             Now.AddDays(2));
 
@@ -167,6 +167,7 @@ public sealed class InboundShipmentTests
         shipment.ReceiveLine(
             ShipmentReceiptId.New(),
             line.Id,
+            WarehouseId,
             new CrateQuantity(100),
             receivedAt);
 
@@ -188,12 +189,14 @@ public sealed class InboundShipmentTests
         shipment.ReceiveLine(
             ShipmentReceiptId.New(),
             line.Id,
+            WarehouseId,
             new CrateQuantity(40),
             Now.AddDays(2));
 
         shipment.ReceiveLine(
             ShipmentReceiptId.New(),
             line.Id,
+            WarehouseId,
             new CrateQuantity(60),
             Now.AddDays(3));
 
@@ -212,6 +215,7 @@ public sealed class InboundShipmentTests
             shipment.ReceiveLine(
             ShipmentReceiptId.New(),
             line.Id,
+            WarehouseId,
                 new CrateQuantity(101),
                 Now.AddDays(2)));
     }
@@ -226,12 +230,14 @@ public sealed class InboundShipmentTests
         shipment.ReceiveLine(
             receiptId,
             line.Id,
+            WarehouseId,
             new CrateQuantity(40),
             Now.AddDays(2));
 
         shipment.ReceiveLine(
             receiptId,
             line.Id,
+            WarehouseId,
             new CrateQuantity(40),
             Now.AddDays(2));
 
@@ -249,13 +255,15 @@ public sealed class InboundShipmentTests
         shipment.ReceiveLine(
             receiptId,
             line.Id,
+            WarehouseId,
             new CrateQuantity(40),
             Now.AddDays(2));
 
         Should.Throw<InvalidOperationException>(() =>
             shipment.ReceiveLine(
-                receiptId,
-                line.Id,
+            receiptId,
+            line.Id,
+            WarehouseId,
                 new CrateQuantity(20),
                 Now.AddDays(2)));
     }
@@ -286,6 +294,7 @@ public sealed class InboundShipmentTests
         shipment.ReceiveLine(
             ShipmentReceiptId.New(),
             line.Id,
+            WarehouseId,
             new CrateQuantity(10),
             Now.AddDays(2));
 
@@ -377,7 +386,6 @@ public sealed class InboundShipmentTests
         return InboundShipment.Create(
             TenantId,
             SupplierId,
-            WarehouseId,
             new TrackingNumber("TRACK-001"),
             new CountryCode("ZA"),
             Now.AddDays(5),

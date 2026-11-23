@@ -115,9 +115,6 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("WarehouseId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "ExpectedArrivalAtUtc");
@@ -128,8 +125,6 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
 
                     b.HasIndex("TenantId", "TrackingNumber")
                         .IsUnique();
-
-                    b.HasIndex("TenantId", "WarehouseId");
 
                     b.ToTable("InboundShipments", "logistics");
                 });
@@ -226,11 +221,16 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<Guid>("ShipmentLineId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ShipmentId");
 
                     b.HasIndex("ShipmentLineId");
+
+                    b.HasIndex("WarehouseId");
 
                     b.ToTable("ShipmentReceipts", "logistics");
                 });

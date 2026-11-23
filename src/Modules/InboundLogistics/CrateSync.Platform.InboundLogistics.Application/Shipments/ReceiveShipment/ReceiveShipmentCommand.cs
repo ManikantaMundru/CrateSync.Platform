@@ -7,4 +7,5 @@ public sealed record ReceiveShipmentCommand(
     Guid ReceiptId,
     Guid ShipmentId,
     Guid ShipmentLineId,
+    Guid WarehouseId,
     int Quantity) : ICommand<Result>;

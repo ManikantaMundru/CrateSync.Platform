@@ -45,7 +45,6 @@ public sealed class CreateShipmentCommandHandlerTests
 
         var command = new CreateShipmentCommand(
             Guid.NewGuid(),
-            Guid.NewGuid(),
             "TRACK-001",
             "ZA",
             _timeProvider.GetUtcNow().AddDays(5));
@@ -87,7 +86,6 @@ public sealed class CreateShipmentCommandHandlerTests
             _timeProvider);
 
         var command = new CreateShipmentCommand(
-            Guid.NewGuid(),
             Guid.NewGuid(),
             "TRACK-001",
             "ZA",

@@ -15,6 +15,7 @@ public sealed class ReceiveShipmentCommandValidatorTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
+            Guid.NewGuid(),
             10);
 
         var result = await _validator.ValidateAsync(
@@ -28,6 +29,7 @@ public sealed class ReceiveShipmentCommandValidatorTests
     public async Task Validate_Should_Fail_When_Quantity_Is_Zero()
     {
         var command = new ReceiveShipmentCommand(
+            Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),

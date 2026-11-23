@@ -3,7 +3,6 @@ namespace CrateSync.Platform.InboundLogistics.Application.Shipments.SearchShipme
 public sealed record ShipmentSummaryResponse(
     Guid Id,
     Guid SupplierId,
-    Guid WarehouseId,
     string TrackingNumber,
     string OriginCountry,
     string Status,

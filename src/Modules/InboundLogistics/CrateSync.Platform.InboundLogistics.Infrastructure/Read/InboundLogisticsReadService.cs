@@ -20,7 +20,6 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             SELECT
                 Id,
                 SupplierId,
-                WarehouseId,
                 TrackingNumber,
                 OriginCountry,
                 CASE Status
@@ -142,6 +141,17 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             FROM logistics.ShipmentDocuments
             WHERE ShipmentId = @ShipmentId
             ORDER BY CreatedAtUtc DESC;
+
+            SELECT
+                Id,
+                ShipmentLineId,
+                WarehouseId,
+                ProductVarietyId,
+                Quantity,
+                ReceivedAtUtc
+            FROM logistics.ShipmentReceipts
+            WHERE ShipmentId = @ShipmentId
+            ORDER BY ReceivedAtUtc DESC;
             """;
 
         await using var connection =
@@ -167,11 +177,12 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             (await result.ReadAsync<ShipmentClearanceEventResponse>()).AsList();
         var documents =
             (await result.ReadAsync<ShipmentDocumentResponse>()).AsList();
+        var receipts =
+            (await result.ReadAsync<ShipmentReceiptResponse>()).AsList();
 
         return new ShipmentResponse(
             header.Id,
             header.SupplierId,
-            header.WarehouseId,
             header.TrackingNumber,
             header.OriginCountry,
             header.Status,
@@ -197,7 +208,8 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             header.PlantQuarantineStatus,
             header.FoodSafetyStatus,
             clearanceEvents,
-            documents);
+            documents,
+            receipts);
     }
 
     public async Task<IReadOnlyCollection<ShipmentSummaryResponse>> SearchAsync(
@@ -205,14 +217,12 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
         string? searchTerm,
         ShipmentStatus? status,
         Guid? supplierId,
-        Guid? warehouseId,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
             SELECT
                 s.Id,
                 s.SupplierId,
-                s.WarehouseId,
                 s.TrackingNumber,
                 s.OriginCountry,
                 CASE s.Status
@@ -276,11 +286,9 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                    OR s.BillOfEntryNumber LIKE '%' + @SearchTerm + '%')
               AND (@Status IS NULL OR s.Status = @Status)
               AND (@SupplierId IS NULL OR s.SupplierId = @SupplierId)
-              AND (@WarehouseId IS NULL OR s.WarehouseId = @WarehouseId)
             GROUP BY
                 s.Id,
                 s.SupplierId,
-                s.WarehouseId,
                 s.TrackingNumber,
                 s.OriginCountry,
                 s.Status,
@@ -307,8 +315,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                         ? null
                         : searchTerm.Trim(),
                     Status = (int?)status,
-                    SupplierId = supplierId,
-                    WarehouseId = warehouseId
+                    SupplierId = supplierId
                 },
                 cancellationToken: cancellationToken));
 
@@ -318,7 +325,6 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
     private sealed record ShipmentHeader(
         Guid Id,
         Guid SupplierId,
-        Guid WarehouseId,
         string TrackingNumber,
         string OriginCountry,
         string Status,
