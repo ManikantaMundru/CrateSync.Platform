@@ -1615,7 +1615,7 @@ onMounted(async () => {
                   class="shipment-auto-reference"
                   @click="generateShipmentReference"
                 >
-                  <i class="cil-bolt" aria-hidden="true" />
+                  <span aria-hidden="true">⚡</span>
                   Auto-generate
                 </button>
               </span>
@@ -1677,11 +1677,13 @@ onMounted(async () => {
                 Optional — can be added later
               </span>
             </span>
-            <i
-              class="cil-chevron-top"
+            <span
+              class="shipment-freight-chevron"
               :class="{ collapsed: !freightExpanded }"
               aria-hidden="true"
-            />
+            >
+             ⌃
+            </span>
           </button>
 
           <div
@@ -1871,7 +1873,7 @@ onMounted(async () => {
                 aria-label="Remove line"
                 @click="removeLine(index)"
               >
-                <i class="cil-trash" aria-hidden="true" />
+                <span aria-hidden="true">×</span>
               </button>
             </div>
           </div>
@@ -1956,7 +1958,7 @@ onMounted(async () => {
             Create shipment
             <i
               v-if="!saving"
-              class="cil-check ms-2"
+              class="cil-check-circle ms-2"
               aria-hidden="true"
             />
           </CButton>
