@@ -160,8 +160,7 @@ public sealed class FinanceController(
         if (shipment.IsFailure)
             return this.ToProblem(shipment.Error);
 
-        if (!await accessService.CanAdminWarehouseAsync(
-                shipment.Value.WarehouseId,
+        if (!await accessService.IsTenantAdminAsync(
                 cancellationToken))
         {
             return Forbid();
@@ -204,20 +203,10 @@ public sealed class FinanceController(
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        var warehouseId =
-            await GetShipmentWarehouseIdAsync(
-                result.Value.ShipmentId,
-                cancellationToken);
-
-        if (!warehouseId.HasValue ||
-            !await accessService.CanReadWarehouseAsync(
-                warehouseId.Value,
-                cancellationToken))
-        {
-            return Forbid();
-        }
-
-        return Ok(result.Value);
+        return await accessService.HasTenantAccessAsync(
+                cancellationToken)
+            ? Ok(result.Value)
+            : Forbid();
     }
 
     [HttpGet("supplier-invoices")]
@@ -232,35 +221,10 @@ public sealed class FinanceController(
                 supplierId),
             cancellationToken);
 
-        if (await accessService.HasTenantWideReadAsync(
-                cancellationToken))
-        {
-            return Ok(result);
-        }
-
-        var assignedWarehouseIds =
-            await accessService.GetAssignedWarehouseIdsAsync(
-                cancellationToken);
-
-        var filtered =
-            new List<SupplierInvoiceSummaryResponse>();
-
-        foreach (var invoice in result)
-        {
-            var warehouseId =
-                await GetShipmentWarehouseIdAsync(
-                    invoice.ShipmentId,
-                    cancellationToken);
-
-            if (warehouseId.HasValue &&
-                assignedWarehouseIds.Contains(
-                    warehouseId.Value))
-            {
-                filtered.Add(invoice);
-            }
-        }
-
-        return Ok(filtered);
+        return await accessService.HasTenantAccessAsync(
+                cancellationToken)
+            ? Ok(result)
+            : Forbid();
     }
 
     [HttpPost("supplier-invoices/{id:guid}/payments")]
@@ -358,16 +322,7 @@ public sealed class FinanceController(
             return this.ToProblem(
                 invoice.Error);
 
-        var warehouseId =
-            await GetShipmentWarehouseIdAsync(
-                invoice.Value.ShipmentId,
-                cancellationToken);
-
-        if (!warehouseId.HasValue)
-            return NotFound();
-
-        return await accessService.CanAdminWarehouseAsync(
-                warehouseId.Value,
+        return await accessService.IsTenantAdminAsync(
                 cancellationToken)
             ? null
             : Forbid();
@@ -387,21 +342,5 @@ public sealed class FinanceController(
         return order.IsFailure
             ? null
             : order.Value.WarehouseId;
-    }
-
-    private async Task<Guid?>
-        GetShipmentWarehouseIdAsync(
-            Guid shipmentId,
-            CancellationToken cancellationToken)
-    {
-        var shipment =
-            await sender.Send(
-                new GetShipmentQuery(
-                    shipmentId),
-                cancellationToken);
-
-        return shipment.IsFailure
-            ? null
-            : shipment.Value.WarehouseId;
     }
 }
