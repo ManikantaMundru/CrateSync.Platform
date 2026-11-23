@@ -21,9 +21,7 @@ namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public sealed class InboundShipmentController(
-    ISender sender,
-    ICurrentTenantAccessService accessService)
+public sealed class InboundShipmentController(ISender sender, ICurrentTenantAccessService accessService)
     : ControllerBase
 {
     [HttpPost]
@@ -34,8 +32,7 @@ public sealed class InboundShipmentController(
         [FromBody] CreateInboundShipmentRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.HasTenantAccessAsync(
-                cancellationToken))
+        if (!await accessService.HasTenantAccessAsync(cancellationToken))
         {
             return Forbid();
         }
@@ -46,9 +43,7 @@ public sealed class InboundShipmentController(
             request.OriginCountry,
             request.ExpectedArrivalAtUtc);
 
-        var result = await sender.Send(
-            command,
-            cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
             return this.ToProblem(result.Error);
@@ -56,8 +51,7 @@ public sealed class InboundShipmentController(
         return CreatedAtAction(
             nameof(GetById),
             new { shipmentId = result.Value },
-            new CreateInboundShipmentResponse(
-                result.Value));
+            new CreateInboundShipmentResponse(result.Value));
     }
 
     [HttpPost("{shipmentId:guid}/lines")]
@@ -69,10 +63,7 @@ public sealed class InboundShipmentController(
         [FromBody] AddShipmentLineRequest request,
         CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
@@ -87,18 +78,13 @@ public sealed class InboundShipmentController(
             request.UnitCost,
             request.Currency);
 
-        var result = await sender.Send(
-            command,
-            cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        return StatusCode(
-            StatusCodes.Status201Created,
-            new AddShipmentLineResponse(result.Value));
+        return StatusCode(StatusCodes.Status201Created, new AddShipmentLineResponse(result.Value));
     }
-
 
     [HttpPut("{shipmentId:guid}/references")]
     public async Task<IActionResult> UpdateReferences(
@@ -106,10 +92,7 @@ public sealed class InboundShipmentController(
         [FromBody] UpdateShipmentReferencesRequest request,
         CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
@@ -127,27 +110,19 @@ public sealed class InboundShipmentController(
             request.BillOfEntryDate,
             request.OutOfChargeAtUtc);
 
-        var result = await sender.Send(
-            command,
-            cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : NoContent();
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpPost("{shipmentId:guid}/clearance-events")]
-    [ProducesResponseType<CreateShipmentClearanceEventResponse>(
-        StatusCodes.Status201Created)]
+    [ProducesResponseType<CreateShipmentClearanceEventResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> RecordClearanceEvent(
         Guid shipmentId,
         [FromBody] RecordClearanceEventRequest request,
         CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
@@ -164,24 +139,17 @@ public sealed class InboundShipmentController(
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        return StatusCode(
-            StatusCodes.Status201Created,
-            new CreateShipmentClearanceEventResponse(
-                result.Value));
+        return StatusCode(StatusCodes.Status201Created, new CreateShipmentClearanceEventResponse(result.Value));
     }
 
     [HttpPost("{shipmentId:guid}/documents")]
-    [ProducesResponseType<CreateShipmentDocumentResponse>(
-        StatusCodes.Status201Created)]
+    [ProducesResponseType<CreateShipmentDocumentResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> AddDocument(
         Guid shipmentId,
         [FromBody] AddShipmentDocumentRequest request,
         CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
@@ -198,56 +166,33 @@ public sealed class InboundShipmentController(
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        return StatusCode(
-            StatusCodes.Status201Created,
-            new CreateShipmentDocumentResponse(
-                result.Value));
+        return StatusCode(StatusCodes.Status201Created, new CreateShipmentDocumentResponse(result.Value));
     }
 
     [HttpPatch("{shipmentId:guid}/ship")]
-    public async Task<IActionResult> MarkShipped(
-        Guid shipmentId,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> MarkShipped(Guid shipmentId, CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
 
-        var result = await sender.Send(
-            new MarkShipmentShippedCommand(
-                shipmentId),
-            cancellationToken);
+        var result = await sender.Send(new MarkShipmentShippedCommand(shipmentId), cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : NoContent();
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpPatch("{shipmentId:guid}/arrive")]
-    public async Task<IActionResult> MarkArrived(
-        Guid shipmentId,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> MarkArrived(Guid shipmentId, CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
 
-        var result = await sender.Send(
-            new MarkShipmentArrivedCommand(
-                shipmentId),
-            cancellationToken);
+        var result = await sender.Send(new MarkShipmentArrivedCommand(shipmentId), cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : NoContent();
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpPost("{shipmentId:guid}/receive")]
@@ -256,9 +201,7 @@ public sealed class InboundShipmentController(
         [FromBody] ReceiveShipmentRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.CanOperateWarehouseAsync(
-                request.WarehouseId,
-                cancellationToken))
+        if (!await accessService.CanOperateWarehouseAsync(request.WarehouseId, cancellationToken))
         {
             return Forbid();
         }
@@ -270,54 +213,33 @@ public sealed class InboundShipmentController(
             request.WarehouseId,
             request.Quantity);
 
-        var result = await sender.Send(
-            command,
-            cancellationToken);
+        var result = await sender.Send(command, cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : NoContent();
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpPatch("{shipmentId:guid}/cancel")]
-    public async Task<IActionResult> Cancel(
-        Guid shipmentId,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Cancel(Guid shipmentId, CancellationToken cancellationToken)
     {
-        var accessResult =
-            await EnsureShipmentOperationAccessAsync(
-                shipmentId,
-                cancellationToken);
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
 
         if (accessResult is not null)
             return accessResult;
 
-        var result = await sender.Send(
-            new CancelShipmentCommand(
-                shipmentId),
-            cancellationToken);
+        var result = await sender.Send(new CancelShipmentCommand(shipmentId), cancellationToken);
 
-        return result.IsFailure
-            ? this.ToProblem(result.Error)
-            : NoContent();
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpGet("{shipmentId:guid}")]
-    public async Task<IActionResult> GetById(
-        Guid shipmentId,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> GetById(Guid shipmentId, CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
-            new GetShipmentQuery(shipmentId),
-            cancellationToken);
+        var result = await sender.Send(new GetShipmentQuery(shipmentId), cancellationToken);
 
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        return await accessService.HasTenantAccessAsync(
-                cancellationToken)
-            ? Ok(result.Value)
-            : Forbid();
+        return await accessService.HasTenantAccessAsync(cancellationToken) ? Ok(result.Value) : Forbid();
     }
 
     [HttpGet]
@@ -327,40 +249,25 @@ public sealed class InboundShipmentController(
         [FromQuery] Guid? supplierId,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.HasTenantAccessAsync(
-                cancellationToken))
+        if (!await accessService.HasTenantAccessAsync(cancellationToken))
         {
             return Forbid();
         }
 
-        var result = await sender.Send(
-            new SearchShipmentsQuery(
-                searchTerm,
-                status,
-                supplierId),
-            cancellationToken);
+        var result = await sender.Send(new SearchShipmentsQuery(searchTerm, status, supplierId), cancellationToken);
 
         return Ok(result);
     }
 
-    private async Task<IActionResult?>
-        EnsureShipmentOperationAccessAsync(
-            Guid shipmentId,
-            CancellationToken cancellationToken)
+    private async Task<IActionResult?> EnsureShipmentOperationAccessAsync(
+        Guid shipmentId,
+        CancellationToken cancellationToken)
     {
-        var shipment =
-            await sender.Send(
-                new GetShipmentQuery(
-                    shipmentId),
-                cancellationToken);
+        var shipment = await sender.Send(new GetShipmentQuery(shipmentId), cancellationToken);
 
         if (shipment.IsFailure)
-            return this.ToProblem(
-                shipment.Error);
+            return this.ToProblem(shipment.Error);
 
-        return await accessService.HasTenantAccessAsync(
-                cancellationToken)
-            ? null
-            : Forbid();
+        return await accessService.HasTenantAccessAsync(cancellationToken) ? null : Forbid();
     }
 }
