@@ -158,6 +158,8 @@ const modalError = ref<string | null>(null)
 const search = ref('')
 const statusFilter = ref('')
 const createVisible = ref(false)
+const freightExpanded = ref(true)
+const shipmentCurrency = ref('USD')
 const clearanceVisible = ref(false)
 const documentVisible = ref(false)
 const receiveVisible = ref(false)
@@ -262,6 +264,50 @@ const documentTypes = [
   'Other',
 ]
 
+const totalDraftCrates = computed(() =>
+  lines.value.reduce(
+    (total, line) =>
+      total +
+      Math.max(
+        0,
+        Number(line.expectedQuantity) || 0,
+      ),
+    0,
+  ),
+)
+
+const totalDraftWeightKg = computed(() =>
+  lines.value.reduce(
+    (total, line) =>
+      total +
+      Math.max(
+        0,
+        Number(line.expectedQuantity) || 0,
+      ) *
+        Math.max(
+          0,
+          Number(line.packSizeKg) || 0,
+        ),
+    0,
+  ),
+)
+
+const totalDraftValue = computed(() =>
+  lines.value.reduce(
+    (total, line) =>
+      total +
+      Math.max(
+        0,
+        Number(line.expectedQuantity) || 0,
+      ) *
+        Math.max(
+          0,
+          Number(line.unitCost) || 0,
+        ),
+    0,
+  ),
+)
+
 const filteredShipments = computed(() =>
   statusFilter.value
     ? shipments.value.filter(
@@ -313,6 +359,11 @@ const warehouseById = computed(
 
 watch([statusFilter, pageSize], () => {
   page.value = 1
+})
+
+watch(shipmentCurrency, (currency) => {
+  for (const line of lines.value)
+    line.currency = currency
 })
 
 watch(
@@ -495,6 +546,8 @@ function resetForm() {
 function openCreate() {
   modalError.value = null
   resetForm()
+  shipmentCurrency.value = 'USD'
+  freightExpanded.value = true
   addLine()
   createVisible.value = true
 }
@@ -507,7 +560,7 @@ function addLine() {
     expectedQuantity: 1,
     packSizeKg: 1,
     unitCost: 0,
-    currency: 'USD',
+    currency: shipmentCurrency.value,
     varieties: [],
   })
 }
@@ -517,6 +570,45 @@ function removeLine(index: number) {
 
   if (lines.value.length === 0)
     addLine()
+}
+
+function duplicateLastLine() {
+  const source = lines.value.at(-1)
+
+  if (!source) {
+    addLine()
+    return
+  }
+
+  lines.value.push({
+    ...source,
+    batchCode: '',
+    varieties: [...source.varieties],
+  })
+}
+
+function generateShipmentReference() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const suffix =
+    crypto.randomUUID()
+      .replaceAll('-', '')
+      .slice(0, 6)
+      .toUpperCase()
+
+  form.trackingNumber =
+    `SHP-${year}-${suffix}`
+}
+
+function formatDraftMoney(value: number) {
+  return new Intl.NumberFormat(
+    undefined,
+    {
+      style: 'currency',
+      currency: shipmentCurrency.value,
+      maximumFractionDigits: 2,
+    },
+  ).format(value)
 }
 
 async function productChanged(
@@ -1441,216 +1533,434 @@ onMounted(async () => {
 
     <CModal
       :visible="createVisible"
-      size="xl"
+      fullscreen
+      class="shipment-create-modal"
       @close="createVisible = false"
     >
-      <CModalHeader>
-        <CModalTitle>New inbound shipment</CModalTitle>
+      <CModalHeader class="shipment-create-header">
+        <div>
+          <div class="shipment-create-title-row">
+            <CModalTitle>New inbound shipment</CModalTitle>
+            <span class="shipment-draft-badge">
+              Draft
+            </span>
+          </div>
+          <p>
+            Record incoming supplier stock and freight details
+          </p>
+        </div>
+
+        <label class="shipment-currency-picker">
+          <span>Currency</span>
+          <select
+            v-model="shipmentCurrency"
+            class="form-select"
+          >
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="GBP">GBP (£)</option>
+            <option value="ZAR">ZAR (R)</option>
+            <option value="INR">INR (₹)</option>
+          </select>
+        </label>
       </CModalHeader>
 
-      <CModalBody>
+      <CModalBody class="shipment-create-body">
         <div v-if="modalError" class="status-message status-error">
           {{ modalError }}
         </div>
 
-        <div class="shipment-form-grid">
-          <label class="form-field">
-            <span>Supplier *</span>
-            <select v-model="form.supplierId" class="form-select">
-              <option value="">Select supplier</option>
-              <option
-                v-for="supplier in suppliers"
-                :key="supplier.id"
-                :value="supplier.id"
-              >
-                {{ supplier.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="form-field">
-            <span>Shipment reference *</span>
-            <input v-model="form.trackingNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Origin country *</span>
-            <select v-model="form.originCountry" class="form-select">
-              <option value="">Select country</option>
-              <option
-                v-for="country in countries"
-                :key="country.code"
-                :value="country.code"
-              >
-                {{ country.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="form-field">
-            <span>Expected arrival *</span>
-            <input
-              v-model="form.expectedArrivalDate"
-              class="form-control"
-              type="date"
-            >
-          </label>
-
-          <label class="form-field">
-            <span>Container number</span>
-            <input v-model="form.containerNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Bill of Lading</span>
-            <input v-model="form.billOfLadingNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Vessel</span>
-            <input v-model="form.vesselName" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Voyage</span>
-            <input v-model="form.voyageNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Port of loading</span>
-            <input v-model="form.portOfLoading" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Port of discharge</span>
-            <input v-model="form.portOfDischarge" class="form-control">
-          </label>
-        </div>
-
-        <div class="shipment-lines-editor">
-          <div class="section-heading">
-            <div>
-              <h3>Shipment lines</h3>
-              <p>Product, variety, batch and expected quantity.</p>
+        <section class="shipment-create-section">
+          <div class="shipment-create-section-heading">
+            <div class="shipment-section-title">
+              <span class="shipment-section-number">1</span>
+              <h3>Core Details</h3>
             </div>
-            <CButton
-              color="secondary"
-              variant="outline"
-              size="sm"
-              @click="addLine"
-            >
-              + Add line
-            </CButton>
+            <span class="shipment-required-note">
+              * Required fields
+            </span>
           </div>
+
+          <div class="shipment-core-grid">
+            <label class="form-field">
+              <span>
+                Supplier
+                <strong class="shipment-required">*</strong>
+              </span>
+              <select
+                v-model="form.supplierId"
+                class="form-select"
+              >
+                <option value="">
+                  Select supplier...
+                </option>
+                <option
+                  v-for="supplier in suppliers"
+                  :key="supplier.id"
+                  :value="supplier.id"
+                >
+                  {{ supplier.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="form-field">
+              <span class="shipment-reference-label">
+                <span>
+                  Shipment reference
+                  <strong class="shipment-required">*</strong>
+                </span>
+                <button
+                  type="button"
+                  class="shipment-auto-reference"
+                  @click="generateShipmentReference"
+                >
+                  <i class="cil-bolt" aria-hidden="true" />
+                  Auto-generate
+                </button>
+              </span>
+              <input
+                v-model="form.trackingNumber"
+                class="form-control"
+                placeholder="e.g. SHP-2026-089"
+              >
+            </label>
+
+            <label class="form-field">
+              <span>
+                Origin country
+                <strong class="shipment-required">*</strong>
+              </span>
+              <select
+                v-model="form.originCountry"
+                class="form-select"
+              >
+                <option value="">
+                  Select country...
+                </option>
+                <option
+                  v-for="country in countries"
+                  :key="country.code"
+                  :value="country.code"
+                >
+                  {{ country.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="form-field">
+              <span>
+                Expected arrival
+                <strong class="shipment-required">*</strong>
+              </span>
+              <input
+                v-model="form.expectedArrivalDate"
+                class="form-control"
+                type="date"
+              >
+            </label>
+          </div>
+        </section>
+
+        <section class="shipment-freight-card">
+          <button
+            type="button"
+            class="shipment-freight-header"
+            @click="freightExpanded = !freightExpanded"
+          >
+            <span class="shipment-section-title">
+              <span class="shipment-section-number muted">
+                2
+              </span>
+              <strong>Freight & Vessel Details</strong>
+              <span class="shipment-optional-badge">
+                Optional — can be added later
+              </span>
+            </span>
+            <i
+              class="cil-chevron-top"
+              :class="{ collapsed: !freightExpanded }"
+              aria-hidden="true"
+            />
+          </button>
 
           <div
-            v-for="(line, index) in lines"
-            :key="index"
-            class="shipment-line-editor"
+            v-if="freightExpanded"
+            class="shipment-freight-grid"
           >
-            <select
-              v-model="line.productId"
-              class="form-select"
-              @change="productChanged(line)"
-            >
-              <option value="">Product</option>
-              <option
-                v-for="product in products"
-                :key="product.id"
-                :value="product.id"
+            <label class="form-field">
+              <span>Container number</span>
+              <input
+                v-model="form.containerNumber"
+                class="form-control"
+                placeholder="e.g. MSKU1234567"
               >
-                {{ product.name }}
-              </option>
-            </select>
+            </label>
 
-            <select
-              v-model="line.productVarietyId"
-              class="form-select"
-              :disabled="!line.productId"
-            >
-              <option value="">Variety</option>
-              <option
-                v-for="variety in line.varieties"
-                :key="variety.id"
-                :value="variety.id"
+            <label class="form-field">
+              <span>Bill of Lading</span>
+              <input
+                v-model="form.billOfLadingNumber"
+                class="form-control"
+                placeholder="e.g. MEDU9876543"
               >
-                {{ variety.name }}
-              </option>
-            </select>
+            </label>
 
-            <input
-              v-model="line.batchCode"
-              class="form-control"
-              placeholder="Batch code"
-            >
+            <label class="form-field">
+              <span>Vessel</span>
+              <input
+                v-model="form.vesselName"
+                class="form-control"
+                placeholder="e.g. MSC Isabella"
+              >
+            </label>
 
-            <input
-              v-model.number="line.expectedQuantity"
-              class="form-control"
-              type="number"
-              min="1"
-              placeholder="Crates"
-            >
+            <label class="form-field">
+              <span>Voyage</span>
+              <input
+                v-model="form.voyageNumber"
+                class="form-control"
+                placeholder="e.g. 614N"
+              >
+            </label>
 
-            <input
-              v-model.number="line.packSizeKg"
-              class="form-control"
-              type="number"
-              min="0.001"
-              step="0.001"
-              placeholder="Pack kg"
-            >
+            <label class="form-field">
+              <span>Port of loading</span>
+              <input
+                v-model="form.portOfLoading"
+                class="form-control"
+                placeholder="e.g. Cape Town (ZACPT)"
+              >
+            </label>
 
-            <input
-              v-model.number="line.unitCost"
-              class="form-control"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Unit cost"
-              title="Optional operational unit cost; no payment workflow is created."
-            >
-
-            <input
-              v-model="line.currency"
-              class="form-control"
-              maxlength="3"
-              placeholder="USD"
-            >
-
-            <CButton
-              color="danger"
-              variant="outline"
-              size="sm"
-              @click="removeLine(index)"
-            >
-              Remove
-            </CButton>
+            <label class="form-field">
+              <span>Port of discharge</span>
+              <input
+                v-model="form.portOfDischarge"
+                class="form-control"
+                placeholder="e.g. JNPT (INNSA)"
+              >
+            </label>
           </div>
-        </div>
+        </section>
+
+        <section class="shipment-create-section shipment-lines-section">
+          <div class="shipment-create-section-heading">
+            <div class="shipment-section-title">
+              <span class="shipment-section-number">3</span>
+              <h3>Shipment Lines</h3>
+              <span class="shipment-section-description">
+                — Product, variety, batch, and expected quantity
+              </span>
+            </div>
+          </div>
+
+          <div class="shipment-line-table-wrap">
+            <div class="shipment-line-table shipment-line-table-head">
+              <span>Product</span>
+              <span>Variety</span>
+              <span>Batch code</span>
+              <span>Crates</span>
+              <span>Pack kg</span>
+              <span>Unit price</span>
+              <span>Line total</span>
+              <span />
+            </div>
+
+            <div
+              v-for="(line, index) in lines"
+              :key="index"
+              class="shipment-line-table shipment-line-table-row"
+            >
+              <select
+                v-model="line.productId"
+                class="form-select"
+                @change="productChanged(line)"
+              >
+                <option value="">Product</option>
+                <option
+                  v-for="product in products"
+                  :key="product.id"
+                  :value="product.id"
+                >
+                  {{ product.name }}
+                </option>
+              </select>
+
+              <select
+                v-model="line.productVarietyId"
+                class="form-select"
+                :disabled="!line.productId"
+              >
+                <option value="">Variety</option>
+                <option
+                  v-for="variety in line.varieties"
+                  :key="variety.id"
+                  :value="variety.id"
+                >
+                  {{ variety.name }}
+                </option>
+              </select>
+
+              <input
+                v-model="line.batchCode"
+                class="form-control"
+                placeholder="BATCH-01"
+              >
+
+              <input
+                v-model.number="line.expectedQuantity"
+                class="form-control shipment-number-input"
+                type="number"
+                min="1"
+                placeholder="0"
+              >
+
+              <input
+                v-model.number="line.packSizeKg"
+                class="form-control shipment-number-input"
+                type="number"
+                min="0.001"
+                step="0.001"
+                placeholder="0"
+              >
+
+              <div class="shipment-price-input">
+                <span>
+                  {{
+                    shipmentCurrency === 'USD'
+                      ? '$'
+                      : shipmentCurrency === 'EUR'
+                        ? '€'
+                        : shipmentCurrency === 'GBP'
+                          ? '£'
+                          : shipmentCurrency === 'INR'
+                            ? '₹'
+                            : 'R'
+                  }}
+                </span>
+                <input
+                  v-model.number="line.unitCost"
+                  class="form-control"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                >
+              </div>
+
+              <strong class="shipment-line-total">
+                {{
+                  formatDraftMoney(
+                    Math.max(
+                      0,
+                      Number(line.expectedQuantity) || 0,
+                    ) *
+                      Math.max(
+                        0,
+                        Number(line.unitCost) || 0,
+                      ),
+                  )
+                }}
+              </strong>
+
+              <button
+                type="button"
+                class="shipment-line-remove"
+                :disabled="lines.length === 1"
+                aria-label="Remove line"
+                @click="removeLine(index)"
+              >
+                <i class="cil-trash" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          <div class="shipment-lines-actions">
+            <div>
+              <CButton
+                color="primary"
+                variant="outline"
+                size="sm"
+                @click="addLine"
+              >
+                <i class="cil-plus me-1" aria-hidden="true" />
+                Add line
+              </CButton>
+
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                @click="duplicateLastLine"
+              >
+                <i class="cil-copy me-1" aria-hidden="true" />
+                Duplicate last line
+              </CButton>
+            </div>
+
+            <small>
+              Add as many product / variety lines as required for this consignment.
+            </small>
+          </div>
+        </section>
       </CModalBody>
 
-      <CModalFooter>
-        <CButton
-          color="secondary"
-          variant="outline"
-          :disabled="saving"
-          @click="createVisible = false"
-        >
-          Cancel
-        </CButton>
-        <CButton
-          color="primary"
-          :disabled="saving"
-          @click="createShipment"
-        >
-          <CSpinner
-            v-if="saving"
-            size="sm"
-            class="me-2"
-          />
-          Create shipment
-        </CButton>
+      <CModalFooter class="shipment-create-footer">
+        <div class="shipment-create-totals">
+          <span>
+            <strong>{{ lines.length }}</strong>
+            {{ lines.length === 1 ? 'line' : 'lines' }}
+          </span>
+          <span class="shipment-summary-dot">•</span>
+          <span>
+            <strong>{{ totalDraftCrates }}</strong>
+            crates
+          </span>
+          <span class="shipment-summary-dot">•</span>
+          <span>
+            <strong>
+              {{ totalDraftWeightKg.toLocaleString() }}
+            </strong>
+            kg
+          </span>
+          <span class="shipment-summary-dot">•</span>
+          <span class="shipment-total-value">
+            Total:
+            <strong>
+              {{ formatDraftMoney(totalDraftValue) }}
+            </strong>
+          </span>
+        </div>
+
+        <div class="shipment-create-footer-actions">
+          <CButton
+            color="secondary"
+            variant="ghost"
+            :disabled="saving"
+            @click="createVisible = false"
+          >
+            Cancel
+          </CButton>
+
+          <CButton
+            color="primary"
+            :disabled="saving"
+            @click="createShipment"
+          >
+            <CSpinner
+              v-if="saving"
+              size="sm"
+              class="me-2"
+            />
+            Create shipment
+            <i
+              v-if="!saving"
+              class="cil-check ms-2"
+              aria-hidden="true"
+            />
+          </CButton>
+        </div>
       </CModalFooter>
     </CModal>
 
