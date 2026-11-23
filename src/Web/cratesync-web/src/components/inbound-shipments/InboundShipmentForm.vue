@@ -59,6 +59,7 @@ const emit = defineEmits<{
 }>()
 
 const saving = ref(false)
+const submitted = ref(false)
 const error = ref<string | null>(null)
 const freightExpanded = ref(true)
 const shipmentCurrency = ref('USD')
@@ -211,6 +212,42 @@ function currencySymbol() {
   }
 }
 
+function lineFieldInvalid(
+  line: DraftLine,
+  field:
+    | 'productId'
+    | 'productVarietyId'
+    | 'batchCode',
+) {
+  if (!submitted.value)
+    return false
+
+  if (field === 'batchCode')
+    return !line.batchCode.trim()
+
+  return !line[field]
+}
+
+function lineValidationMessage(
+  line: DraftLine,
+  index: number,
+) {
+  const missing: string[] = []
+
+  if (!line.productId)
+    missing.push('product')
+
+  if (!line.productVarietyId)
+    missing.push('variety')
+
+  if (!line.batchCode.trim())
+    missing.push('batch code')
+
+  return missing.length
+    ? `Line ${index + 1}: select/enter ${missing.join(', ')}.`
+    : null
+}
+
 async function productChanged(
   line: DraftLine,
 ) {
@@ -230,6 +267,11 @@ async function productChanged(
       product.varieties.filter(
         (item) => item.isActive,
       )
+
+    if (line.varieties.length === 1) {
+      line.productVarietyId =
+        line.varieties[0].id
+    }
   } catch (exception) {
     error.value =
       exception instanceof Error
@@ -239,6 +281,8 @@ async function productChanged(
 }
 
 async function createShipment() {
+  submitted.value = true
+
   if (
     !form.supplierId ||
     !form.trackingNumber.trim() ||
@@ -250,16 +294,18 @@ async function createShipment() {
     return
   }
 
-  if (
-    lines.value.some(
-      (line) =>
-        !line.productId ||
-        !line.productVarietyId ||
-        !line.batchCode.trim(),
-    )
-  ) {
-    error.value =
-      'Complete product, variety and batch for every shipment line.'
+  const invalidLines =
+    lines.value
+      .map((line, index) =>
+        lineValidationMessage(line, index),
+      )
+      .filter(
+        (message): message is string =>
+          message !== null,
+      )
+
+  if (invalidLines.length > 0) {
+    error.value = invalidLines.join(' ')
     return
   }
 
@@ -625,9 +671,18 @@ async function createShipment() {
             <select
               v-model="line.productId"
               class="form-select"
+              :class="{
+                'is-invalid':
+                  lineFieldInvalid(
+                    line,
+                    'productId',
+                  ),
+              }"
               @change="productChanged(line)"
             >
-              <option value="">Product</option>
+              <option value="" disabled>
+                Select product...
+              </option>
               <option
                 v-for="product in products"
                 :key="product.id"
@@ -640,9 +695,18 @@ async function createShipment() {
             <select
               v-model="line.productVarietyId"
               class="form-select"
+              :class="{
+                'is-invalid':
+                  lineFieldInvalid(
+                    line,
+                    'productVarietyId',
+                  ),
+              }"
               :disabled="!line.productId"
             >
-              <option value="">Variety</option>
+              <option value="" disabled>
+                Select variety...
+              </option>
               <option
                 v-for="variety in line.varieties"
                 :key="variety.id"
@@ -655,6 +719,13 @@ async function createShipment() {
             <input
               v-model="line.batchCode"
               class="form-control"
+              :class="{
+                'is-invalid':
+                  lineFieldInvalid(
+                    line,
+                    'batchCode',
+                  ),
+              }"
               placeholder="BATCH-01"
             >
 
@@ -739,9 +810,18 @@ async function createShipment() {
                 <select
                   v-model="line.productId"
                   class="form-select"
+                  :class="{
+                    'is-invalid':
+                      lineFieldInvalid(
+                        line,
+                        'productId',
+                      ),
+                  }"
                   @change="productChanged(line)"
                 >
-                  <option value="">Select product</option>
+                  <option value="" disabled>
+                    Select product...
+                  </option>
                   <option
                     v-for="product in products"
                     :key="product.id"
@@ -757,9 +837,18 @@ async function createShipment() {
                 <select
                   v-model="line.productVarietyId"
                   class="form-select"
+                  :class="{
+                    'is-invalid':
+                      lineFieldInvalid(
+                        line,
+                        'productVarietyId',
+                      ),
+                  }"
                   :disabled="!line.productId"
                 >
-                  <option value="">Select variety</option>
+                  <option value="" disabled>
+                    Select variety...
+                  </option>
                   <option
                     v-for="variety in line.varieties"
                     :key="variety.id"
@@ -775,6 +864,13 @@ async function createShipment() {
                 <input
                   v-model="line.batchCode"
                   class="form-control"
+                  :class="{
+                    'is-invalid':
+                      lineFieldInvalid(
+                        line,
+                        'batchCode',
+                      ),
+                  }"
                   placeholder="BATCH-01"
                 >
               </label>
@@ -814,6 +910,24 @@ async function createShipment() {
                 </div>
               </label>
             </div>
+
+            <p
+              v-if="
+                submitted &&
+                lineValidationMessage(
+                  line,
+                  index,
+                )
+              "
+              class="shipment-line-validation"
+            >
+              {{
+                lineValidationMessage(
+                  line,
+                  index,
+                )
+              }}
+            </p>
 
             <footer>
               <span>Line total</span>
