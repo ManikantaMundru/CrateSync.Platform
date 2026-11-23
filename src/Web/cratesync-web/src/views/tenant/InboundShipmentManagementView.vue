@@ -20,6 +20,7 @@ import {
 import { apiFetch } from '@/services/api'
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
+import InboundShipmentForm from '@/components/inbound-shipments/InboundShipmentForm.vue'
 
 interface ShipmentSummary {
   id: string
@@ -120,30 +121,6 @@ interface ProductSummary {
   isActive: boolean
 }
 
-interface ProductVariety {
-  id: string
-  name: string
-  isActive: boolean
-}
-
-interface ProductDetails {
-  id: string
-  name: string
-  isActive: boolean
-  varieties: ProductVariety[]
-}
-
-interface DraftLine {
-  productId: string
-  productVarietyId: string
-  batchCode: string
-  expectedQuantity: number
-  packSizeKg: number
-  unitCost: number
-  currency: string
-  varieties: ProductVariety[]
-}
-
 const shipments = ref<ShipmentSummary[]>([])
 const suppliers = ref<SupplierSummary[]>([])
 const warehouses = ref<WarehouseSummary[]>([])
@@ -157,28 +134,13 @@ const success = ref<string | null>(null)
 const modalError = ref<string | null>(null)
 const search = ref('')
 const statusFilter = ref('')
-const createVisible = ref(false)
+const viewMode = ref<'list' | 'create'>('list')
 const clearanceVisible = ref(false)
 const documentVisible = ref(false)
 const receiveVisible = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
-
-const form = reactive({
-  supplierId: '',
-  trackingNumber: '',
-  originCountry: '',
-  expectedArrivalDate: '',
-  containerNumber: '',
-  billOfLadingNumber: '',
-  portOfLoading: '',
-  portOfDischarge: '',
-  vesselName: '',
-  voyageNumber: '',
-})
-
-const lines = ref<DraftLine[]>([])
 
 const clearanceForm = reactive({
   authority: 'Customs',
@@ -478,215 +440,23 @@ async function loadShipment(id: string) {
   }
 }
 
-function resetForm() {
-  form.supplierId = ''
-  form.trackingNumber = ''
-  form.originCountry = ''
-  form.expectedArrivalDate = ''
-  form.containerNumber = ''
-  form.billOfLadingNumber = ''
-  form.portOfLoading = ''
-  form.portOfDischarge = ''
-  form.vesselName = ''
-  form.voyageNumber = ''
-  lines.value = []
-}
-
 function openCreate() {
-  modalError.value = null
-  resetForm()
-  addLine()
-  createVisible.value = true
+  viewMode.value = 'create'
 }
 
-function addLine() {
-  lines.value.push({
-    productId: '',
-    productVarietyId: '',
-    batchCode: '',
-    expectedQuantity: 1,
-    packSizeKg: 1,
-    unitCost: 0,
-    currency: 'USD',
-    varieties: [],
-  })
+function showShipmentList() {
+  viewMode.value = 'list'
 }
 
-function removeLine(index: number) {
-  lines.value.splice(index, 1)
-
-  if (lines.value.length === 0)
-    addLine()
-}
-
-async function productChanged(
-  line: DraftLine,
+async function handleShipmentCreated(
+  shipmentId: string,
 ) {
-  line.productVarietyId = ''
-  line.varieties = []
+  viewMode.value = 'list'
+  success.value =
+    'Inbound shipment created successfully.'
 
-  if (!line.productId)
-    return
-
-  try {
-    const product =
-      await apiFetch<ProductDetails>(
-        `/api/catalog/products/${line.productId}`,
-      )
-
-    line.varieties =
-      product.varieties.filter(
-        (item) => item.isActive,
-      )
-  } catch (exception) {
-    modalError.value =
-      exception instanceof Error
-        ? exception.message
-        : 'Unable to load product varieties.'
-  }
-}
-
-async function createShipment() {
-  if (
-    !form.supplierId ||
-    !form.trackingNumber.trim() ||
-    !form.originCountry ||
-    !form.expectedArrivalDate
-  ) {
-    modalError.value =
-      'Supplier, reference, origin and ETA are required.'
-    return
-  }
-
-  if (
-    lines.value.some(
-      (line) =>
-        !line.productId ||
-        !line.productVarietyId ||
-        !line.batchCode.trim(),
-    )
-  ) {
-    modalError.value =
-      'Complete product, variety and batch for every shipment line.'
-    return
-  }
-
-  saving.value = true
-  modalError.value = null
-  success.value = null
-
-  try {
-    const created = await apiFetch<{
-      id: string
-    }>('/api/InboundShipment', {
-      method: 'POST',
-      headers: {
-        'Content-Type':
-          'application/json',
-      },
-      body: JSON.stringify({
-        supplierId: form.supplierId,
-        trackingNumber:
-          form.trackingNumber.trim(),
-        originCountry:
-          form.originCountry,
-        expectedArrivalAtUtc:
-          new Date(
-            `${form.expectedArrivalDate}T12:00:00Z`,
-          ).toISOString(),
-      }),
-    })
-
-    for (const line of lines.value) {
-      await apiFetch(
-        `/api/InboundShipment/${created.id}/lines`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
-          body: JSON.stringify({
-            productId: line.productId,
-            productVarietyId:
-              line.productVarietyId,
-            batchCode:
-              line.batchCode.trim(),
-            expectedQuantity:
-              Number(
-                line.expectedQuantity,
-              ),
-            packSizeKg:
-              Number(line.packSizeKg),
-            unitCost:
-              Number(line.unitCost),
-            currency:
-              line.currency
-                .trim()
-                .toUpperCase(),
-          }),
-        },
-      )
-    }
-
-    if (
-      form.containerNumber.trim() ||
-      form.billOfLadingNumber.trim() ||
-      form.portOfLoading.trim() ||
-      form.portOfDischarge.trim() ||
-      form.vesselName.trim() ||
-      form.voyageNumber.trim()
-    ) {
-      await apiFetch(
-        `/api/InboundShipment/${created.id}/references`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
-          body: JSON.stringify({
-            containerNumber:
-              form.containerNumber.trim() ||
-              null,
-            billOfLadingNumber:
-              form.billOfLadingNumber.trim() ||
-              null,
-            portOfLoading:
-              form.portOfLoading.trim() ||
-              null,
-            portOfDischarge:
-              form.portOfDischarge.trim() ||
-              null,
-            vesselName:
-              form.vesselName.trim() ||
-              null,
-            voyageNumber:
-              form.voyageNumber.trim() ||
-              null,
-            customsBrokerName: null,
-            billOfEntryNumber: null,
-            billOfEntryDate: null,
-            outOfChargeAtUtc: null,
-          }),
-        },
-      )
-    }
-
-    createVisible.value = false
-    success.value =
-      'Inbound shipment created successfully.'
-
-    await loadShipments()
-    await loadShipment(created.id)
-  } catch (exception) {
-    modalError.value =
-      exception instanceof Error
-        ? exception.message
-        : 'Unable to create inbound shipment.'
-  } finally {
-    saving.value = false
-  }
+  await loadShipments()
+  await loadShipment(shipmentId)
 }
 
 function remainingQuantity(
@@ -976,7 +746,18 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page-stack users-page shipment-page">
+  <InboundShipmentForm
+    v-if="viewMode === 'create'"
+    :suppliers="suppliers"
+    :products="products"
+    @cancel="showShipmentList"
+    @created="handleShipmentCreated"
+  />
+
+  <section
+    v-else
+    class="page-stack users-page shipment-page"
+  >
     <div class="page-heading catalog-page-heading">
       <div>
         <p class="eyebrow catalog-page-eyebrow">
@@ -1438,221 +1219,6 @@ onMounted(async () => {
         </div>
       </aside>
     </div>
-
-    <CModal
-      :visible="createVisible"
-      size="xl"
-      @close="createVisible = false"
-    >
-      <CModalHeader>
-        <CModalTitle>New inbound shipment</CModalTitle>
-      </CModalHeader>
-
-      <CModalBody>
-        <div v-if="modalError" class="status-message status-error">
-          {{ modalError }}
-        </div>
-
-        <div class="shipment-form-grid">
-          <label class="form-field">
-            <span>Supplier *</span>
-            <select v-model="form.supplierId" class="form-select">
-              <option value="">Select supplier</option>
-              <option
-                v-for="supplier in suppliers"
-                :key="supplier.id"
-                :value="supplier.id"
-              >
-                {{ supplier.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="form-field">
-            <span>Shipment reference *</span>
-            <input v-model="form.trackingNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Origin country *</span>
-            <select v-model="form.originCountry" class="form-select">
-              <option value="">Select country</option>
-              <option
-                v-for="country in countries"
-                :key="country.code"
-                :value="country.code"
-              >
-                {{ country.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="form-field">
-            <span>Expected arrival *</span>
-            <input
-              v-model="form.expectedArrivalDate"
-              class="form-control"
-              type="date"
-            >
-          </label>
-
-          <label class="form-field">
-            <span>Container number</span>
-            <input v-model="form.containerNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Bill of Lading</span>
-            <input v-model="form.billOfLadingNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Vessel</span>
-            <input v-model="form.vesselName" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Voyage</span>
-            <input v-model="form.voyageNumber" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Port of loading</span>
-            <input v-model="form.portOfLoading" class="form-control">
-          </label>
-
-          <label class="form-field">
-            <span>Port of discharge</span>
-            <input v-model="form.portOfDischarge" class="form-control">
-          </label>
-        </div>
-
-        <div class="shipment-lines-editor">
-          <div class="section-heading">
-            <div>
-              <h3>Shipment lines</h3>
-              <p>Product, variety, batch and expected quantity.</p>
-            </div>
-            <CButton
-              color="secondary"
-              variant="outline"
-              size="sm"
-              @click="addLine"
-            >
-              + Add line
-            </CButton>
-          </div>
-
-          <div
-            v-for="(line, index) in lines"
-            :key="index"
-            class="shipment-line-editor"
-          >
-            <select
-              v-model="line.productId"
-              class="form-select"
-              @change="productChanged(line)"
-            >
-              <option value="">Product</option>
-              <option
-                v-for="product in products"
-                :key="product.id"
-                :value="product.id"
-              >
-                {{ product.name }}
-              </option>
-            </select>
-
-            <select
-              v-model="line.productVarietyId"
-              class="form-select"
-              :disabled="!line.productId"
-            >
-              <option value="">Variety</option>
-              <option
-                v-for="variety in line.varieties"
-                :key="variety.id"
-                :value="variety.id"
-              >
-                {{ variety.name }}
-              </option>
-            </select>
-
-            <input
-              v-model="line.batchCode"
-              class="form-control"
-              placeholder="Batch code"
-            >
-
-            <input
-              v-model.number="line.expectedQuantity"
-              class="form-control"
-              type="number"
-              min="1"
-              placeholder="Crates"
-            >
-
-            <input
-              v-model.number="line.packSizeKg"
-              class="form-control"
-              type="number"
-              min="0.001"
-              step="0.001"
-              placeholder="Pack kg"
-            >
-
-            <input
-              v-model.number="line.unitCost"
-              class="form-control"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="Unit cost"
-              title="Optional operational unit cost; no payment workflow is created."
-            >
-
-            <input
-              v-model="line.currency"
-              class="form-control"
-              maxlength="3"
-              placeholder="USD"
-            >
-
-            <CButton
-              color="danger"
-              variant="outline"
-              size="sm"
-              @click="removeLine(index)"
-            >
-              Remove
-            </CButton>
-          </div>
-        </div>
-      </CModalBody>
-
-      <CModalFooter>
-        <CButton
-          color="secondary"
-          variant="outline"
-          :disabled="saving"
-          @click="createVisible = false"
-        >
-          Cancel
-        </CButton>
-        <CButton
-          color="primary"
-          :disabled="saving"
-          @click="createShipment"
-        >
-          <CSpinner
-            v-if="saving"
-            size="sm"
-            class="me-2"
-          />
-          Create shipment
-        </CButton>
-      </CModalFooter>
-    </CModal>
 
     <CModal
       :visible="clearanceVisible"
