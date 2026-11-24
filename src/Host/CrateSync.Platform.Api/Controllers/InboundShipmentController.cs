@@ -6,6 +6,9 @@ using CrateSync.Platform.InboundLogistics.Application.Shipments.AddShipmentDocum
 using CrateSync.Platform.InboundLogistics.Application.Shipments.AddShipmentLine;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.CancelShipment;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.CreateShipment;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.CreateWarehouseDelivery;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.DispatchWarehouseDelivery;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.ConfirmWarehouseDelivery;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.GetShipment;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentArrived;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentShipped;
@@ -193,6 +196,119 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         var result = await sender.Send(new MarkShipmentArrivedCommand(shipmentId), cancellationToken);
 
         return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
+    }
+
+    [HttpPost("{shipmentId:guid}/warehouse-deliveries")]
+    public async Task<IActionResult> CreateWarehouseDelivery(
+        Guid shipmentId,
+        [FromBody] CreateWarehouseDeliveryRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!await accessService.CanOperateWarehouseAsync(
+                request.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await sender.Send(
+            new CreateWarehouseDeliveryCommand(
+                shipmentId,
+                request.WarehouseId,
+                request.TransportCompany,
+                request.DriverName,
+                request.DriverPhone,
+                request.VehicleNumber,
+                request.OriginLocation,
+                request.DestinationLocation,
+                request.TransportReference,
+                request.Remarks,
+                request.Allocations
+                    .Select(x => new CreateWarehouseDeliveryAllocation(
+                        x.ShipmentLineId,
+                        x.Quantity))
+                    .ToArray()),
+            cancellationToken);
+
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : StatusCode(
+                StatusCodes.Status201Created,
+                new { id = result.Value });
+    }
+
+    [HttpPatch("{shipmentId:guid}/warehouse-deliveries/{deliveryId:guid}/dispatch")]
+    public async Task<IActionResult> DispatchWarehouseDelivery(
+        Guid shipmentId,
+        Guid deliveryId,
+        CancellationToken cancellationToken)
+    {
+        var shipment = await sender.Send(
+            new GetShipmentQuery(shipmentId),
+            cancellationToken);
+
+        if (shipment.IsFailure)
+            return this.ToProblem(shipment.Error);
+
+        var delivery = shipment.Value.Deliveries?
+            .SingleOrDefault(x => x.Id == deliveryId);
+
+        if (delivery is null)
+            return NotFound();
+
+        if (!await accessService.CanOperateWarehouseAsync(
+                delivery.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await sender.Send(
+            new DispatchWarehouseDeliveryCommand(
+                shipmentId,
+                deliveryId),
+            cancellationToken);
+
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
+    }
+
+    [HttpPatch("{shipmentId:guid}/warehouse-deliveries/{deliveryId:guid}/receive")]
+    public async Task<IActionResult> ConfirmWarehouseDelivery(
+        Guid shipmentId,
+        Guid deliveryId,
+        CancellationToken cancellationToken)
+    {
+        var shipment = await sender.Send(
+            new GetShipmentQuery(shipmentId),
+            cancellationToken);
+
+        if (shipment.IsFailure)
+            return this.ToProblem(shipment.Error);
+
+        var delivery = shipment.Value.Deliveries?
+            .SingleOrDefault(x => x.Id == deliveryId);
+
+        if (delivery is null)
+            return NotFound();
+
+        if (!await accessService.CanOperateWarehouseAsync(
+                delivery.WarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await sender.Send(
+            new ConfirmWarehouseDeliveryCommand(
+                shipmentId,
+                deliveryId),
+            cancellationToken);
+
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpPost("{shipmentId:guid}/receive")]
