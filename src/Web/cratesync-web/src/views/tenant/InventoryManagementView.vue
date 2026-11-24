@@ -12,6 +12,7 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import WarehouseTransferForm from '@/components/inventory/WarehouseTransferForm.vue'
 
@@ -28,6 +29,7 @@ interface StockSummary {
   id: string
   warehouseId: string
   productVarietyId: string
+  countryOfOrigin: string
   productId: string
   productName: string
   varietyName: string
@@ -76,6 +78,8 @@ const filteredStock = computed(() => {
     return [
       item.productName,
       item.varietyName,
+      item.countryOfOrigin,
+      countryName(item.countryOfOrigin),
       item.warehouseName,
       item.warehouseCode,
     ]
@@ -146,6 +150,17 @@ watch(warehouseFilter, async () => {
   movements.value = []
   await loadStock()
 })
+
+function countryName(code: string) {
+  if (code === 'ZZ')
+    return 'Unknown origin'
+
+  return (
+    countries.find(
+      (country) => country.code === code,
+    )?.name ?? code
+  )
+}
 
 function stockStatus(item: StockSummary) {
   if (
@@ -241,6 +256,7 @@ function showInventory() {
 async function handleTransferCompleted(
   destinationWarehouseId: string,
   productVarietyId: string,
+  countryOfOrigin: string,
 ) {
   viewMode.value = 'list'
   await loadStock()
@@ -251,7 +267,9 @@ async function handleTransferCompleted(
         item.warehouseId ===
           destinationWarehouseId &&
         item.productVarietyId ===
-          productVarietyId,
+          productVarietyId &&
+        item.countryOfOrigin ===
+          countryOfOrigin,
     )
 
   if (destination)
@@ -322,6 +340,8 @@ async function selectStock(
         warehouseId: item.warehouseId,
         productVarietyId:
           item.productVarietyId,
+        countryOfOrigin:
+          item.countryOfOrigin,
       })
 
     movements.value =
@@ -494,6 +514,7 @@ onMounted(async () => {
               <tr>
                 <th>Product</th>
                 <th>Variety</th>
+                <th>Origin</th>
                 <th>Warehouse</th>
                 <th>On hand</th>
                 <th>Reserved</th>
@@ -521,6 +542,16 @@ onMounted(async () => {
                 </td>
                 <td>
                   {{ item.varietyName }}
+                </td>
+                <td>
+                  <div class="inventory-origin-cell">
+                    <strong>
+                      {{ countryName(item.countryOfOrigin) }}
+                    </strong>
+                    <small>
+                      {{ item.countryOfOrigin }}
+                    </small>
+                  </div>
                 </td>
                 <td>
                   <div class="inventory-warehouse-cell">
@@ -575,6 +606,8 @@ onMounted(async () => {
                 </strong>
                 <span>
                   {{ item.varietyName }}
+                  ·
+                  {{ countryName(item.countryOfOrigin) }}
                 </span>
               </div>
 
@@ -592,6 +625,8 @@ onMounted(async () => {
               {{ item.warehouseName }}
               ·
               {{ item.warehouseCode }}
+              ·
+              {{ item.countryOfOrigin }}
             </div>
 
             <div class="inventory-mobile-values">
@@ -651,6 +686,10 @@ onMounted(async () => {
                 {{ selectedStock.varietyName }}
               </h2>
               <p>
+                {{ countryName(selectedStock.countryOfOrigin) }}
+                ·
+                {{ selectedStock.countryOfOrigin }}
+                ·
                 {{ selectedStock.warehouseName }}
                 ·
                 {{ selectedStock.warehouseCode }}
@@ -693,7 +732,7 @@ onMounted(async () => {
               <div>
                 <h3>Recent movements</h3>
                 <p>
-                  Audit trail for this warehouse / variety balance
+                  Audit trail for this warehouse / variety / origin balance
                 </p>
               </div>
             </div>
