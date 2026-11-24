@@ -73,7 +73,6 @@ interface VarietyLookup {
 }
 
 const warehouses = ref<WarehouseSummary[]>([])
-const products = ref<ProductSummary[]>([])
 const stock = ref<StockSummary[]>([])
 const movements = ref<StockMovement[]>([])
 const selectedStock = ref<StockSummary | null>(null)
@@ -315,8 +314,6 @@ async function loadReferenceData() {
   ])
 
   warehouses.value = warehouseResult
-  products.value = productResult
-
   const details = await Promise.all(
     productResult.map((product) =>
       apiFetch<ProductDetails>(
