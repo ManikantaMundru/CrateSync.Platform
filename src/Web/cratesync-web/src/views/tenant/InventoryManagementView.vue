@@ -163,14 +163,6 @@ function countryName(code: string) {
   )
 }
 
-function countryName(code: string) {
-  return (
-    countries.find(
-      (country) => country.code === code,
-    )?.name ?? code
-  )
-}
-
 function stockStatus(item: StockSummary) {
   if (
     item.onHand === 0 &&
@@ -524,7 +516,6 @@ onMounted(async () => {
                 <th>Product</th>
                 <th>Variety</th>
                 <th>Origin</th>
-                <th>Origin</th>
                 <th>Warehouse</th>
                 <th>On hand</th>
                 <th>Reserved</th>
@@ -552,16 +543,6 @@ onMounted(async () => {
                 </td>
                 <td>
                   {{ item.varietyName }}
-                </td>
-                <td>
-                  <div class="inventory-origin-cell">
-                    <strong>
-                      {{ countryName(item.countryOfOrigin) }}
-                    </strong>
-                    <small>
-                      {{ item.countryOfOrigin }}
-                    </small>
-                  </div>
                 </td>
                 <td>
                   <div class="inventory-origin-cell">
@@ -654,8 +635,6 @@ onMounted(async () => {
               {{ item.warehouseName }}
               ·
               {{ item.warehouseCode }}
-              ·
-              {{ item.countryOfOrigin }}
             </div>
 
             <div class="inventory-mobile-values">
