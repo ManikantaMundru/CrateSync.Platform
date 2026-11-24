@@ -12,7 +12,6 @@ using CrateSync.Platform.InboundLogistics.Application.Shipments.ConfirmWarehouse
 using CrateSync.Platform.InboundLogistics.Application.Shipments.GetShipment;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentArrived;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkShipmentShipped;
-using CrateSync.Platform.InboundLogistics.Application.Shipments.ReceiveShipment;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.RecordClearanceEvent;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.SearchShipments;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.UpdateShipmentReferences;
@@ -309,29 +308,6 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         return result.IsFailure
             ? this.ToProblem(result.Error)
             : NoContent();
-    }
-
-    [HttpPost("{shipmentId:guid}/receive")]
-    public async Task<IActionResult> Receive(
-        Guid shipmentId,
-        [FromBody] ReceiveShipmentRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (!await accessService.CanOperateWarehouseAsync(request.WarehouseId, cancellationToken))
-        {
-            return Forbid();
-        }
-
-        var command = new ReceiveShipmentCommand(
-            request.ReceiptId,
-            shipmentId,
-            request.ShipmentLineId,
-            request.WarehouseId,
-            request.Quantity);
-
-        var result = await sender.Send(command, cancellationToken);
-
-        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpPatch("{shipmentId:guid}/cancel")]
