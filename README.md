@@ -217,8 +217,8 @@ Paths use the casing shown in Swagger. Values in braces are GUIDs. Send JSON wit
 | Area | Base path | Operations relative to the base path | Query parameters |
 | --- | --- | --- | --- |
 | Inbound shipments | `/api/InboundShipment` | `GET` list, `POST` create, `GET /{shipmentId}`, `POST /{shipmentId}/lines`, `PATCH /{shipmentId}/ship`, `PATCH /{shipmentId}/arrive`, `POST /{shipmentId}/warehouse-deliveries`, `PATCH /{shipmentId}/warehouse-deliveries/{deliveryId}/dispatch`, `PATCH /{shipmentId}/warehouse-deliveries/{deliveryId}/receive`, `PATCH /{shipmentId}/cancel` | List accepts `searchTerm`, `status`, `supplierId`. Warehouse inventory is created only when a dispatched delivery is confirmed received. |
-| Inventory | `/api/inventory` | `GET` list balances, `GET /stock`, `GET /movements`, `POST /adjustments` (returns `204`) | `warehouseId` and `productVarietyId` are optional for the list, and both are needed for stock or movement lookup. |
-| Sales orders | `/api/sales-orders` | `GET` list, `POST` create, `GET /{id}`, `POST /{id}/lines`, `PUT /{id}/lines/{lineId}`, `DELETE /{id}/lines/{lineId}`, `PATCH /{id}/confirm`, `PATCH /{id}/dispatch`, `PATCH /{id}/fulfil`, `PATCH /{id}/cancel` | List accepts `status`, `customerId`. |
+| Inventory | `/api/inventory` | `GET` list balances, `GET /stock`, `GET /movements`, `POST /transfers`, `POST /adjustments` (returns `204`) | Inventory identity is warehouse + product variety + origin country. List accepts optional `warehouseId`, `productVarietyId`, `originCountry`; exact stock/movement lookup requires all three. Transfers preserve origin. |
+| Sales orders | `/api/sales-orders` | `GET` list, `POST` create, `GET /{id}`, `POST /{id}/lines`, `PUT /{id}/lines/{lineId}`, `DELETE /{id}/lines/{lineId}`, `PATCH /{id}/confirm`, `PATCH /{id}/dispatch`, `PATCH /{id}/fulfil`, `PATCH /{id}/cancel` | List accepts `status`, `customerId`. New order lines require `originCountry` so reservations target the correct inventory origin. |
 
 ### Finance
 
