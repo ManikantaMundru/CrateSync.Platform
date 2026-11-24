@@ -105,9 +105,9 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         _deliveries.AsReadOnly();
 
     public bool IsClearedForWarehouseDispatch =>
-        CustomsStatus is CustomsClearanceStatus.Cleared or CustomsClearanceStatus.OutOfCharge &&
-        PlantQuarantineStatus is PlantQuarantineStatus.NotRequired or PlantQuarantineStatus.Cleared &&
-        FoodSafetyStatus is FoodSafetyStatus.NotRequired or FoodSafetyStatus.NocIssued;
+        (CustomsStatus is CustomsClearanceStatus.Cleared or CustomsClearanceStatus.OutOfCharge) &&
+        (PlantQuarantineStatus is PlantQuarantineStatus.NotRequired or PlantQuarantineStatus.Cleared) &&
+        (FoodSafetyStatus is FoodSafetyStatus.NotRequired or FoodSafetyStatus.NocIssued);
 
     public static InboundShipment Create(
         Guid tenantId,
