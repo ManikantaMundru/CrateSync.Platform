@@ -36,19 +36,19 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
         var repository =
             Substitute.For<IInventoryBalanceRepository>();
 
-        repository.GetAsync(
+        repository.GetByVarietyAsync(
                 tenantId,
                 warehouseId,
                 varietyA,
                 Arg.Any<CancellationToken>())
-            .Returns(balanceA);
+            .Returns([balanceA]);
 
-        repository.GetAsync(
+        repository.GetByVarietyAsync(
                 tenantId,
                 warehouseId,
                 varietyB,
                 Arg.Any<CancellationToken>())
-            .Returns(balanceB);
+            .Returns([balanceB]);
 
         var unitOfWork =
             Substitute.For<IInventoryUnitOfWork>();
@@ -119,19 +119,19 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
         var repository =
             Substitute.For<IInventoryBalanceRepository>();
 
-        repository.GetAsync(
+        repository.GetByVarietyAsync(
                 tenantId,
                 warehouseId,
                 varietyA,
                 Arg.Any<CancellationToken>())
-            .Returns(balanceA);
+            .Returns([balanceA]);
 
-        repository.GetAsync(
+        repository.GetByVarietyAsync(
                 tenantId,
                 warehouseId,
                 varietyB,
                 Arg.Any<CancellationToken>())
-            .Returns(balanceB);
+            .Returns([balanceB]);
 
         var unitOfWork =
             Substitute.For<IInventoryUnitOfWork>();
@@ -186,16 +186,92 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ConfirmedOrder_WhenMultipleOriginsExist_ShouldFailInsteadOfChoosingArbitrarily()
+    {
+        var tenantId = Guid.NewGuid();
+        var warehouseId = Guid.NewGuid();
+        var salesOrderId = Guid.NewGuid();
+        var varietyId = Guid.NewGuid();
+
+        var southAfrica = CreateBalanceWithStock(
+            tenantId,
+            warehouseId,
+            varietyId,
+            100,
+            "ZA");
+
+        var italy = CreateBalanceWithStock(
+            tenantId,
+            warehouseId,
+            varietyId,
+            80,
+            "IT");
+
+        var repository =
+            Substitute.For<IInventoryBalanceRepository>();
+
+        repository.GetByVarietyAsync(
+                tenantId,
+                warehouseId,
+                varietyId,
+                Arg.Any<CancellationToken>())
+            .Returns([southAfrica, italy]);
+
+        var unitOfWork =
+            Substitute.For<IInventoryUnitOfWork>();
+
+        var publisher =
+            Substitute.For<IPublisher>();
+
+        var handler =
+            new SalesOrderConfirmedIntegrationEventHandler(
+                repository,
+                unitOfWork,
+                new FakeTimeProvider(Now),
+                publisher);
+
+        await handler.Handle(
+            new SalesOrderConfirmedIntegrationEvent(
+                tenantId,
+                salesOrderId,
+                warehouseId,
+                [
+                    new SalesOrderLineIntegrationContract(
+                        Guid.NewGuid(),
+                        varietyId,
+                        30)
+                ],
+                Now),
+            CancellationToken.None);
+
+        southAfrica.Reserved.Value.ShouldBe(0);
+        italy.Reserved.Value.ShouldBe(0);
+
+        await unitOfWork.DidNotReceive()
+            .SaveChangesAsync(
+                Arg.Any<CancellationToken>());
+
+        await publisher.Received(1).Publish(
+            Arg.Is<StockReservationFailedIntegrationEvent>(
+                x =>
+                    x.Reason.Contains(
+                        "Multiple countries of origin")),
+            Arg.Any<CancellationToken>());
+    }
+
     private static InventoryBalance CreateBalanceWithStock(
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
-        int quantity)
+        int quantity,
+        string countryOfOrigin = "ZA")
     {
         var balance = InventoryBalance.Create(
             tenantId,
             warehouseId,
             productVarietyId,
+            countryOfOrigin,
             Now.AddHours(-1));
 
         balance.Receive(
