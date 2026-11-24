@@ -22,6 +22,7 @@ internal sealed class AdjustStockCommandHandler(
             tenantContext.TenantId,
             request.WarehouseId,
             request.ProductVarietyId,
+            request.CountryOfOrigin,
             cancellationToken);
 
         if (balance is null)
