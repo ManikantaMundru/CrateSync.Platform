@@ -123,6 +123,7 @@ public sealed class InventoryController(
                 request.SourceWarehouseId,
                 request.DestinationWarehouseId,
                 request.ProductVarietyId,
+                request.OriginCountry,
                 request.Quantity,
                 request.TransferReference,
                 request.Remarks),
