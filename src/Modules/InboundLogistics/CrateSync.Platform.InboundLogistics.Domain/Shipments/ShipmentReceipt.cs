@@ -10,7 +10,7 @@ public sealed class ShipmentReceipt : Entity<ShipmentReceiptId>
         ShipmentReceiptId id,
         ShipmentLineId shipmentLineId,
         Guid warehouseId,
-        ShipmentDeliveryId? deliveryId,
+        Guid? deliveryId,
         Guid productVarietyId,
         int quantity,
         DateTimeOffset receivedAtUtc)
@@ -31,7 +31,7 @@ public sealed class ShipmentReceipt : Entity<ShipmentReceiptId>
 
     public Guid WarehouseId { get; private set; }
 
-    public ShipmentDeliveryId? DeliveryId { get; private set; }
+    public Guid? DeliveryId { get; private set; }
 
     public Guid ProductVarietyId { get; private set; }
 
