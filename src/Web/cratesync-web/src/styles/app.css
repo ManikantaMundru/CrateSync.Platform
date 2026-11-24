@@ -6305,3 +6305,201 @@ a {
     max-width: 100%;
   }
 }
+
+
+/* Port to warehouse delivery workflow */
+.delivery-allocation-list,
+.warehouse-delivery-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.delivery-allocation-row,
+.warehouse-delivery-card {
+  border: 1px solid #e1e8ef;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.delivery-allocation-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: 1rem;
+  align-items: end;
+  padding: 0.85rem;
+}
+
+.delivery-allocation-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.delivery-allocation-row strong {
+  color: #172033;
+  font-size: 0.82rem;
+}
+
+.delivery-allocation-row small {
+  color: #7b8ba1;
+  font-size: 0.72rem;
+}
+
+.delivery-allocation-row label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.delivery-allocation-row label > span {
+  color: #596a80;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.warehouse-delivery-card {
+  overflow: hidden;
+}
+
+.warehouse-delivery-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid #e8edf2;
+  background: #fafbfc;
+}
+
+.warehouse-delivery-card > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.warehouse-delivery-card > header strong {
+  color: #172033;
+  font-size: 0.82rem;
+}
+
+.warehouse-delivery-card > header small {
+  overflow: hidden;
+  color: #75859a;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-delivery-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+}
+
+.warehouse-delivery-meta > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.warehouse-delivery-meta small {
+  color: #8a98aa;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.warehouse-delivery-meta strong {
+  overflow: hidden;
+  color: #334155;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warehouse-delivery-allocations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0 0.9rem 0.8rem;
+}
+
+.warehouse-delivery-allocations > span {
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  color: #53657b;
+  background: #f1f5f9;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.warehouse-delivery-card > .shipment-muted {
+  padding-inline: 0.9rem;
+}
+
+.warehouse-delivery-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-top: 1px solid #e8edf2;
+}
+
+[data-coreui-theme="dark"] .delivery-allocation-row,
+[data-coreui-theme="dark"] .warehouse-delivery-card {
+  border-color: #2e3d38;
+  background: #17221f;
+}
+
+[data-coreui-theme="dark"] .warehouse-delivery-card > header {
+  border-color: #2e3d38;
+  background: #1d2925;
+}
+
+[data-coreui-theme="dark"] .delivery-allocation-row strong,
+[data-coreui-theme="dark"] .warehouse-delivery-card > header strong,
+[data-coreui-theme="dark"] .warehouse-delivery-meta strong {
+  color: #eef3f1;
+}
+
+[data-coreui-theme="dark"] .warehouse-delivery-allocations > span {
+  color: #c9d5d0;
+  background: #24322d;
+}
+
+[data-coreui-theme="dark"] .warehouse-delivery-actions {
+  border-color: #2e3d38;
+}
+
+@media (max-width: 767.98px) {
+  .delivery-allocation-row {
+    grid-template-columns: 1fr;
+  }
+
+  .warehouse-delivery-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .warehouse-delivery-card > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .warehouse-delivery-card > header small {
+    white-space: normal;
+  }
+
+  .warehouse-delivery-actions {
+    justify-content: stretch;
+  }
+
+  .warehouse-delivery-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .warehouse-delivery-meta {
+    grid-template-columns: 1fr;
+  }
+}
