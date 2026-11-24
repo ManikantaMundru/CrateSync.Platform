@@ -1237,9 +1237,21 @@ onMounted(async () => {
           {{ modalError }}
         </div>
 
+        <div class="clearance-form-help">
+          <strong>What are you recording?</strong>
+          <p>
+            Choose the authority currently handling the shipment, then record
+            its latest status. Add the official reference number when one is
+            available and use Remarks for operational notes.
+          </p>
+        </div>
+
         <div class="shipment-modal-fields">
           <label class="form-field">
             <span>Authority</span>
+            <small class="form-help-text">
+              Customs = import clearance · Plant Quarantine = agricultural inspection · Food Safety = food regulator.
+            </small>
             <select
               v-model="clearanceForm.authority"
               class="form-select"
@@ -1264,6 +1276,9 @@ onMounted(async () => {
 
           <label class="form-field">
             <span>Status</span>
+            <small class="form-help-text">
+              Record the latest stage only; every update is kept in the clearance timeline.
+            </small>
             <select
               v-model="clearanceForm.status"
               class="form-select"
