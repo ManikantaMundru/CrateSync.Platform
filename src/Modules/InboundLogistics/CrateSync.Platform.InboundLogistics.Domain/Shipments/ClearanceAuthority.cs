@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace CrateSync.Platform.InboundLogistics.Domain.Shipments;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ClearanceAuthority
 {
     Customs = 1,
