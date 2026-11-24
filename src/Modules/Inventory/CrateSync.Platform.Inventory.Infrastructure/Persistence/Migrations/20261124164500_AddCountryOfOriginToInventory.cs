@@ -1,9 +1,13 @@
+using CrateSync.Platform.Inventory.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations;
 
+[DbContext(typeof(InventoryDbContext))]
+[Migration("20261124164500_AddCountryOfOriginToInventory")]
 public partial class AddCountryOfOriginToInventory : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
