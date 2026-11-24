@@ -16,6 +16,7 @@ internal sealed class ShipmentLineReceivedIntegrationEventHandler(ISender sender
                 notification.TenantId,
                 notification.WarehouseId,
                 notification.ProductVarietyId,
+                notification.CountryOfOrigin,
                 notification.Quantity,
                 notification.ShipmentId,
                 notification.ReceiptId),
