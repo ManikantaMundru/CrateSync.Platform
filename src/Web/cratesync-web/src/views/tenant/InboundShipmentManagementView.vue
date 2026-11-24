@@ -1093,7 +1093,7 @@ onMounted(async () => {
                 </div>
 
                 <span
-                  v-else-if="
+                  v-if="
                     line.receivedQuantity ===
                     line.expectedQuantity
                   "
