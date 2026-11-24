@@ -356,9 +356,16 @@ a {
 
 .content-area {
   width: 100%;
-  max-width: 1500px;
+  max-width: 1920px;
   margin: 0 auto;
-  padding: 1.75rem;
+  padding: 1.5rem;
+}
+
+@media (min-width: 1600px) {
+  .content-area {
+    max-width: none;
+    padding-inline: 2rem;
+  }
 }
 
 .page-stack {
