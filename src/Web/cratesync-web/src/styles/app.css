@@ -5506,3 +5506,17 @@ a {
     grid-column: 1 / -1;
   }
 }
+
+
+.shipment-line-validation {
+  margin: 0;
+  padding: 0 0.85rem 0.7rem;
+  color: #dc2626;
+  font-size: 0.7rem;
+}
+
+.shipment-line-table-row .is-invalid,
+.shipment-line-mobile-card .is-invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.08);
+}
