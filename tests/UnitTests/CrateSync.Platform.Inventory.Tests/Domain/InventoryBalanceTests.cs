@@ -311,6 +311,7 @@ public sealed class InventoryBalanceTests
             TenantId,
             WarehouseId,
             ProductVarietyId,
+            "ZA",
             Now);
     }
 
@@ -334,6 +335,7 @@ public sealed class InventoryBalanceTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             Guid.NewGuid(),
+            "ZA",
             Now);
 
         var receiptId = Guid.NewGuid();
@@ -391,6 +393,7 @@ public sealed class InventoryBalanceTests
             TenantId,
             Guid.NewGuid(),
             ProductVarietyId,
+            "ZA",
             Now);
 
         var transferId = Guid.NewGuid();
@@ -432,6 +435,7 @@ public sealed class InventoryBalanceTests
             TenantId,
             Guid.NewGuid(),
             ProductVarietyId,
+            "ZA",
             Now);
 
         var reference =
