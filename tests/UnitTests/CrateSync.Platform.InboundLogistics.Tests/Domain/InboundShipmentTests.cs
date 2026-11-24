@@ -466,7 +466,7 @@ public sealed class InboundShipmentTests
                 Now.AddDays(2).AddHours(5));
 
         receipts.Count.ShouldBe(1);
-        receipts.Single().DeliveryId.ShouldBe(deliveryId);
+        receipts.Single().DeliveryId.ShouldBe(deliveryId.Value);
         receipts.Single().WarehouseId.ShouldBe(WarehouseId);
         receipts.Single().Quantity.ShouldBe(40);
 
