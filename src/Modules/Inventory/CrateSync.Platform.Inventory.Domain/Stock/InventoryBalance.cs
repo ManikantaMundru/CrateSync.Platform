@@ -47,6 +47,18 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        DateTimeOffset createdAtUtc) =>
+        Create(
+            tenantId,
+            warehouseId,
+            productVarietyId,
+            "ZZ",
+            createdAtUtc);
+
+    public static InventoryBalance Create(
+        Guid tenantId,
+        Guid warehouseId,
+        Guid productVarietyId,
         string countryOfOrigin,
         DateTimeOffset createdAtUtc)
     {
