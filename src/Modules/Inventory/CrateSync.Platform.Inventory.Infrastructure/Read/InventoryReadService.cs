@@ -13,6 +13,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string countryOfOrigin,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
@@ -20,6 +21,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                 b.Id,
                 b.WarehouseId,
                 b.ProductVarietyId,
+                b.CountryOfOrigin,
                 b.OnHand,
                 b.Reserved,
                 b.OnHand - b.Reserved AS Available,
@@ -40,7 +42,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                AND p.TenantId = b.TenantId
             WHERE b.TenantId = @TenantId
               AND b.WarehouseId = @WarehouseId
-              AND b.ProductVarietyId = @ProductVarietyId;
+              AND b.ProductVarietyId = @ProductVarietyId
+              AND b.CountryOfOrigin = @CountryOfOrigin;
             """;
 
         await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
@@ -48,7 +51,13 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         return await connection.QuerySingleOrDefaultAsync<StockResponse>(
             new CommandDefinition(
                 sql,
-                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId },
+                new
+                {
+                    TenantId = tenantId,
+                    WarehouseId = warehouseId,
+                    ProductVarietyId = productVarietyId,
+                    CountryOfOrigin = countryOfOrigin.Trim().ToUpperInvariant()
+                },
                 cancellationToken: cancellationToken));
     }
 
@@ -56,6 +65,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         Guid tenantId,
         Guid? warehouseId,
         Guid? productVarietyId,
+        string? countryOfOrigin,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
@@ -63,6 +73,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                 b.Id,
                 b.WarehouseId,
                 b.ProductVarietyId,
+                b.CountryOfOrigin,
                 b.OnHand,
                 b.Reserved,
                 b.OnHand - b.Reserved AS Available,
@@ -84,7 +95,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
             WHERE b.TenantId = @TenantId
               AND (@WarehouseId IS NULL OR b.WarehouseId = @WarehouseId)
               AND (@ProductVarietyId IS NULL OR b.ProductVarietyId = @ProductVarietyId)
-            ORDER BY p.Name, pv.Name, w.Name;
+              AND (@CountryOfOrigin IS NULL OR b.CountryOfOrigin = @CountryOfOrigin)
+            ORDER BY p.Name, pv.Name, b.CountryOfOrigin, w.Name;
             """;
 
         await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
@@ -92,7 +104,15 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         var rows = await connection.QueryAsync<StockSummaryResponse>(
             new CommandDefinition(
                 sql,
-                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId },
+                new
+                {
+                    TenantId = tenantId,
+                    WarehouseId = warehouseId,
+                    ProductVarietyId = productVarietyId,
+                    CountryOfOrigin = string.IsNullOrWhiteSpace(countryOfOrigin)
+                        ? null
+                        : countryOfOrigin.Trim().ToUpperInvariant()
+                },
                 cancellationToken: cancellationToken));
 
         return rows.AsList();
@@ -102,6 +122,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string countryOfOrigin,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
@@ -127,6 +148,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
             WHERE b.TenantId = @TenantId
               AND b.WarehouseId = @WarehouseId
               AND b.ProductVarietyId = @ProductVarietyId
+              AND b.CountryOfOrigin = @CountryOfOrigin
             ORDER BY m.OccurredAtUtc DESC;
             """;
 
@@ -135,7 +157,13 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         var rows = await connection.QueryAsync<StockMovementResponse>(
             new CommandDefinition(
                 sql,
-                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId },
+                new
+                {
+                    TenantId = tenantId,
+                    WarehouseId = warehouseId,
+                    ProductVarietyId = productVarietyId,
+                    CountryOfOrigin = countryOfOrigin.Trim().ToUpperInvariant()
+                },
                 cancellationToken: cancellationToken));
 
         return rows.AsList();
