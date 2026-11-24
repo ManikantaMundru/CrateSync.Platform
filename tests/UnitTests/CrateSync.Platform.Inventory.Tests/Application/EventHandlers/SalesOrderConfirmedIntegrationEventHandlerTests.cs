@@ -40,6 +40,7 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
                 tenantId,
                 warehouseId,
                 varietyA,
+                "ZA",
                 Arg.Any<CancellationToken>())
             .Returns(balanceA);
 
@@ -47,6 +48,7 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
                 tenantId,
                 warehouseId,
                 varietyB,
+                "ZA",
                 Arg.Any<CancellationToken>())
             .Returns(balanceB);
 
@@ -74,11 +76,13 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
                     new SalesOrderLineIntegrationContract(
                         Guid.NewGuid(),
                         varietyA,
-                        30),
+                        30,
+                        "ZA"),
                     new SalesOrderLineIntegrationContract(
                         Guid.NewGuid(),
                         varietyB,
-                        20)
+                        20,
+                        "ZA")
                 ],
                 Now);
 
@@ -123,6 +127,7 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
                 tenantId,
                 warehouseId,
                 varietyA,
+                "ZA",
                 Arg.Any<CancellationToken>())
             .Returns(balanceA);
 
@@ -130,6 +135,7 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
                 tenantId,
                 warehouseId,
                 varietyB,
+                "ZA",
                 Arg.Any<CancellationToken>())
             .Returns(balanceB);
 
@@ -155,11 +161,13 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
                     new SalesOrderLineIntegrationContract(
                         Guid.NewGuid(),
                         varietyA,
-                        30),
+                        30,
+                        "ZA"),
                     new SalesOrderLineIntegrationContract(
                         Guid.NewGuid(),
                         varietyB,
-                        20)
+                        20,
+                        "ZA")
                 ],
                 Now);
 
@@ -196,6 +204,7 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
             tenantId,
             warehouseId,
             productVarietyId,
+            "ZA",
             Now.AddHours(-1));
 
         balance.Receive(
