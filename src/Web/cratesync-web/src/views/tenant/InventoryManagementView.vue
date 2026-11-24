@@ -62,16 +62,6 @@ const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 
-const warehouseById = computed(
-  () =>
-    new Map(
-      warehouses.value.map((warehouse) => [
-        warehouse.id,
-        warehouse,
-      ]),
-    ),
-)
-
 const filteredStock = computed(() => {
   const term =
     search.value.trim().toLowerCase()
@@ -153,22 +143,6 @@ watch(warehouseFilter, async () => {
   movements.value = []
   await loadStock()
 })
-
-function warehouseName(id: string) {
-  const warehouse =
-    warehouseById.value.get(id)
-
-  return warehouse
-    ? warehouse.name
-    : 'Warehouse'
-}
-
-function warehouseCode(id: string) {
-  return (
-    warehouseById.value.get(id)?.code ??
-    '—'
-  )
-}
 
 function stockStatus(item: StockSummary) {
   if (
