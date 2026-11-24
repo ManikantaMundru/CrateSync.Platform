@@ -201,9 +201,103 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.ToTable("ShipmentDocuments", "logistics");
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DestinationLocation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset?>("DispatchedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DriverName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("DriverPhone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("OriginLocation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTimeOffset?>("ReceivedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransportCompany")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("TransportReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VehicleNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShipmentId");
+                    b.HasIndex("Status");
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("ShipmentDeliveries", "logistics");
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDeliveryAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DeliveryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ShipmentLineId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId");
+                    b.HasIndex("ShipmentLineId");
+
+                    b.ToTable("ShipmentDeliveryAllocations", "logistics");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentReceipt", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DeliveryId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ProductVarietyId")
@@ -225,6 +319,8 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId");
 
                     b.HasIndex("ShipmentId");
 
@@ -292,6 +388,24 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDelivery", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
+                        .WithMany("Deliveries")
+                        .HasForeignKey("ShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDeliveryAllocation", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDelivery", null)
+                        .WithMany("Allocations")
+                        .HasForeignKey("DeliveryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentReceipt", b =>
                 {
                     b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
@@ -355,6 +469,8 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", b =>
                 {
                     b.Navigation("ClearanceEvents");
+
+                    b.Navigation("Deliveries");
 
                     b.Navigation("Documents");
 
