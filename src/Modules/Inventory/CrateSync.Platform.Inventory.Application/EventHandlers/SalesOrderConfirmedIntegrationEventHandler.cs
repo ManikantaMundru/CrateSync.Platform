@@ -23,28 +23,82 @@ internal sealed class SalesOrderConfirmedIntegrationEventHandler(
 
         foreach (var line in notification.Lines)
         {
-            var balance = await repository.GetAsync(
-                notification.TenantId,
-                notification.WarehouseId,
-                line.ProductVarietyId,
-                cancellationToken);
+            var candidates =
+                await repository.GetByVarietyAsync(
+                    notification.TenantId,
+                    notification.WarehouseId,
+                    line.ProductVarietyId,
+                    cancellationToken);
 
-            if (balance is null)
+            var existingBalances =
+                candidates
+                    .Where(x =>
+                        x.Reservations.Any(
+                            r =>
+                                r.SalesOrderId ==
+                                notification.SalesOrderId))
+                    .ToArray();
+
+            if (existingBalances.Length > 1)
             {
                 await PublishFailure(
                     notification,
-                    $"Inventory does not exist for product variety '{line.ProductVarietyId}' at warehouse '{notification.WarehouseId}'.",
+                    $"Sales order '{notification.SalesOrderId}' has reservations for multiple origins of product variety '{line.ProductVarietyId}'.",
                     cancellationToken);
                 return;
             }
 
-            var existing = balance.Reservations.SingleOrDefault(x => x.SalesOrderId == notification.SalesOrderId);
+            InventoryBalance? balance =
+                existingBalances.SingleOrDefault();
+
+            if (balance is null)
+            {
+                var availableOrigins =
+                    candidates
+                        .Where(x => x.Available > 0)
+                        .ToArray();
+
+                if (availableOrigins.Length == 0)
+                {
+                    await PublishFailure(
+                        notification,
+                        $"Inventory does not exist for product variety '{line.ProductVarietyId}' at warehouse '{notification.WarehouseId}'.",
+                        cancellationToken);
+                    return;
+                }
+
+                if (availableOrigins.Length > 1)
+                {
+                    var origins =
+                        string.Join(
+                            ", ",
+                            availableOrigins
+                                .Select(x => x.CountryOfOrigin)
+                                .OrderBy(x => x));
+
+                    await PublishFailure(
+                        notification,
+                        $"Multiple countries of origin are available for product variety '{line.ProductVarietyId}' ({origins}). Select a country of origin on the sales order before confirming it.",
+                        cancellationToken);
+                    return;
+                }
+
+                balance = availableOrigins[0];
+            }
+
+            var existing =
+                balance.Reservations.SingleOrDefault(
+                    x =>
+                        x.SalesOrderId ==
+                        notification.SalesOrderId);
 
             if (existing is not null &&
-                existing.Status == StockReservationStatus.Active &&
+                existing.Status ==
+                    StockReservationStatus.Active &&
                 existing.Quantity == line.Quantity)
             {
-                balances.Add((balance, line.Quantity));
+                balances.Add(
+                    (balance, line.Quantity));
                 continue;
             }
 
@@ -52,7 +106,7 @@ internal sealed class SalesOrderConfirmedIntegrationEventHandler(
             {
                 await PublishFailure(
                     notification,
-                    $"Insufficient stock for product variety '{line.ProductVarietyId}'. Available: {balance.Available}, requested: {line.Quantity}.",
+                    $"Insufficient {balance.CountryOfOrigin} stock for product variety '{line.ProductVarietyId}'. Available: {balance.Available}, requested: {line.Quantity}.",
                     cancellationToken);
                 return;
             }
