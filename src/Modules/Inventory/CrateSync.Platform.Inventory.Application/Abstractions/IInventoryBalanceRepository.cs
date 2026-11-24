@@ -8,6 +8,13 @@ public interface IInventoryBalanceRepository
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string countryOfOrigin,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyCollection<InventoryBalance>> GetByVarietyAsync(
+        Guid tenantId,
+        Guid warehouseId,
+        Guid productVarietyId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<InventoryBalance>> GetBySalesOrderIdAsync(
