@@ -299,7 +299,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             if (
                 existingReceipt.ShipmentLineId != shipmentLineId ||
                 existingReceipt.WarehouseId != warehouseId ||
-                existingReceipt.DeliveryId != deliveryId ||
+                existingReceipt.DeliveryId != deliveryId?.Value ||
                 existingReceipt.Quantity != quantity.Value)
             {
                 throw new InvalidOperationException(
@@ -338,7 +338,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             receiptId,
             line.Id,
             warehouseId,
-            deliveryId,
+            deliveryId?.Value,
             line.ProductVarietyId,
             quantity.Value,
             occurredOnUtc);
@@ -480,7 +480,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         if (delivery.Status == ShipmentDeliveryStatus.Received)
         {
             return _receipts
-                .Where(x => x.DeliveryId == deliveryId)
+                .Where(x => x.DeliveryId == deliveryId.Value)
                 .ToArray();
         }
 
