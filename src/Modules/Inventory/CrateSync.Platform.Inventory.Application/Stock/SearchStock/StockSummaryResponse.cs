@@ -7,4 +7,9 @@ public sealed record StockSummaryResponse(
     int OnHand,
     int Reserved,
     int Available,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    Guid ProductId = default,
+    string ProductName = "",
+    string VarietyName = "",
+    string WarehouseName = "",
+    string WarehouseCode = "");
