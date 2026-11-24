@@ -175,6 +175,7 @@ public sealed class SalesOrderCancellationAndDispatchIntegrationEventHandlerTest
             tenantId,
             warehouseId,
             productVarietyId,
+            "ZA",
             Now.AddHours(-1));
 
         balance.Receive(
