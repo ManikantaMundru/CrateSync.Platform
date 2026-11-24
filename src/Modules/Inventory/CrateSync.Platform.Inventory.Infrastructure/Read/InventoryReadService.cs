@@ -134,6 +134,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                     WHEN 3 THEN 'ReservationReleased'
                     WHEN 4 THEN 'Dispatched'
                     WHEN 5 THEN 'Adjusted'
+                    WHEN 6 THEN 'TransferOut'
+                    WHEN 7 THEN 'TransferIn'
                 END AS Type,
                 m.OnHandChange,
                 m.ReservedChange,
