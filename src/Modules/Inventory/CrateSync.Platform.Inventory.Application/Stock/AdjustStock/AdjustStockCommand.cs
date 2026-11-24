@@ -6,5 +6,6 @@ namespace CrateSync.Platform.Inventory.Application.Stock.AdjustStock;
 public sealed record AdjustStockCommand(
     Guid WarehouseId,
     Guid ProductVarietyId,
+    string CountryOfOrigin,
     int QuantityChange,
     string Reason) : ICommand<Result>;
