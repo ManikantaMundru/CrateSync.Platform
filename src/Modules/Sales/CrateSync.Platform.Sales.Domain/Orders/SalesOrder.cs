@@ -86,7 +86,13 @@ public sealed class SalesOrder : AggregateRoot<SalesOrderId>
     {
         EnsureDraft();
 
-        var normalizedOrigin = originCountry.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(originCountry))
+            throw new ArgumentException(
+                "Origin country is required.",
+                nameof(originCountry));
+
+        var normalizedOrigin =
+            originCountry.Trim().ToUpperInvariant();
 
         if (_lines.Any(x =>
                 x.ProductVarietyId == productVarietyId &&
