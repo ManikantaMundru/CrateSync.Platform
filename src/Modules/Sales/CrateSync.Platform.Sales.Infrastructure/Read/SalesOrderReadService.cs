@@ -46,6 +46,7 @@ internal sealed class SalesOrderReadService(ISqlConnectionFactory connectionFact
             SELECT
                 Id,
                 ProductVarietyId,
+                OriginCountry,
                 Quantity,
                 PackSize,
                 UnitPrice,
