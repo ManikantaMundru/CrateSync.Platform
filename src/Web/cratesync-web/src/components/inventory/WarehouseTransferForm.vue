@@ -11,6 +11,7 @@ import {
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
 import { countries } from '@/data/countries'
+import { countries } from '@/data/countries'
 
 interface WarehouseSummary {
   id: string
@@ -112,6 +113,14 @@ function countryName(code: string) {
   if (code === 'ZZ')
     return 'Unknown origin'
 
+  return (
+    countries.find(
+      (country) => country.code === code,
+    )?.name ?? code
+  )
+}
+
+function countryName(code: string) {
   return (
     countries.find(
       (country) => country.code === code,
