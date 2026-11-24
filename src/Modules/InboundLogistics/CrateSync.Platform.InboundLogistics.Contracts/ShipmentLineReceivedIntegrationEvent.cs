@@ -8,6 +8,7 @@ public sealed record ShipmentLineReceivedIntegrationEvent(
     Guid TenantId,
     Guid WarehouseId,
     Guid ProductVarietyId,
+    string CountryOfOrigin,
     int Quantity,
     DateTimeOffset OccurredAtUtc) : IIntegrationEvent
 {
