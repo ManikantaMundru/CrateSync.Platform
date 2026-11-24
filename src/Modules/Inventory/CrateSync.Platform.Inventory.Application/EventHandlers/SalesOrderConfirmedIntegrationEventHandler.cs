@@ -27,13 +27,14 @@ internal sealed class SalesOrderConfirmedIntegrationEventHandler(
                 notification.TenantId,
                 notification.WarehouseId,
                 line.ProductVarietyId,
+                line.OriginCountry,
                 cancellationToken);
 
             if (balance is null)
             {
                 await PublishFailure(
                     notification,
-                    $"Inventory does not exist for product variety '{line.ProductVarietyId}' at warehouse '{notification.WarehouseId}'.",
+                    $"Inventory does not exist for product variety '{line.ProductVarietyId}' / origin '{line.OriginCountry}' at warehouse '{notification.WarehouseId}'.",
                     cancellationToken);
                 return;
             }
