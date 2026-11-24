@@ -16,6 +16,9 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         string originCountry,
         CancellationToken cancellationToken = default)
     {
+        originCountry =
+            originCountry.Trim().ToUpperInvariant();
+
         const string sql = """
             SELECT
                 b.Id,
@@ -62,6 +65,11 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         string? originCountry,
         CancellationToken cancellationToken = default)
     {
+        originCountry =
+            string.IsNullOrWhiteSpace(originCountry)
+                ? null
+                : originCountry.Trim().ToUpperInvariant();
+
         const string sql = """
             SELECT
                 b.Id,
@@ -111,6 +119,9 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         string originCountry,
         CancellationToken cancellationToken = default)
     {
+        originCountry =
+            originCountry.Trim().ToUpperInvariant();
+
         const string sql = """
             SELECT
                 m.Id,
