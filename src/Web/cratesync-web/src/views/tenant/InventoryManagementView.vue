@@ -191,6 +191,7 @@ watch(originFilter, () => {
 
 watch(warehouseFilter, async () => {
   page.value = 1
+  originFilter.value = ''
   selectedStock.value = null
   movements.value = []
   await loadStock()
