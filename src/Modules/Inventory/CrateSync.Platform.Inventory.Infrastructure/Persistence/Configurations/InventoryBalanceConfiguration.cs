@@ -18,6 +18,9 @@ internal sealed class InventoryBalanceConfiguration : IEntityTypeConfiguration<I
         builder.Property(x => x.TenantId).IsRequired();
         builder.Property(x => x.WarehouseId).IsRequired();
         builder.Property(x => x.ProductVarietyId).IsRequired();
+        builder.Property(x => x.CountryOfOrigin)
+            .HasMaxLength(2)
+            .IsRequired();
 
         builder.Property(x => x.OnHand)
             .HasConversion(quantity => quantity.Value, value => new StockQuantity(value))
@@ -38,9 +41,17 @@ internal sealed class InventoryBalanceConfiguration : IEntityTypeConfiguration<I
             .IsConcurrencyToken()
             .IsRequired();
 
-        builder.HasIndex(x => new { x.TenantId, x.WarehouseId, x.ProductVarietyId }).IsUnique();
+        builder.HasIndex(x => new
+        {
+            x.TenantId,
+            x.WarehouseId,
+            x.ProductVarietyId,
+            x.CountryOfOrigin
+        }).IsUnique();
+
         builder.HasIndex(x => new { x.TenantId, x.WarehouseId });
         builder.HasIndex(x => new { x.TenantId, x.ProductVarietyId });
+        builder.HasIndex(x => new { x.TenantId, x.CountryOfOrigin });
 
         builder.HasMany(x => x.Movements)
             .WithOne()
