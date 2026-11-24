@@ -18,6 +18,7 @@ internal sealed class ReceiveStockCommandHandler(
             request.TenantId,
             request.WarehouseId,
             request.ProductVarietyId,
+            request.CountryOfOrigin,
             cancellationToken);
 
         var now = timeProvider.GetUtcNow();
@@ -28,6 +29,7 @@ internal sealed class ReceiveStockCommandHandler(
                 request.TenantId,
                 request.WarehouseId,
                 request.ProductVarietyId,
+                request.CountryOfOrigin,
                 now);
 
             repository.Add(balance);
