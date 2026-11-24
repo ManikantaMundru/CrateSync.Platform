@@ -11,6 +11,7 @@ internal sealed class InventoryBalanceRepository(InventoryDbContext dbContext) :
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string originCountry,
         CancellationToken cancellationToken = default)
     {
         return dbContext.InventoryBalances
@@ -19,7 +20,8 @@ internal sealed class InventoryBalanceRepository(InventoryDbContext dbContext) :
             .SingleOrDefaultAsync(
                 x => x.TenantId == tenantId &&
                      x.WarehouseId == warehouseId &&
-                     x.ProductVarietyId == productVarietyId,
+                     x.ProductVarietyId == productVarietyId &&
+                     x.OriginCountry == originCountry,
                 cancellationToken);
     }
 
