@@ -13,6 +13,7 @@ import {
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
 import { countries } from '@/data/countries'
+import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import WarehouseTransferForm from '@/components/inventory/WarehouseTransferForm.vue'
 
@@ -155,6 +156,14 @@ function countryName(code: string) {
   if (code === 'ZZ')
     return 'Unknown origin'
 
+  return (
+    countries.find(
+      (country) => country.code === code,
+    )?.name ?? code
+  )
+}
+
+function countryName(code: string) {
   return (
     countries.find(
       (country) => country.code === code,
@@ -515,6 +524,7 @@ onMounted(async () => {
                 <th>Product</th>
                 <th>Variety</th>
                 <th>Origin</th>
+                <th>Origin</th>
                 <th>Warehouse</th>
                 <th>On hand</th>
                 <th>Reserved</th>
@@ -542,6 +552,16 @@ onMounted(async () => {
                 </td>
                 <td>
                   {{ item.varietyName }}
+                </td>
+                <td>
+                  <div class="inventory-origin-cell">
+                    <strong>
+                      {{ countryName(item.countryOfOrigin) }}
+                    </strong>
+                    <small>
+                      {{ item.countryOfOrigin }}
+                    </small>
+                  </div>
                 </td>
                 <td>
                   <div class="inventory-origin-cell">
@@ -619,6 +639,15 @@ onMounted(async () => {
               >
                 {{ stockStatus(item).label }}
               </span>
+            </div>
+
+            <div class="inventory-mobile-origin">
+              Origin:
+              <strong>
+                {{ countryName(item.countryOfOrigin) }}
+              </strong>
+              ·
+              {{ item.countryOfOrigin }}
             </div>
 
             <div class="inventory-mobile-warehouse">
