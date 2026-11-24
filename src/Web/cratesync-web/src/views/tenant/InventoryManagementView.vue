@@ -79,6 +79,18 @@ function originName(code: string) {
   return countryByCode.get(code) ?? code
 }
 
+function countryFlag(code: string) {
+  if (!/^[A-Z]{2}$/.test(code) || code === 'ZZ')
+    return '🌐'
+
+  return String.fromCodePoint(
+    ...[...code].map(
+      (character) =>
+        127397 + character.charCodeAt(0),
+    ),
+  )
+}
+
 const originOptions = computed(() =>
   [...new Set(
     stock.value
@@ -93,10 +105,17 @@ const filteredStock = computed(() => {
   const term =
     search.value.trim().toLowerCase()
 
-  if (!term)
-    return stock.value
-
   return stock.value.filter((item) => {
+    if (
+      originFilter.value &&
+      item.originCountry !== originFilter.value
+    ) {
+      return false
+    }
+
+    if (!term)
+      return true
+
     return [
       item.productName,
       item.varietyName,
@@ -166,7 +185,11 @@ watch(pageSize, () => {
   page.value = 1
 })
 
-watch([warehouseFilter, originFilter], async () => {
+watch(originFilter, () => {
+  page.value = 1
+})
+
+watch(warehouseFilter, async () => {
   page.value = 1
   selectedStock.value = null
   movements.value = []
@@ -309,12 +332,6 @@ async function loadStock() {
       )
     }
 
-    if (originFilter.value) {
-      params.set(
-        'originCountry',
-        originFilter.value,
-      )
-    }
 
     const query = params.toString()
 
@@ -462,7 +479,7 @@ onMounted(async () => {
         <strong>
           {{ totalCount.toLocaleString() }}
         </strong>
-        <small>warehouse / variety balances</small>
+        <small>warehouse / variety / origin balances</small>
       </article>
     </section>
 
@@ -501,6 +518,7 @@ onMounted(async () => {
             :key="code"
             :value="code"
           >
+            {{ countryFlag(code) }}
             {{ originName(code) }}
           </option>
         </select>
@@ -583,6 +601,7 @@ onMounted(async () => {
                 <td>
                   <div class="inventory-origin-cell">
                     <strong>
+                      {{ countryFlag(item.originCountry) }}
                       {{ originName(item.originCountry) }}
                     </strong>
                     <small>{{ item.originCountry }}</small>
@@ -657,6 +676,7 @@ onMounted(async () => {
             <div class="inventory-mobile-origin">
               Origin:
               <strong>
+                {{ countryFlag(item.originCountry) }}
                 {{ originName(item.originCountry) }}
               </strong>
             </div>
@@ -726,6 +746,7 @@ onMounted(async () => {
               <p class="inventory-detail-origin">
                 Origin:
                 <strong>
+                  {{ countryFlag(selectedStock.originCountry) }}
                   {{ originName(selectedStock.originCountry) }}
                 </strong>
               </p>
