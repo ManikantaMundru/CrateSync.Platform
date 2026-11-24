@@ -4,4 +4,5 @@ namespace CrateSync.Platform.Inventory.Application.Stock.GetStockMovements;
 
 public sealed record GetStockMovementsQuery(
     Guid WarehouseId,
-    Guid ProductVarietyId) : IQuery<IReadOnlyCollection<StockMovementResponse>>;
+    Guid ProductVarietyId,
+    string CountryOfOrigin) : IQuery<IReadOnlyCollection<StockMovementResponse>>;
