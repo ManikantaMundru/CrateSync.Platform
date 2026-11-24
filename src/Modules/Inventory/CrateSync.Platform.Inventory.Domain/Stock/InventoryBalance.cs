@@ -17,12 +17,14 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string countryOfOrigin,
         DateTimeOffset createdAtUtc)
         : base(id)
     {
         TenantId = tenantId;
         WarehouseId = warehouseId;
         ProductVarietyId = productVarietyId;
+        CountryOfOrigin = NormalizeCountry(countryOfOrigin);
         OnHand = StockQuantity.Zero;
         Reserved = StockQuantity.Zero;
         CreatedAtUtc = createdAtUtc;
@@ -32,6 +34,7 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
     public Guid TenantId { get; private set; }
     public Guid WarehouseId { get; private set; }
     public Guid ProductVarietyId { get; private set; }
+    public string CountryOfOrigin { get; private set; } = null!;
     public StockQuantity OnHand { get; private set; }
     public StockQuantity Reserved { get; private set; }
     public int Available => OnHand.Value - Reserved.Value;
@@ -40,13 +43,24 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
     public IReadOnlyCollection<StockMovement> Movements => _movements.AsReadOnly();
     public IReadOnlyCollection<StockReservation> Reservations => _reservations.AsReadOnly();
 
-    public static InventoryBalance Create(Guid tenantId, Guid warehouseId, Guid productVarietyId, DateTimeOffset createdAtUtc)
+    public static InventoryBalance Create(
+        Guid tenantId,
+        Guid warehouseId,
+        Guid productVarietyId,
+        string countryOfOrigin,
+        DateTimeOffset createdAtUtc)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("Tenant ID cannot be empty.", nameof(tenantId));
         if (warehouseId == Guid.Empty) throw new ArgumentException("Warehouse ID cannot be empty.", nameof(warehouseId));
         if (productVarietyId == Guid.Empty) throw new ArgumentException("Product variety ID cannot be empty.", nameof(productVarietyId));
 
-        return new InventoryBalance(InventoryBalanceId.New(), tenantId, warehouseId, productVarietyId, createdAtUtc);
+        return new InventoryBalance(
+            InventoryBalanceId.New(),
+            tenantId,
+            warehouseId,
+            productVarietyId,
+            countryOfOrigin,
+            createdAtUtc);
     }
 
     public bool Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc)
@@ -244,6 +258,19 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
 
         RaiseDomainEvent(new StockAdjustedDomainEvent(
             Id, TenantId, WarehouseId, ProductVarietyId, quantityChange, reason.Value, occurredAtUtc));
+    }
+
+    private static string NormalizeCountry(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("Country of origin is required.", nameof(value));
+
+        var normalized = value.Trim().ToUpperInvariant();
+
+        if (normalized.Length != 2)
+            throw new ArgumentException("Country of origin must be a 2-letter country code.", nameof(value));
+
+        return normalized;
     }
 
     private void AddMovement(
