@@ -466,6 +466,11 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDelivery", b =>
+                {
+                    b.Navigation("Allocations");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", b =>
                 {
                     b.Navigation("ClearanceEvents");
