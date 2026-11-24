@@ -28,6 +28,11 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CountryOfOrigin")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -59,11 +64,13 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TenantId", "CountryOfOrigin");
+
                     b.HasIndex("TenantId", "ProductVarietyId");
 
                     b.HasIndex("TenantId", "WarehouseId");
 
-                    b.HasIndex("TenantId", "WarehouseId", "ProductVarietyId")
+                    b.HasIndex("TenantId", "WarehouseId", "ProductVarietyId", "CountryOfOrigin")
                         .IsUnique();
 
                     b.ToTable("InventoryBalances", "inventory");
