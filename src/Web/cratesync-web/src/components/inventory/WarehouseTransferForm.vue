@@ -10,6 +10,7 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { countries } from '@/data/countries'
 
 interface WarehouseSummary {
   id: string
@@ -22,6 +23,7 @@ interface StockSummary {
   id: string
   warehouseId: string
   productVarietyId: string
+  countryOfOrigin: string
   productName: string
   varietyName: string
   warehouseName: string
@@ -41,6 +43,7 @@ const emit = defineEmits<{
   completed: [
     destinationWarehouseId: string,
     productVarietyId: string,
+    countryOfOrigin: string,
   ]
 }>()
 
@@ -51,7 +54,7 @@ const form = reactive({
   transferId: crypto.randomUUID(),
   sourceWarehouseId: '',
   destinationWarehouseId: '',
-  productVarietyId: '',
+  stockPositionId: '',
   quantity: 0,
   transferReference: '',
   remarks: '',
@@ -66,9 +69,9 @@ const sourcePositions = computed(() =>
         item.available > 0,
     )
     .sort((a, b) =>
-      `${a.productName} ${a.varietyName}`
+      `${a.productName} ${a.varietyName} ${a.countryOfOrigin}`
         .localeCompare(
-          `${b.productName} ${b.varietyName}`,
+          `${b.productName} ${b.varietyName} ${b.countryOfOrigin}`,
         ),
     ),
 )
@@ -76,8 +79,8 @@ const sourcePositions = computed(() =>
 const selectedPosition = computed(() =>
   sourcePositions.value.find(
     (item) =>
-      item.productVarietyId ===
-      form.productVarietyId,
+      item.id ===
+      form.stockPositionId,
   ) ?? null,
 )
 
@@ -92,18 +95,29 @@ const destinationWarehouses = computed(() =>
 watch(
   () => form.sourceWarehouseId,
   () => {
-    form.productVarietyId = ''
+    form.stockPositionId = ''
     form.destinationWarehouseId = ''
     form.quantity = 0
   },
 )
 
 watch(
-  () => form.productVarietyId,
+  () => form.stockPositionId,
   () => {
     form.quantity = 0
   },
 )
+
+function countryName(code: string) {
+  if (code === 'ZZ')
+    return 'Unknown origin'
+
+  return (
+    countries.find(
+      (country) => country.code === code,
+    )?.name ?? code
+  )
+}
 
 function generateReference() {
   const year = new Date().getFullYear()
@@ -121,7 +135,7 @@ async function submitTransfer() {
   if (
     !form.sourceWarehouseId ||
     !form.destinationWarehouseId ||
-    !form.productVarietyId
+    !form.stockPositionId
   ) {
     error.value =
       'Source warehouse, destination warehouse and stock item are required.'
@@ -158,7 +172,9 @@ async function submitTransfer() {
           destinationWarehouseId:
             form.destinationWarehouseId,
           productVarietyId:
-            form.productVarietyId,
+            selectedPosition.value!.productVarietyId,
+          countryOfOrigin:
+            selectedPosition.value!.countryOfOrigin,
           quantity: Number(form.quantity),
           transferReference:
             form.transferReference.trim() ||
@@ -172,7 +188,8 @@ async function submitTransfer() {
     emit(
       'completed',
       form.destinationWarehouseId,
-      form.productVarietyId,
+      selectedPosition.value!.productVarietyId,
+      selectedPosition.value!.countryOfOrigin,
     )
   } catch (exception) {
     error.value =
@@ -276,7 +293,7 @@ async function submitTransfer() {
           <label class="form-field">
             <span>Product / variety *</span>
             <select
-              v-model="form.productVarietyId"
+              v-model="form.stockPositionId"
               class="form-select"
               :disabled="!form.sourceWarehouseId"
             >
@@ -286,9 +303,10 @@ async function submitTransfer() {
               <option
                 v-for="item in sourcePositions"
                 :key="item.id"
-                :value="item.productVarietyId"
+                :value="item.id"
               >
                 {{ item.productName }} / {{ item.varietyName }}
+                · {{ countryName(item.countryOfOrigin) }}
                 — {{ item.available.toLocaleString() }} available
               </option>
             </select>
@@ -411,6 +429,8 @@ async function submitTransfer() {
           {{ selectedPosition.productName }}
           /
           {{ selectedPosition.varietyName }}
+          ·
+          {{ countryName(selectedPosition.countryOfOrigin) }}
         </span>
         <strong v-if="form.quantity > 0">
           {{ Number(form.quantity).toLocaleString() }}
