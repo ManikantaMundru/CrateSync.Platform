@@ -10,17 +10,20 @@ public interface IInventoryReadService
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string originCountry,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<StockSummaryResponse>> SearchStockAsync(
         Guid tenantId,
         Guid? warehouseId,
         Guid? productVarietyId,
+        string? originCountry,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<StockMovementResponse>> GetMovementsAsync(
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string originCountry,
         CancellationToken cancellationToken = default);
 }
