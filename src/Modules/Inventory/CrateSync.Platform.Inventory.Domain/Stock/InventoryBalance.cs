@@ -165,6 +165,65 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         return true;
     }
 
+    public bool TransferOut(
+        CrateQuantity quantity,
+        StockReference reference,
+        string? reason,
+        DateTimeOffset occurredAtUtc)
+    {
+        if (_movements.Any(
+                x =>
+                    x.Type == StockMovementType.TransferOut &&
+                    x.Reference == reference))
+        {
+            return false;
+        }
+
+        if (quantity.Value > Available)
+            throw new InsufficientStockException(Available, quantity.Value);
+
+        OnHand = new StockQuantity(OnHand.Value - quantity.Value);
+        UpdatedAtUtc = occurredAtUtc;
+
+        AddMovement(
+            StockMovementType.TransferOut,
+            -quantity.Value,
+            0,
+            reference,
+            reason,
+            occurredAtUtc);
+
+        return true;
+    }
+
+    public bool TransferIn(
+        CrateQuantity quantity,
+        StockReference reference,
+        string? reason,
+        DateTimeOffset occurredAtUtc)
+    {
+        if (_movements.Any(
+                x =>
+                    x.Type == StockMovementType.TransferIn &&
+                    x.Reference == reference))
+        {
+            return false;
+        }
+
+        OnHand = new StockQuantity(OnHand.Value + quantity.Value);
+        UpdatedAtUtc = occurredAtUtc;
+
+        AddMovement(
+            StockMovementType.TransferIn,
+            quantity.Value,
+            0,
+            reference,
+            reason,
+            occurredAtUtc);
+
+        return true;
+    }
+
     public void Adjust(int quantityChange, AdjustmentReason reason, StockReference reference, DateTimeOffset occurredAtUtc)
     {
         if (quantityChange == 0)
