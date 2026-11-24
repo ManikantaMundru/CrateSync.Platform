@@ -5,6 +5,7 @@ using CrateSync.Platform.Inventory.Application.Stock.AdjustStock;
 using CrateSync.Platform.Inventory.Application.Stock.GetStock;
 using CrateSync.Platform.Inventory.Application.Stock.GetStockMovements;
 using CrateSync.Platform.Inventory.Application.Stock.SearchStock;
+using CrateSync.Platform.Inventory.Application.Stock.TransferStock;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -99,6 +100,37 @@ public sealed class InventoryController(
             cancellationToken);
 
         return Ok(result);
+    }
+
+    [HttpPost("transfers")]
+    public async Task<IActionResult> Transfer(
+        [FromBody] TransferStockRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!await accessService.CanOperateWarehouseAsync(
+                request.SourceWarehouseId,
+                cancellationToken) ||
+            !await accessService.CanOperateWarehouseAsync(
+                request.DestinationWarehouseId,
+                cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await sender.Send(
+            new TransferStockCommand(
+                request.TransferId,
+                request.SourceWarehouseId,
+                request.DestinationWarehouseId,
+                request.ProductVarietyId,
+                request.Quantity,
+                request.TransferReference,
+                request.Remarks),
+            cancellationToken);
+
+        return result.IsFailure
+            ? this.ToProblem(result.Error)
+            : NoContent();
     }
 
     [HttpPost("adjustments")]
