@@ -87,6 +87,18 @@ function originName(code: string) {
   return countryByCode.get(code) ?? code
 }
 
+function countryFlag(code: string) {
+  if (!/^[A-Z]{2}$/.test(code) || code === 'ZZ')
+    return '🌐'
+
+  return String.fromCodePoint(
+    ...[...code].map(
+      (character) =>
+        127397 + character.charCodeAt(0),
+    ),
+  )
+}
+
 const selectedPosition = computed(() =>
   sourcePositions.value.find(
     (item) =>
@@ -305,7 +317,8 @@ async function submitTransfer() {
                 :value="item.id"
               >
                 {{ item.productName }} / {{ item.varietyName }}
-                · {{ originName(item.originCountry) }}
+                · {{ countryFlag(item.originCountry) }}
+                {{ originName(item.originCountry) }}
                 — {{ item.available.toLocaleString() }} available
               </option>
             </select>
@@ -428,7 +441,8 @@ async function submitTransfer() {
           {{ selectedPosition.productName }}
           /
           {{ selectedPosition.varietyName }}
-          · {{ originName(selectedPosition.originCountry) }}
+          · {{ countryFlag(selectedPosition.originCountry) }}
+          {{ originName(selectedPosition.originCountry) }}
         </span>
         <strong v-if="form.quantity > 0">
           {{ Number(form.quantity).toLocaleString() }}
