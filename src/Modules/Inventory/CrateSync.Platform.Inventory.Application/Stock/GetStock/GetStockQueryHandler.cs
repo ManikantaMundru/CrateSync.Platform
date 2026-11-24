@@ -17,6 +17,7 @@ internal sealed class GetStockQueryHandler(
             tenantContext.TenantId,
             request.WarehouseId,
             request.ProductVarietyId,
+            request.CountryOfOrigin,
             cancellationToken);
 
         return response is null
