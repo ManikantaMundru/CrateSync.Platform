@@ -4,6 +4,7 @@ public sealed record StockSummaryResponse(
     Guid Id,
     Guid WarehouseId,
     Guid ProductVarietyId,
+    string CountryOfOrigin,
     int OnHand,
     int Reserved,
     int Available,
