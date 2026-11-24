@@ -24,6 +24,7 @@ internal sealed class TransferStockCommandHandler(
             tenantContext.TenantId,
             request.SourceWarehouseId,
             request.ProductVarietyId,
+            request.CountryOfOrigin,
             cancellationToken);
 
         if (source is null)
@@ -33,6 +34,7 @@ internal sealed class TransferStockCommandHandler(
             tenantContext.TenantId,
             request.DestinationWarehouseId,
             request.ProductVarietyId,
+            request.CountryOfOrigin,
             cancellationToken);
 
         var now = timeProvider.GetUtcNow();
@@ -58,6 +60,7 @@ internal sealed class TransferStockCommandHandler(
                     tenantContext.TenantId,
                     request.DestinationWarehouseId,
                     request.ProductVarietyId,
+                    request.CountryOfOrigin,
                     now);
 
                 repository.Add(destination);
