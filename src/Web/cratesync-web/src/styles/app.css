@@ -6503,3 +6503,29 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+
+.inventory-origin-cell {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.inventory-origin-cell strong {
+  overflow: hidden;
+  color: #334155;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventory-origin-cell small {
+  color: #8a98aa;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+[data-coreui-theme="dark"] .inventory-origin-cell strong {
+  color: #eef3f1;
+}
