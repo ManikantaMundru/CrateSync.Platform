@@ -5,4 +5,5 @@ public sealed record AddSalesOrderLineRequest(
     int Quantity,
     decimal PackSize,
     decimal UnitPrice,
-    string Currency);
+    string Currency,
+    string OriginCountry = "ZZ");
