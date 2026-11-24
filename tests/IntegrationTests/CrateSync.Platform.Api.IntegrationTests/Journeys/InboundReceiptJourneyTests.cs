@@ -149,6 +149,7 @@ public sealed class InboundReceiptJourneyTests(
                 productVarietyId);
 
         stockA.OnHand.ShouldBe(15);
+        stockA.CountryOfOrigin.ShouldBe("ZA");
 
         var stockB =
             await JourneyTestData.GetStockAsync(
@@ -157,6 +158,7 @@ public sealed class InboundReceiptJourneyTests(
                 productVarietyId);
 
         stockB.OnHand.ShouldBe(25);
+        stockB.CountryOfOrigin.ShouldBe("ZA");
     }
 
     private static async Task<Guid> CreateDeliveryAsync(
