@@ -146,12 +146,48 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 Id,
                 ShipmentLineId,
                 WarehouseId,
+                DeliveryId,
                 ProductVarietyId,
                 Quantity,
                 ReceivedAtUtc
             FROM logistics.ShipmentReceipts
             WHERE ShipmentId = @ShipmentId
             ORDER BY ReceivedAtUtc DESC;
+
+            SELECT
+                Id,
+                WarehouseId,
+                CASE Status
+                    WHEN 1 THEN 'Planned'
+                    WHEN 2 THEN 'InTransit'
+                    WHEN 3 THEN 'Received'
+                    WHEN 4 THEN 'Cancelled'
+                END AS Status,
+                TransportCompany,
+                DriverName,
+                DriverPhone,
+                VehicleNumber,
+                OriginLocation,
+                DestinationLocation,
+                TransportReference,
+                Remarks,
+                CreatedAtUtc,
+                DispatchedAtUtc,
+                ReceivedAtUtc
+            FROM logistics.ShipmentDeliveries
+            WHERE ShipmentId = @ShipmentId
+            ORDER BY CreatedAtUtc DESC;
+
+            SELECT
+                a.Id,
+                a.DeliveryId,
+                a.ShipmentLineId,
+                a.Quantity
+            FROM logistics.ShipmentDeliveryAllocations a
+            INNER JOIN logistics.ShipmentDeliveries d
+                ON d.Id = a.DeliveryId
+            WHERE d.ShipmentId = @ShipmentId
+            ORDER BY a.Id;
             """;
 
         await using var connection =
@@ -179,6 +215,37 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             (await result.ReadAsync<ShipmentDocumentResponse>()).AsList();
         var receipts =
             (await result.ReadAsync<ShipmentReceiptResponse>()).AsList();
+        var deliveryRows =
+            (await result.ReadAsync<ShipmentDeliveryRow>()).AsList();
+        var allocationRows =
+            (await result.ReadAsync<ShipmentDeliveryAllocationResponse>()).AsList();
+
+        var deliveries =
+            deliveryRows
+                .Select(delivery => new ShipmentDeliveryResponse(
+                    delivery.Id,
+                    delivery.WarehouseId,
+                    delivery.Status,
+                    delivery.TransportCompany,
+                    delivery.DriverName,
+                    delivery.DriverPhone,
+                    delivery.VehicleNumber,
+                    delivery.OriginLocation,
+                    delivery.DestinationLocation,
+                    delivery.TransportReference,
+                    delivery.Remarks,
+                    delivery.CreatedAtUtc,
+                    delivery.DispatchedAtUtc,
+                    delivery.ReceivedAtUtc,
+                    allocationRows
+                        .Where(x => x.DeliveryId == delivery.Id)
+                        .ToArray()))
+                .ToArray();
+
+        var isClearedForWarehouseDispatch =
+            header.CustomsStatus is "Cleared" or "OutOfCharge" &&
+            header.PlantQuarantineStatus is "NotRequired" or "Cleared" &&
+            header.FoodSafetyStatus is "NotRequired" or "NocIssued";
 
         return new ShipmentResponse(
             header.Id,
@@ -209,7 +276,9 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             header.FoodSafetyStatus,
             clearanceEvents,
             documents,
-            receipts);
+            receipts,
+            deliveries,
+            isClearedForWarehouseDispatch);
     }
 
     public async Task<IReadOnlyCollection<ShipmentSummaryResponse>> SearchAsync(
@@ -321,6 +390,22 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
 
         return shipments.AsList();
     }
+
+    private sealed record ShipmentDeliveryRow(
+        Guid Id,
+        Guid WarehouseId,
+        string Status,
+        string TransportCompany,
+        string DriverName,
+        string DriverPhone,
+        string? VehicleNumber,
+        string OriginLocation,
+        string DestinationLocation,
+        string? TransportReference,
+        string? Remarks,
+        DateTimeOffset CreatedAtUtc,
+        DateTimeOffset? DispatchedAtUtc,
+        DateTimeOffset? ReceivedAtUtc);
 
     private sealed record ShipmentHeader(
         Guid Id,

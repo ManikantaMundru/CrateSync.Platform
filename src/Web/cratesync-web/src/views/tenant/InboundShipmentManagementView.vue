@@ -21,6 +21,7 @@ import { apiFetch } from '@/services/api'
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import InboundShipmentForm from '@/components/inbound-shipments/InboundShipmentForm.vue'
+import WarehouseDeliveryForm from '@/components/inbound-shipments/WarehouseDeliveryForm.vue'
 
 interface ShipmentSummary {
   id: string
@@ -64,9 +65,35 @@ interface ShipmentReceipt {
   id: string
   shipmentLineId: string
   warehouseId: string
+  deliveryId: string | null
   productVarietyId: string
   quantity: number
   receivedAtUtc: string
+}
+
+interface ShipmentDeliveryAllocation {
+  id: string
+  deliveryId: string
+  shipmentLineId: string
+  quantity: number
+}
+
+interface ShipmentDelivery {
+  id: string
+  warehouseId: string
+  status: string
+  transportCompany: string
+  driverName: string
+  driverPhone: string
+  vehicleNumber: string | null
+  originLocation: string
+  destinationLocation: string
+  transportReference: string | null
+  remarks: string | null
+  createdAtUtc: string
+  dispatchedAtUtc: string | null
+  receivedAtUtc: string | null
+  allocations: ShipmentDeliveryAllocation[]
 }
 
 interface ShipmentDocument {
@@ -96,6 +123,8 @@ interface ShipmentDetails extends ShipmentSummary {
   clearanceEvents: ClearanceEvent[] | null
   documents: ShipmentDocument[] | null
   receipts: ShipmentReceipt[] | null
+  deliveries: ShipmentDelivery[] | null
+  isClearedForWarehouseDispatch: boolean
 }
 
 interface SupplierSummary {
@@ -134,10 +163,9 @@ const success = ref<string | null>(null)
 const modalError = ref<string | null>(null)
 const search = ref('')
 const statusFilter = ref('')
-const viewMode = ref<'list' | 'create'>('list')
+const viewMode = ref<'list' | 'create' | 'delivery'>('list')
 const clearanceVisible = ref(false)
 const documentVisible = ref(false)
-const receiveVisible = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -154,16 +182,6 @@ const documentForm = reactive({
   documentName: '',
   referenceNumber: '',
   notes: '',
-})
-
-const receiveForm = reactive({
-  receiptId: '',
-  shipmentLineId: '',
-  warehouseId: '',
-  batchCode: '',
-  expectedQuantity: 0,
-  receivedQuantity: 0,
-  quantity: 0,
 })
 
 const clearanceStatuses: Record<
@@ -469,93 +487,75 @@ function remainingQuantity(
   )
 }
 
-function canReceiveLine(
-  line: ShipmentLine,
-) {
-  return (
-    selectedShipment.value !== null &&
-    [
-      'Arrived',
-      'Receiving',
-      'PartiallyReceived',
-    ].includes(
-      selectedShipment.value.status,
-    ) &&
-    remainingQuantity(line) > 0
-  )
-}
-
-function openReceive(
-  line: ShipmentLine,
-) {
-  receiveForm.receiptId =
-    crypto.randomUUID()
-  receiveForm.shipmentLineId = line.id
-  receiveForm.warehouseId = ''
-  receiveForm.batchCode = line.batchCode
-  receiveForm.expectedQuantity =
-    line.expectedQuantity
-  receiveForm.receivedQuantity =
-    line.receivedQuantity
-  receiveForm.quantity =
-    remainingQuantity(line)
-
-  modalError.value = null
-  receiveVisible.value = true
-}
-
-async function receiveStock() {
+function openWarehouseDelivery() {
   if (!selectedShipment.value)
     return
 
-  const remaining =
-    receiveForm.expectedQuantity -
-    receiveForm.receivedQuantity
+  viewMode.value = 'delivery'
+}
 
-  if (!receiveForm.warehouseId) {
-    modalError.value =
-      'Select the destination warehouse.'
+async function handleWarehouseDeliveryCreated() {
+  if (!selectedShipment.value)
     return
-  }
 
-  if (
-    receiveForm.quantity <= 0 ||
-    receiveForm.quantity > remaining
-  ) {
-    modalError.value =
-      `Enter a quantity between 1 and ${remaining}.`
+  const shipmentId =
+    selectedShipment.value.id
+
+  viewMode.value = 'list'
+  success.value =
+    'Warehouse delivery planned successfully.'
+
+  await loadShipment(shipmentId)
+}
+
+async function dispatchWarehouseDelivery(
+  deliveryId: string,
+) {
+  if (!selectedShipment.value)
     return
-  }
 
   saving.value = true
-  modalError.value = null
+  error.value = null
 
   try {
     await apiFetch(
-      `/api/InboundShipment/${selectedShipment.value.id}/receive`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type':
-            'application/json',
-        },
-        body: JSON.stringify({
-          receiptId:
-            receiveForm.receiptId,
-          shipmentLineId:
-            receiveForm.shipmentLineId,
-          warehouseId:
-            receiveForm.warehouseId,
-          quantity: Number(
-            receiveForm.quantity,
-          ),
-        }),
-      },
+      `/api/InboundShipment/${selectedShipment.value.id}/warehouse-deliveries/${deliveryId}/dispatch`,
+      { method: 'PATCH' },
     )
 
-    receiveVisible.value = false
     success.value =
-      'Stock received and inventory updated.'
+      'Delivery marked in transit.'
+
+    await loadShipment(
+      selectedShipment.value.id,
+    )
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to dispatch warehouse delivery.'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function confirmWarehouseDelivery(
+  deliveryId: string,
+) {
+  if (!selectedShipment.value)
+    return
+
+  saving.value = true
+  error.value = null
+
+  try {
+    await apiFetch(
+      `/api/InboundShipment/${selectedShipment.value.id}/warehouse-deliveries/${deliveryId}/receive`,
+      { method: 'PATCH' },
+    )
+
+    success.value =
+      'Warehouse delivery received and inventory updated.'
 
     await Promise.all([
       loadShipments(),
@@ -564,10 +564,10 @@ async function receiveStock() {
       ),
     ])
   } catch (exception) {
-    modalError.value =
+    error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to receive stock.'
+        : 'Unable to receive warehouse delivery.'
   } finally {
     saving.value = false
   }
@@ -752,6 +752,17 @@ onMounted(async () => {
     :products="products"
     @cancel="showShipmentList"
     @created="handleShipmentCreated"
+  />
+
+  <WarehouseDeliveryForm
+    v-else-if="
+      viewMode === 'delivery' &&
+      selectedShipment
+    "
+    :shipment="selectedShipment"
+    :warehouses="warehouses"
+    @cancel="showShipmentList"
+    @created="handleWarehouseDeliveryCreated"
   />
 
   <section
@@ -1081,18 +1092,8 @@ onMounted(async () => {
                   </div>
                 </div>
 
-                <CButton
-                  v-if="canReceiveLine(line)"
-                  color="primary"
-                  variant="outline"
-                  size="sm"
-                  @click="openReceive(line)"
-                >
-                  Receive
-                </CButton>
-
                 <span
-                  v-else-if="
+                  v-if="
                     line.receivedQuantity ===
                     line.expectedQuantity
                   "
@@ -1107,31 +1108,153 @@ onMounted(async () => {
           <section class="shipment-detail-section">
             <div class="section-heading">
               <div>
-                <h3>Warehouse allocations</h3>
-                <p>Confirmed receipt destinations</p>
+                <h3>Port → Warehouse deliveries</h3>
+                <p>Transport legs, allocations and warehouse receipt</p>
               </div>
+
+              <CButton
+                v-if="
+                  selectedShipment.isClearedForWarehouseDispatch &&
+                  ['Arrived', 'Receiving', 'PartiallyReceived'].includes(
+                    selectedShipment.status,
+                  ) &&
+                  selectedShipment.lines.some(
+                    (line) => remainingQuantity(line) > 0,
+                  )
+                "
+                color="primary"
+                size="sm"
+                @click="openWarehouseDelivery"
+              >
+                Allocate to warehouse
+              </CButton>
             </div>
 
             <div
-              v-if="selectedShipment.receipts?.length"
-              class="shipment-documents"
+              v-if="
+                selectedShipment.status === 'Arrived' &&
+                !selectedShipment.isClearedForWarehouseDispatch
+              "
+              class="clearance-form-help"
             >
-              <div
-                v-for="receipt in selectedShipment.receipts"
-                :key="receipt.id"
-                class="shipment-document-row"
+              <strong>Warehouse dispatch is locked</strong>
+              <p>
+                Complete Customs and any required Plant Quarantine / Food Safety
+                clearance before stock can leave the port for a warehouse.
+              </p>
+            </div>
+
+            <div
+              v-if="selectedShipment.deliveries?.length"
+              class="warehouse-delivery-list"
+            >
+              <article
+                v-for="delivery in selectedShipment.deliveries"
+                :key="delivery.id"
+                class="warehouse-delivery-card"
               >
-                <div>
-                  <strong>{{ warehouseName(receipt.warehouseId) }}</strong>
-                  <small>
-                    {{ receipt.quantity }} crates · {{ formatDate(receipt.receivedAtUtc) }}
-                  </small>
+                <header>
+                  <div>
+                    <strong>
+                      {{ warehouseName(delivery.warehouseId) }}
+                    </strong>
+                    <small>
+                      {{ delivery.originLocation }}
+                      →
+                      {{ delivery.destinationLocation }}
+                    </small>
+                  </div>
+                  <span class="shipment-status-pill">
+                    {{ friendlyStatus(delivery.status) }}
+                  </span>
+                </header>
+
+                <div class="warehouse-delivery-meta">
+                  <span>
+                    <small>Transporter</small>
+                    <strong>{{ delivery.transportCompany }}</strong>
+                  </span>
+                  <span>
+                    <small>Driver</small>
+                    <strong>{{ delivery.driverName }}</strong>
+                  </span>
+                  <span>
+                    <small>Phone</small>
+                    <strong>{{ delivery.driverPhone }}</strong>
+                  </span>
+                  <span>
+                    <small>Vehicle</small>
+                    <strong>{{ delivery.vehicleNumber || '—' }}</strong>
+                  </span>
                 </div>
-              </div>
+
+                <div class="warehouse-delivery-allocations">
+                  <span
+                    v-for="allocation in delivery.allocations"
+                    :key="allocation.id"
+                  >
+                    {{
+                      selectedShipment.lines.find(
+                        (line) =>
+                          line.id === allocation.shipmentLineId,
+                      )?.batchCode || 'Line'
+                    }}
+                    ·
+                    {{ allocation.quantity }} crates
+                  </span>
+                </div>
+
+                <p
+                  v-if="delivery.transportReference || delivery.remarks"
+                  class="shipment-muted"
+                >
+                  {{ delivery.transportReference || '' }}
+                  <span
+                    v-if="
+                      delivery.transportReference &&
+                      delivery.remarks
+                    "
+                  >
+                    ·
+                  </span>
+                  {{ delivery.remarks || '' }}
+                </p>
+
+                <div class="warehouse-delivery-actions">
+                  <CButton
+                    v-if="delivery.status === 'Planned'"
+                    color="primary"
+                    variant="outline"
+                    size="sm"
+                    :disabled="saving"
+                    @click="
+                      dispatchWarehouseDelivery(
+                        delivery.id,
+                      )
+                    "
+                  >
+                    Mark dispatched
+                  </CButton>
+
+                  <CButton
+                    v-if="delivery.status === 'InTransit'"
+                    color="primary"
+                    size="sm"
+                    :disabled="saving"
+                    @click="
+                      confirmWarehouseDelivery(
+                        delivery.id,
+                      )
+                    "
+                  >
+                    Confirm warehouse receipt
+                  </CButton>
+                </div>
+              </article>
             </div>
 
             <p v-else class="shipment-muted">
-              No warehouse allocations recorded yet.
+              No port-to-warehouse deliveries planned yet.
             </p>
           </section>
 
@@ -1329,116 +1452,6 @@ onMounted(async () => {
           @click="saveClearanceEvent"
         >
           Save update
-        </CButton>
-      </CModalFooter>
-    </CModal>
-
-    <CModal
-      :visible="receiveVisible"
-      @close="receiveVisible = false"
-    >
-      <CModalHeader>
-        <CModalTitle>
-          Receive shipment stock
-        </CModalTitle>
-      </CModalHeader>
-
-      <CModalBody>
-        <div
-          v-if="modalError"
-          class="status-message status-error"
-        >
-          {{ modalError }}
-        </div>
-
-        <div class="shipment-receive-summary">
-          <div>
-            <small>Batch</small>
-            <strong>
-              {{ receiveForm.batchCode }}
-            </strong>
-          </div>
-          <div>
-            <small>Expected</small>
-            <strong>
-              {{ receiveForm.expectedQuantity }}
-            </strong>
-          </div>
-          <div>
-            <small>Already received</small>
-            <strong>
-              {{ receiveForm.receivedQuantity }}
-            </strong>
-          </div>
-          <div>
-            <small>Remaining</small>
-            <strong>
-              {{
-                receiveForm.expectedQuantity -
-                receiveForm.receivedQuantity
-              }}
-            </strong>
-          </div>
-        </div>
-
-        <label class="form-field mt-3">
-          <span>Destination warehouse *</span>
-          <select
-            v-model="receiveForm.warehouseId"
-            class="form-select"
-          >
-            <option value="">
-              Select warehouse
-            </option>
-            <option
-              v-for="warehouse in warehouses"
-              :key="warehouse.id"
-              :value="warehouse.id"
-            >
-              {{ warehouse.name }} ({{ warehouse.code }})
-            </option>
-          </select>
-        </label>
-
-        <label class="form-field mt-3">
-          <span>Quantity received now *</span>
-          <input
-            v-model.number="receiveForm.quantity"
-            class="form-control"
-            type="number"
-            min="1"
-            :max="
-              receiveForm.expectedQuantity -
-              receiveForm.receivedQuantity
-            "
-          >
-          <small class="shipment-muted">
-            This quantity is added to inventory immediately.
-          </small>
-        </label>
-      </CModalBody>
-
-      <CModalFooter>
-        <CButton
-          color="secondary"
-          variant="outline"
-          :disabled="saving"
-          @click="receiveVisible = false"
-        >
-          Cancel
-        </CButton>
-
-        <CButton
-          color="primary"
-          :disabled="saving"
-          @click="receiveStock"
-        >
-          <CSpinner
-            v-if="saving"
-            size="sm"
-            class="me-2"
-          />
-          Confirm receipt
         </CButton>
       </CModalFooter>
     </CModal>

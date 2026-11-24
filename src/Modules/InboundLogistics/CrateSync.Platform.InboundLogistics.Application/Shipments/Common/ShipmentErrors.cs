@@ -10,6 +10,9 @@ public static class ShipmentErrors
             $"Inbound shipment '{shipmentId}' was not found.",
             ErrorType.NotFound);
 
+    public static Error Conflict(string code, string description) =>
+        new(code, description, ErrorType.Conflict);
+
     public static Error TrackingNumberAlreadyExists(string trackingNumber) =>
         new(
             "InboundLogistics.Shipment.TrackingNumberAlreadyExists",

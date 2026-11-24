@@ -34,6 +34,8 @@ internal sealed class ShipmentReceiptConfiguration
         builder.Property(x => x.WarehouseId)
             .IsRequired();
 
+        builder.Property(x => x.DeliveryId);
+
         builder.Property(x => x.ProductVarietyId)
             .IsRequired();
 
@@ -46,5 +48,6 @@ internal sealed class ShipmentReceiptConfiguration
         builder.HasIndex("ShipmentId");
         builder.HasIndex(x => x.ShipmentLineId);
         builder.HasIndex(x => x.WarehouseId);
+        builder.HasIndex(x => x.DeliveryId);
     }
 }

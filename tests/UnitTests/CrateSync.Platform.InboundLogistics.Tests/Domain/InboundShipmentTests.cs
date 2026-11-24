@@ -381,6 +381,100 @@ public sealed class InboundShipmentTests
         document.ReferenceNumber.ShouldBe("PHYTO-001");
     }
 
+    [Fact]
+    public void CreateWarehouseDelivery_Should_Require_Clearance()
+    {
+        var shipment = CreateArrivedShipment();
+        var line = shipment.Lines.Single();
+
+        Should.Throw<InvalidOperationException>(() =>
+            shipment.CreateWarehouseDelivery(
+                WarehouseId,
+                "Fruit Logistics",
+                "Driver One",
+                "+27 82 000 0000",
+                "CA 123-456",
+                "Cape Town Port",
+                "Cape Town Warehouse",
+                "DLV-001",
+                null,
+                [(line.Id, 20)],
+                Now.AddDays(2)));
+    }
+
+    [Fact]
+    public void CreateWarehouseDelivery_Should_Prevent_OverAllocation()
+    {
+        var shipment = CreateClearedArrivedShipment();
+        var line = shipment.Lines.Single();
+
+        shipment.CreateWarehouseDelivery(
+            WarehouseId,
+            "Fruit Logistics",
+            "Driver One",
+            "+27 82 000 0000",
+            "CA 123-456",
+            "Cape Town Port",
+            "Cape Town Warehouse",
+            "DLV-001",
+            null,
+            [(line.Id, 70)],
+            Now.AddDays(2));
+
+        Should.Throw<InvalidOperationException>(() =>
+            shipment.CreateWarehouseDelivery(
+                Guid.NewGuid(),
+                "Fruit Logistics",
+                "Driver Two",
+                "+27 82 111 1111",
+                "CA 654-321",
+                "Cape Town Port",
+                "Johannesburg Warehouse",
+                "DLV-002",
+                null,
+                [(line.Id, 40)],
+                Now.AddDays(2)));
+    }
+
+    [Fact]
+    public void ConfirmWarehouseDelivery_Should_Create_Receipt_Linked_To_Delivery()
+    {
+        var shipment = CreateClearedArrivedShipment();
+        var line = shipment.Lines.Single();
+
+        var deliveryId =
+            shipment.CreateWarehouseDelivery(
+                WarehouseId,
+                "Fruit Logistics",
+                "Driver One",
+                "+27 82 000 0000",
+                "CA 123-456",
+                "Cape Town Port",
+                "Cape Town Warehouse",
+                "DLV-001",
+                null,
+                [(line.Id, 40)],
+                Now.AddDays(2));
+
+        shipment.DispatchWarehouseDelivery(
+            deliveryId,
+            Now.AddDays(2).AddHours(1));
+
+        var receipts =
+            shipment.ConfirmWarehouseDelivery(
+                deliveryId,
+                Now.AddDays(2).AddHours(5));
+
+        receipts.Count.ShouldBe(1);
+        receipts.Single().DeliveryId.ShouldBe(deliveryId.Value);
+        receipts.Single().WarehouseId.ShouldBe(WarehouseId);
+        receipts.Single().Quantity.ShouldBe(40);
+
+        shipment.Deliveries.Single().Status
+            .ShouldBe(ShipmentDeliveryStatus.Received);
+        line.ReceivedQuantity.Value.ShouldBe(40);
+    }
+
     private static InboundShipment CreateShipment()
     {
         return InboundShipment.Create(
@@ -420,6 +514,20 @@ public sealed class InboundShipmentTests
         var shipment = CreateShippedShipment();
 
         shipment.MarkArrived(Now.AddDays(1));
+
+        return shipment;
+    }
+
+    private static InboundShipment CreateClearedArrivedShipment()
+    {
+        var shipment = CreateArrivedShipment();
+
+        shipment.RecordClearanceEvent(
+            ClearanceAuthority.Customs,
+            nameof(CustomsClearanceStatus.Cleared),
+            "BOE-001",
+            null,
+            Now.AddDays(1).AddHours(1));
 
         return shipment;
     }

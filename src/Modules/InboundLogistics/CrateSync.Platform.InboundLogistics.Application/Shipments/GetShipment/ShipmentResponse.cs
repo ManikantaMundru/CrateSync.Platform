@@ -29,7 +29,9 @@ public sealed record ShipmentResponse(
     string FoodSafetyStatus = "NotRequired",
     IReadOnlyCollection<ShipmentClearanceEventResponse>? ClearanceEvents = null,
     IReadOnlyCollection<ShipmentDocumentResponse>? Documents = null,
-    IReadOnlyCollection<ShipmentReceiptResponse>? Receipts = null);
+    IReadOnlyCollection<ShipmentReceiptResponse>? Receipts = null,
+    IReadOnlyCollection<ShipmentDeliveryResponse>? Deliveries = null,
+    bool IsClearedForWarehouseDispatch = false);
 
 public sealed record ShipmentLineResponse(
     Guid Id,
@@ -63,6 +65,30 @@ public sealed record ShipmentReceiptResponse(
     Guid Id,
     Guid ShipmentLineId,
     Guid WarehouseId,
+    Guid? DeliveryId,
     Guid ProductVarietyId,
     int Quantity,
     DateTimeOffset ReceivedAtUtc);
+
+public sealed record ShipmentDeliveryResponse(
+    Guid Id,
+    Guid WarehouseId,
+    string Status,
+    string TransportCompany,
+    string DriverName,
+    string DriverPhone,
+    string? VehicleNumber,
+    string OriginLocation,
+    string DestinationLocation,
+    string? TransportReference,
+    string? Remarks,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? DispatchedAtUtc,
+    DateTimeOffset? ReceivedAtUtc,
+    IReadOnlyCollection<ShipmentDeliveryAllocationResponse> Allocations);
+
+public sealed record ShipmentDeliveryAllocationResponse(
+    Guid Id,
+    Guid DeliveryId,
+    Guid ShipmentLineId,
+    int Quantity);
