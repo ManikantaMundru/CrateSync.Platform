@@ -358,4 +358,116 @@ public sealed class InventoryBalanceTests
     }
 
 
+    [Fact]
+    public void TransferOut_Should_Use_Available_Not_OnHand()
+    {
+        var balance = CreateBalanceWithStock(100);
+        balance.ReserveForOrder(
+            Guid.NewGuid(),
+            new CrateQuantity(80),
+            Now.AddMinutes(2));
+
+        var reference =
+            StockReference.WarehouseTransfer(
+                Guid.NewGuid());
+
+        Should.Throw<InsufficientStockException>(
+            () => balance.TransferOut(
+                new CrateQuantity(30),
+                reference,
+                "TRF-001",
+                Now.AddMinutes(3)));
+
+        balance.OnHand.Value.ShouldBe(100);
+        balance.Reserved.Value.ShouldBe(80);
+        balance.Available.ShouldBe(20);
+    }
+
+    [Fact]
+    public void TransferOut_And_TransferIn_Should_Create_Linked_Movements()
+    {
+        var source = CreateBalanceWithStock(100);
+        var destination = InventoryBalance.Create(
+            TenantId,
+            Guid.NewGuid(),
+            ProductVarietyId,
+            Now);
+
+        var transferId = Guid.NewGuid();
+        var reference =
+            StockReference.WarehouseTransfer(
+                transferId);
+
+        source.TransferOut(
+            new CrateQuantity(40),
+            reference,
+            "TRF-001",
+            Now.AddMinutes(2));
+
+        destination.TransferIn(
+            new CrateQuantity(40),
+            reference,
+            "TRF-001",
+            Now.AddMinutes(2));
+
+        source.OnHand.Value.ShouldBe(60);
+        destination.OnHand.Value.ShouldBe(40);
+
+        source.Movements.Last().Type.ShouldBe(
+            StockMovementType.TransferOut);
+        destination.Movements.Last().Type.ShouldBe(
+            StockMovementType.TransferIn);
+
+        source.Movements.Last().Reference.Id
+            .ShouldBe(transferId);
+        destination.Movements.Last().Reference.Id
+            .ShouldBe(transferId);
+    }
+
+    [Fact]
+    public void Transfer_Should_Be_Idempotent_For_Same_Transfer_Id()
+    {
+        var source = CreateBalanceWithStock(100);
+        var destination = InventoryBalance.Create(
+            TenantId,
+            Guid.NewGuid(),
+            ProductVarietyId,
+            Now);
+
+        var reference =
+            StockReference.WarehouseTransfer(
+                Guid.NewGuid());
+
+        source.TransferOut(
+            new CrateQuantity(40),
+            reference,
+            null,
+            Now.AddMinutes(2));
+
+        destination.TransferIn(
+            new CrateQuantity(40),
+            reference,
+            null,
+            Now.AddMinutes(2));
+
+        var sourceReplay = source.TransferOut(
+            new CrateQuantity(40),
+            reference,
+            null,
+            Now.AddMinutes(3));
+
+        var destinationReplay =
+            destination.TransferIn(
+                new CrateQuantity(40),
+                reference,
+                null,
+                Now.AddMinutes(3));
+
+        sourceReplay.ShouldBeFalse();
+        destinationReplay.ShouldBeFalse();
+        source.OnHand.Value.ShouldBe(60);
+        destination.OnHand.Value.ShouldBe(40);
+    }
+
+
 }
