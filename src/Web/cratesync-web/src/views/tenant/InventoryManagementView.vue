@@ -12,6 +12,7 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import WarehouseTransferForm from '@/components/inventory/WarehouseTransferForm.vue'
 
@@ -33,6 +34,7 @@ interface StockSummary {
   varietyName: string
   warehouseName: string
   warehouseCode: string
+  originCountry: string
   onHand: number
   reserved: number
   available: number
@@ -61,9 +63,31 @@ const loading = ref(true)
 const detailsLoading = ref(false)
 const error = ref<string | null>(null)
 const warehouseFilter = ref('')
+const originFilter = ref('')
 const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
+
+const countryByCode = new Map(
+  countries.map((country) => [
+    country.code,
+    country.name,
+  ]),
+)
+
+function originName(code: string) {
+  return countryByCode.get(code) ?? code
+}
+
+const originOptions = computed(() =>
+  [...new Set(
+    stock.value
+      .map((item) => item.originCountry)
+      .filter(Boolean),
+  )].sort((a, b) =>
+    originName(a).localeCompare(originName(b)),
+  ),
+)
 
 const filteredStock = computed(() => {
   const term =
@@ -78,6 +102,8 @@ const filteredStock = computed(() => {
       item.varietyName,
       item.warehouseName,
       item.warehouseCode,
+      item.originCountry,
+      originName(item.originCountry),
     ]
       .filter(Boolean)
       .some((value) =>
@@ -140,7 +166,7 @@ watch(pageSize, () => {
   page.value = 1
 })
 
-watch(warehouseFilter, async () => {
+watch([warehouseFilter, originFilter], async () => {
   page.value = 1
   selectedStock.value = null
   movements.value = []
@@ -241,6 +267,7 @@ function showInventory() {
 async function handleTransferCompleted(
   destinationWarehouseId: string,
   productVarietyId: string,
+  originCountry: string,
 ) {
   viewMode.value = 'list'
   await loadStock()
@@ -251,7 +278,9 @@ async function handleTransferCompleted(
         item.warehouseId ===
           destinationWarehouseId &&
         item.productVarietyId ===
-          productVarietyId,
+          productVarietyId &&
+        item.originCountry ===
+          originCountry,
     )
 
   if (destination)
@@ -277,6 +306,13 @@ async function loadStock() {
       params.set(
         'warehouseId',
         warehouseFilter.value,
+      )
+    }
+
+    if (originFilter.value) {
+      params.set(
+        'originCountry',
+        originFilter.value,
       )
     }
 
@@ -322,6 +358,8 @@ async function selectStock(
         warehouseId: item.warehouseId,
         productVarietyId:
           item.productVarietyId,
+        originCountry:
+          item.originCountry,
       })
 
     movements.value =
@@ -449,6 +487,25 @@ onMounted(async () => {
         </select>
       </label>
 
+      <label class="inventory-warehouse-filter">
+        <span>Origin</span>
+        <select
+          v-model="originFilter"
+          class="form-select"
+        >
+          <option value="">
+            All origins
+          </option>
+          <option
+            v-for="code in originOptions"
+            :key="code"
+            :value="code"
+          >
+            {{ originName(code) }}
+          </option>
+        </select>
+      </label>
+
       <label class="search-field inventory-search">
         <i
           class="cil-search"
@@ -458,7 +515,7 @@ onMounted(async () => {
           v-model="search"
           class="form-control tenant-search"
           type="search"
-          placeholder="Search product, variety or warehouse..."
+          placeholder="Search product, variety, origin or warehouse..."
         >
       </label>
     </section>
@@ -494,6 +551,7 @@ onMounted(async () => {
               <tr>
                 <th>Product</th>
                 <th>Variety</th>
+                <th>Origin</th>
                 <th>Warehouse</th>
                 <th>On hand</th>
                 <th>Reserved</th>
@@ -521,6 +579,14 @@ onMounted(async () => {
                 </td>
                 <td>
                   {{ item.varietyName }}
+                </td>
+                <td>
+                  <div class="inventory-origin-cell">
+                    <strong>
+                      {{ originName(item.originCountry) }}
+                    </strong>
+                    <small>{{ item.originCountry }}</small>
+                  </div>
                 </td>
                 <td>
                   <div class="inventory-warehouse-cell">
@@ -588,6 +654,13 @@ onMounted(async () => {
               </span>
             </div>
 
+            <div class="inventory-mobile-origin">
+              Origin:
+              <strong>
+                {{ originName(item.originCountry) }}
+              </strong>
+            </div>
+
             <div class="inventory-mobile-warehouse">
               {{ item.warehouseName }}
               ·
@@ -650,6 +723,12 @@ onMounted(async () => {
                 /
                 {{ selectedStock.varietyName }}
               </h2>
+              <p class="inventory-detail-origin">
+                Origin:
+                <strong>
+                  {{ originName(selectedStock.originCountry) }}
+                </strong>
+              </p>
               <p>
                 {{ selectedStock.warehouseName }}
                 ·
@@ -693,7 +772,7 @@ onMounted(async () => {
               <div>
                 <h3>Recent movements</h3>
                 <p>
-                  Audit trail for this warehouse / variety balance
+                  Audit trail for this warehouse / variety / origin balance
                 </p>
               </div>
             </div>
