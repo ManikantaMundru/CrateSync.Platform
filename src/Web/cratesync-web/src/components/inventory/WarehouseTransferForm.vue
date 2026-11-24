@@ -120,14 +120,6 @@ function countryName(code: string) {
   )
 }
 
-function countryName(code: string) {
-  return (
-    countries.find(
-      (country) => country.code === code,
-    )?.name ?? code
-  )
-}
-
 function generateReference() {
   const year = new Date().getFullYear()
   const suffix =
