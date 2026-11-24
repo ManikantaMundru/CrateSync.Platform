@@ -10,6 +10,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     private readonly List<ShipmentClearanceEvent> _clearanceEvents = [];
     private readonly List<ShipmentDocument> _documents = [];
     private readonly List<ShipmentReceipt> _receipts = [];
+    private readonly List<ShipmentDelivery> _deliveries = [];
 
     private InboundShipment() { }
 
@@ -99,6 +100,14 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 
     public IReadOnlyCollection<ShipmentReceipt> Receipts =>
         _receipts.AsReadOnly();
+
+    public IReadOnlyCollection<ShipmentDelivery> Deliveries =>
+        _deliveries.AsReadOnly();
+
+    public bool IsClearedForWarehouseDispatch =>
+        CustomsStatus is CustomsClearanceStatus.Cleared or CustomsClearanceStatus.OutOfCharge &&
+        PlantQuarantineStatus is PlantQuarantineStatus.NotRequired or PlantQuarantineStatus.Cleared &&
+        FoodSafetyStatus is FoodSafetyStatus.NotRequired or FoodSafetyStatus.NocIssued;
 
     public static InboundShipment Create(
         Guid tenantId,
@@ -278,7 +287,8 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         ShipmentLineId shipmentLineId,
         Guid warehouseId,
         CrateQuantity quantity,
-        DateTimeOffset occurredOnUtc)
+        DateTimeOffset occurredOnUtc,
+        ShipmentDeliveryId? deliveryId = null)
     {
         var existingReceipt =
             _receipts.SingleOrDefault(
@@ -289,6 +299,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             if (
                 existingReceipt.ShipmentLineId != shipmentLineId ||
                 existingReceipt.WarehouseId != warehouseId ||
+                existingReceipt.DeliveryId != deliveryId ||
                 existingReceipt.Quantity != quantity.Value)
             {
                 throw new InvalidOperationException(
@@ -327,6 +338,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             receiptId,
             line.Id,
             warehouseId,
+            deliveryId,
             line.ProductVarietyId,
             quantity.Value,
             occurredOnUtc);
@@ -358,6 +370,145 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 occurredOnUtc));
 
         return receipt.Id;
+    }
+
+    public ShipmentDeliveryId CreateWarehouseDelivery(
+        Guid warehouseId,
+        string transportCompany,
+        string driverName,
+        string driverPhone,
+        string? vehicleNumber,
+        string originLocation,
+        string destinationLocation,
+        string? transportReference,
+        string? remarks,
+        IReadOnlyCollection<(ShipmentLineId LineId, int Quantity)> allocations,
+        DateTimeOffset occurredOnUtc)
+    {
+        if (Status is not ShipmentStatus.Arrived and
+            not ShipmentStatus.Receiving and
+            not ShipmentStatus.PartiallyReceived)
+        {
+            throw new InvalidOperationException(
+                "Shipment must have arrived before warehouse delivery can be planned.");
+        }
+
+        if (!IsClearedForWarehouseDispatch)
+        {
+            throw new InvalidOperationException(
+                "Shipment must complete required Customs, Plant Quarantine and Food Safety clearance before warehouse dispatch.");
+        }
+
+        if (allocations.Count == 0)
+            throw new InvalidOperationException("Warehouse delivery must contain at least one allocation.");
+
+        var delivery = new ShipmentDelivery(
+            ShipmentDeliveryId.New(),
+            warehouseId,
+            transportCompany,
+            driverName,
+            driverPhone,
+            vehicleNumber,
+            originLocation,
+            destinationLocation,
+            transportReference,
+            remarks,
+            occurredOnUtc);
+
+        foreach (var allocation in allocations)
+        {
+            var line = _lines.SingleOrDefault(x => x.Id == allocation.LineId);
+
+            if (line is null)
+                throw new InvalidOperationException(
+                    $"Shipment line '{allocation.LineId.Value}' was not found.");
+
+            var alreadyAllocated =
+                _deliveries
+                    .Where(x =>
+                        x.Status is ShipmentDeliveryStatus.Planned or ShipmentDeliveryStatus.InTransit)
+                    .SelectMany(x => x.Allocations)
+                    .Where(x => x.ShipmentLineId == allocation.LineId)
+                    .Sum(x => x.Quantity);
+
+            var remaining =
+                line.ExpectedQuantity.Value -
+                line.ReceivedQuantity.Value -
+                alreadyAllocated;
+
+            if (allocation.Quantity <= 0 ||
+                allocation.Quantity > remaining)
+            {
+                throw new InvalidOperationException(
+                    $"Shipment line '{allocation.LineId.Value}' has only {remaining} crates available for allocation.");
+            }
+
+            delivery.AddAllocation(
+                allocation.LineId,
+                allocation.Quantity);
+        }
+
+        _deliveries.Add(delivery);
+        UpdatedAtUtc = occurredOnUtc;
+
+        return delivery.Id;
+    }
+
+    public void DispatchWarehouseDelivery(
+        ShipmentDeliveryId deliveryId,
+        DateTimeOffset occurredOnUtc)
+    {
+        if (!IsClearedForWarehouseDispatch)
+            throw new InvalidOperationException("Shipment is not cleared for warehouse dispatch.");
+
+        var delivery =
+            _deliveries.SingleOrDefault(x => x.Id == deliveryId)
+            ?? throw new InvalidOperationException("Warehouse delivery was not found.");
+
+        delivery.MarkDispatched(occurredOnUtc);
+        UpdatedAtUtc = occurredOnUtc;
+    }
+
+    public IReadOnlyCollection<ShipmentReceipt> ConfirmWarehouseDelivery(
+        ShipmentDeliveryId deliveryId,
+        DateTimeOffset occurredOnUtc)
+    {
+        var delivery =
+            _deliveries.SingleOrDefault(x => x.Id == deliveryId)
+            ?? throw new InvalidOperationException("Warehouse delivery was not found.");
+
+        if (delivery.Status == ShipmentDeliveryStatus.Received)
+        {
+            return _receipts
+                .Where(x => x.DeliveryId == deliveryId)
+                .ToArray();
+        }
+
+        if (delivery.Status != ShipmentDeliveryStatus.InTransit)
+            throw new InvalidOperationException("Only in-transit deliveries can be received.");
+
+        var receipts = new List<ShipmentReceipt>();
+
+        foreach (var allocation in delivery.Allocations)
+        {
+            var receiptId = ShipmentReceiptId.New();
+
+            ReceiveLine(
+                receiptId,
+                allocation.ShipmentLineId,
+                delivery.WarehouseId,
+                new CrateQuantity(allocation.Quantity),
+                occurredOnUtc,
+                delivery.Id);
+
+            receipts.Add(
+                _receipts.Single(x => x.Id == receiptId));
+        }
+
+        delivery.MarkReceived(occurredOnUtc);
+        UpdatedAtUtc = occurredOnUtc;
+
+        return receipts;
     }
 
     public void Cancel(DateTimeOffset occurredOnUtc)
