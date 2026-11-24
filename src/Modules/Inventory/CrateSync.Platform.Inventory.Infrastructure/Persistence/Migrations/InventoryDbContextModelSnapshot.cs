@@ -35,6 +35,11 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasColumnName("OnHand");
 
+                    b.Property<string>("OriginCountry")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
                     b.Property<Guid>("ProductVarietyId")
                         .HasColumnType("uniqueidentifier");
 
@@ -63,7 +68,7 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "WarehouseId");
 
-                    b.HasIndex("TenantId", "WarehouseId", "ProductVarietyId")
+                    b.HasIndex("TenantId", "WarehouseId", "ProductVarietyId", "OriginCountry")
                         .IsUnique();
 
                     b.ToTable("InventoryBalances", "inventory");
