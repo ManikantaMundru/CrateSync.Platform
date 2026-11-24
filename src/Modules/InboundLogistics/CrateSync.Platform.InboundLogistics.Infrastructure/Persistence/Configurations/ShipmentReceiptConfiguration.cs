@@ -34,12 +34,7 @@ internal sealed class ShipmentReceiptConfiguration
         builder.Property(x => x.WarehouseId)
             .IsRequired();
 
-        builder.Property(x => x.DeliveryId)
-            .HasConversion(
-                id => id.HasValue ? id.Value.Value : (Guid?)null,
-                value => value.HasValue
-                    ? ShipmentDeliveryId.From(value.Value)
-                    : null);
+        builder.Property(x => x.DeliveryId);
 
         builder.Property(x => x.ProductVarietyId)
             .IsRequired();
