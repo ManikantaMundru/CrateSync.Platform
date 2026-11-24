@@ -6,12 +6,14 @@ import {
   watch,
 } from 'vue'
 import {
+  CButton,
   CCard,
   CCardBody,
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
+import WarehouseTransferForm from '@/components/inventory/WarehouseTransferForm.vue'
 
 interface WarehouseSummary {
   id: string
@@ -50,6 +52,7 @@ interface StockMovement {
   occurredAtUtc: string
 }
 
+const viewMode = ref<'list' | 'transfer'>('list')
 const warehouses = ref<WarehouseSummary[]>([])
 const stock = ref<StockSummary[]>([])
 const movements = ref<StockMovement[]>([])
@@ -227,6 +230,34 @@ function movementReference(
   )} · ${shortId}`
 }
 
+function openTransfer() {
+  viewMode.value = 'transfer'
+}
+
+function showInventory() {
+  viewMode.value = 'list'
+}
+
+async function handleTransferCompleted(
+  destinationWarehouseId: string,
+  productVarietyId: string,
+) {
+  viewMode.value = 'list'
+  await loadStock()
+
+  const destination =
+    stock.value.find(
+      (item) =>
+        item.warehouseId ===
+          destinationWarehouseId &&
+        item.productVarietyId ===
+          productVarietyId,
+    )
+
+  if (destination)
+    await selectStock(destination)
+}
+
 async function loadReferenceData() {
   warehouses.value =
     await apiFetch<WarehouseSummary[]>(
@@ -323,7 +354,18 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page-stack inventory-page">
+  <WarehouseTransferForm
+    v-if="viewMode === 'transfer'"
+    :warehouses="warehouses"
+    :stock="stock"
+    @cancel="showInventory"
+    @completed="handleTransferCompleted"
+  />
+
+  <section
+    v-else
+    class="page-stack inventory-page"
+  >
     <div class="page-heading catalog-page-heading">
       <div>
         <p class="eyebrow catalog-page-eyebrow">
@@ -334,6 +376,15 @@ onMounted(async () => {
           See current stock availability and trace every inventory movement.
         </p>
       </div>
+
+      <CButton
+        color="primary"
+        class="users-add-button"
+        @click="openTransfer"
+      >
+        <i class="cil-swap-horizontal me-1" aria-hidden="true" />
+        Transfer stock
+      </CButton>
     </div>
 
     <div
