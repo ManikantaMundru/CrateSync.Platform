@@ -10,6 +10,7 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { countries } from '@/data/countries'
 
 interface WarehouseSummary {
   id: string
@@ -26,6 +27,7 @@ interface StockSummary {
   varietyName: string
   warehouseName: string
   warehouseCode: string
+  originCountry: string
   onHand: number
   reserved: number
   available: number
@@ -41,6 +43,7 @@ const emit = defineEmits<{
   completed: [
     destinationWarehouseId: string,
     productVarietyId: string,
+    originCountry: string,
   ]
 }>()
 
@@ -51,7 +54,7 @@ const form = reactive({
   transferId: crypto.randomUUID(),
   sourceWarehouseId: '',
   destinationWarehouseId: '',
-  productVarietyId: '',
+  stockPositionId: '',
   quantity: 0,
   transferReference: '',
   remarks: '',
@@ -73,11 +76,21 @@ const sourcePositions = computed(() =>
     ),
 )
 
+const countryByCode = new Map(
+  countries.map((country) => [
+    country.code,
+    country.name,
+  ]),
+)
+
+function originName(code: string) {
+  return countryByCode.get(code) ?? code
+}
+
 const selectedPosition = computed(() =>
   sourcePositions.value.find(
     (item) =>
-      item.productVarietyId ===
-      form.productVarietyId,
+      item.id === form.stockPositionId,
   ) ?? null,
 )
 
@@ -92,14 +105,14 @@ const destinationWarehouses = computed(() =>
 watch(
   () => form.sourceWarehouseId,
   () => {
-    form.productVarietyId = ''
+    form.stockPositionId = ''
     form.destinationWarehouseId = ''
     form.quantity = 0
   },
 )
 
 watch(
-  () => form.productVarietyId,
+  () => form.stockPositionId,
   () => {
     form.quantity = 0
   },
@@ -121,7 +134,7 @@ async function submitTransfer() {
   if (
     !form.sourceWarehouseId ||
     !form.destinationWarehouseId ||
-    !form.productVarietyId
+    !form.stockPositionId
   ) {
     error.value =
       'Source warehouse, destination warehouse and stock item are required.'
@@ -158,7 +171,9 @@ async function submitTransfer() {
           destinationWarehouseId:
             form.destinationWarehouseId,
           productVarietyId:
-            form.productVarietyId,
+            selectedPosition.value!.productVarietyId,
+          originCountry:
+            selectedPosition.value!.originCountry,
           quantity: Number(form.quantity),
           transferReference:
             form.transferReference.trim() ||
@@ -172,7 +187,8 @@ async function submitTransfer() {
     emit(
       'completed',
       form.destinationWarehouseId,
-      form.productVarietyId,
+      selectedPosition.value!.productVarietyId,
+      selectedPosition.value!.originCountry,
     )
   } catch (exception) {
     error.value =
@@ -276,7 +292,7 @@ async function submitTransfer() {
           <label class="form-field">
             <span>Product / variety *</span>
             <select
-              v-model="form.productVarietyId"
+              v-model="form.stockPositionId"
               class="form-select"
               :disabled="!form.sourceWarehouseId"
             >
@@ -286,9 +302,10 @@ async function submitTransfer() {
               <option
                 v-for="item in sourcePositions"
                 :key="item.id"
-                :value="item.productVarietyId"
+                :value="item.id"
               >
                 {{ item.productName }} / {{ item.varietyName }}
+                · {{ originName(item.originCountry) }}
                 — {{ item.available.toLocaleString() }} available
               </option>
             </select>
@@ -411,6 +428,7 @@ async function submitTransfer() {
           {{ selectedPosition.productName }}
           /
           {{ selectedPosition.varietyName }}
+          · {{ originName(selectedPosition.originCountry) }}
         </span>
         <strong v-if="form.quantity > 0">
           {{ Number(form.quantity).toLocaleString() }}
