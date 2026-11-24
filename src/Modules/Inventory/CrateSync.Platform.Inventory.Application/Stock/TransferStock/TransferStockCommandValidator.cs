@@ -19,6 +19,9 @@ internal sealed class TransferStockCommandValidator
                 "Source and destination warehouses must be different.");
 
         RuleFor(x => x.ProductVarietyId).NotEmpty();
+        RuleFor(x => x.OriginCountry)
+            .NotEmpty()
+            .Length(2);
         RuleFor(x => x.Quantity).GreaterThan(0);
         RuleFor(x => x.TransferReference)
             .MaximumLength(100);
