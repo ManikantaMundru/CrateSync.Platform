@@ -92,6 +92,11 @@ namespace CrateSync.Platform.Sales.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("OriginCountry")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
                     b.Property<decimal>("PackSize")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)")
@@ -109,7 +114,7 @@ namespace CrateSync.Platform.Sales.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductVarietyId");
+                    b.HasIndex("ProductVarietyId", "OriginCountry");
 
                     b.HasIndex("SalesOrderId");
 
