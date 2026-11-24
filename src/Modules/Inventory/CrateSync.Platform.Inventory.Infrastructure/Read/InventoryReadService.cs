@@ -17,17 +17,30 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
     {
         const string sql = """
             SELECT
-                Id,
-                WarehouseId,
-                ProductVarietyId,
-                OnHand,
-                Reserved,
-                OnHand - Reserved AS Available,
-                UpdatedAtUtc
-            FROM inventory.InventoryBalances
-            WHERE TenantId = @TenantId
-              AND WarehouseId = @WarehouseId
-              AND ProductVarietyId = @ProductVarietyId;
+                b.Id,
+                b.WarehouseId,
+                b.ProductVarietyId,
+                b.OnHand,
+                b.Reserved,
+                b.OnHand - b.Reserved AS Available,
+                b.UpdatedAtUtc,
+                p.Id AS ProductId,
+                p.Name AS ProductName,
+                pv.Name AS VarietyName,
+                w.Name AS WarehouseName,
+                w.Code AS WarehouseCode
+            FROM inventory.InventoryBalances b
+            INNER JOIN warehousing.Warehouses w
+                ON w.Id = b.WarehouseId
+               AND w.TenantId = b.TenantId
+            INNER JOIN catalog.ProductVarieties pv
+                ON pv.Id = b.ProductVarietyId
+            INNER JOIN catalog.Products p
+                ON p.Id = pv.ProductId
+               AND p.TenantId = b.TenantId
+            WHERE b.TenantId = @TenantId
+              AND b.WarehouseId = @WarehouseId
+              AND b.ProductVarietyId = @ProductVarietyId;
             """;
 
         await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
@@ -47,18 +60,31 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
     {
         const string sql = """
             SELECT
-                Id,
-                WarehouseId,
-                ProductVarietyId,
-                OnHand,
-                Reserved,
-                OnHand - Reserved AS Available,
-                UpdatedAtUtc
-            FROM inventory.InventoryBalances
-            WHERE TenantId = @TenantId
-              AND (@WarehouseId IS NULL OR WarehouseId = @WarehouseId)
-              AND (@ProductVarietyId IS NULL OR ProductVarietyId = @ProductVarietyId)
-            ORDER BY UpdatedAtUtc DESC;
+                b.Id,
+                b.WarehouseId,
+                b.ProductVarietyId,
+                b.OnHand,
+                b.Reserved,
+                b.OnHand - b.Reserved AS Available,
+                b.UpdatedAtUtc,
+                p.Id AS ProductId,
+                p.Name AS ProductName,
+                pv.Name AS VarietyName,
+                w.Name AS WarehouseName,
+                w.Code AS WarehouseCode
+            FROM inventory.InventoryBalances b
+            INNER JOIN warehousing.Warehouses w
+                ON w.Id = b.WarehouseId
+               AND w.TenantId = b.TenantId
+            INNER JOIN catalog.ProductVarieties pv
+                ON pv.Id = b.ProductVarietyId
+            INNER JOIN catalog.Products p
+                ON p.Id = pv.ProductId
+               AND p.TenantId = b.TenantId
+            WHERE b.TenantId = @TenantId
+              AND (@WarehouseId IS NULL OR b.WarehouseId = @WarehouseId)
+              AND (@ProductVarietyId IS NULL OR b.ProductVarietyId = @ProductVarietyId)
+            ORDER BY p.Name, pv.Name, w.Name;
             """;
 
         await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
