@@ -2,6 +2,7 @@ using CrateSync.Platform.Api.IntegrationTests.Infrastructure;
 using CrateSync.Platform.Api.Requests.InboundShipments;
 using CrateSync.Platform.Api.Responses.InboundShipments;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.GetShipment;
+using CrateSync.Platform.InboundLogistics.Domain.Shipments;
 using Shouldly;
 using System.Net;
 using System.Net.Http.Json;
@@ -14,7 +15,7 @@ public sealed class InboundReceiptJourneyTests(
     CustomWebApplicationFactory factory)
 {
     [Fact]
-    public async Task InboundShipment_ShouldSplitReceivedStockAcrossWarehouses()
+    public async Task InboundShipment_ShouldSplitPortDeliveriesAcrossWarehouses()
     {
         await factory.ResetAsync();
 
@@ -70,29 +71,51 @@ public sealed class InboundReceiptJourneyTests(
             $"/api/InboundShipment/{shipmentId}/arrive",
             null)).EnsureSuccessStatusCode();
 
-        var receiveA =
+        var clearanceResponse =
             await client.PostAsJsonAsync(
-                $"/api/InboundShipment/{shipmentId}/receive",
-                new ReceiveShipmentRequest(
-                    Guid.NewGuid(),
-                    lineId,
-                    warehouseAId,
-                    15));
+                $"/api/InboundShipment/{shipmentId}/clearance-events",
+                new RecordClearanceEventRequest(
+                    ClearanceAuthority.Customs,
+                    "Cleared",
+                    "BOE-001",
+                    "Cleared for warehouse dispatch"));
 
-        receiveA.StatusCode.ShouldBe(
-            HttpStatusCode.NoContent);
+        clearanceResponse.StatusCode.ShouldBe(
+            HttpStatusCode.Created);
 
-        var receiveB =
-            await client.PostAsJsonAsync(
-                $"/api/InboundShipment/{shipmentId}/receive",
-                new ReceiveShipmentRequest(
-                    Guid.NewGuid(),
-                    lineId,
-                    warehouseBId,
-                    25));
+        var deliveryAId =
+            await CreateDeliveryAsync(
+                client,
+                shipmentId,
+                warehouseAId,
+                lineId,
+                15,
+                "TRUCK-A");
 
-        receiveB.StatusCode.ShouldBe(
-            HttpStatusCode.NoContent);
+        var deliveryBId =
+            await CreateDeliveryAsync(
+                client,
+                shipmentId,
+                warehouseBId,
+                lineId,
+                25,
+                "TRUCK-B");
+
+        (await client.PatchAsync(
+            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/dispatch",
+            null)).EnsureSuccessStatusCode();
+
+        (await client.PatchAsync(
+            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryBId}/dispatch",
+            null)).EnsureSuccessStatusCode();
+
+        (await client.PatchAsync(
+            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/receive",
+            null)).EnsureSuccessStatusCode();
+
+        (await client.PatchAsync(
+            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryBId}/receive",
+            null)).EnsureSuccessStatusCode();
 
         var shipment =
             await client.GetFromJsonAsync<ShipmentResponse>(
@@ -101,15 +124,22 @@ public sealed class InboundReceiptJourneyTests(
         shipment.ShouldNotBeNull();
         shipment.Status.ShouldBe("Received");
         shipment.Lines.Single().ReceivedQuantity.ShouldBe(40);
+        shipment.Deliveries.ShouldNotBeNull();
+        shipment.Deliveries.Count.ShouldBe(2);
+        shipment.Deliveries.ShouldAllBe(
+            x => x.Status == "Received");
+
         shipment.Receipts.ShouldNotBeNull();
         shipment.Receipts.Count.ShouldBe(2);
         shipment.Receipts.ShouldContain(
             x =>
                 x.WarehouseId == warehouseAId &&
+                x.DeliveryId == deliveryAId &&
                 x.Quantity == 15);
         shipment.Receipts.ShouldContain(
             x =>
                 x.WarehouseId == warehouseBId &&
+                x.DeliveryId == deliveryBId &&
                 x.Quantity == 25);
 
         var stockA =
@@ -128,4 +158,44 @@ public sealed class InboundReceiptJourneyTests(
 
         stockB.OnHand.ShouldBe(25);
     }
+
+    private static async Task<Guid> CreateDeliveryAsync(
+        HttpClient client,
+        Guid shipmentId,
+        Guid warehouseId,
+        Guid lineId,
+        int quantity,
+        string vehicleNumber)
+    {
+        var response =
+            await client.PostAsJsonAsync(
+                $"/api/InboundShipment/{shipmentId}/warehouse-deliveries",
+                new CreateWarehouseDeliveryRequest(
+                    warehouseId,
+                    "Fruit Logistics",
+                    "Test Driver",
+                    "+27 82 000 0000",
+                    vehicleNumber,
+                    "Cape Town Port",
+                    $"Warehouse {warehouseId}",
+                    $"DLV-{Guid.NewGuid():N}",
+                    null,
+                    [
+                        new CreateWarehouseDeliveryAllocationRequest(
+                            lineId,
+                            quantity)
+                    ]));
+
+        response.StatusCode.ShouldBe(
+            HttpStatusCode.Created);
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<DeliveryCreatedResponse>();
+
+        result.ShouldNotBeNull();
+        return result.Id;
+    }
+
+    private sealed record DeliveryCreatedResponse(Guid Id);
 }
