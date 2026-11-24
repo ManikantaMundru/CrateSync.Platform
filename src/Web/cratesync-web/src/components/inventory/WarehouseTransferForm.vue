@@ -11,7 +11,6 @@ import {
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
 import { countries } from '@/data/countries'
-import { countries } from '@/data/countries'
 
 interface WarehouseSummary {
   id: string
