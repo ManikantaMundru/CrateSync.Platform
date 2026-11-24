@@ -17,6 +17,7 @@ internal sealed class GetStockMovementsQueryHandler(
             tenantContext.TenantId,
             request.WarehouseId,
             request.ProductVarietyId,
+            request.OriginCountry,
             cancellationToken);
     }
 }
