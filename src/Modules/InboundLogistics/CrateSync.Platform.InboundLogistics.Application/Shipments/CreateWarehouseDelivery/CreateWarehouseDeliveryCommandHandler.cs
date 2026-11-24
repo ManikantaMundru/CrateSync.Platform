@@ -24,7 +24,7 @@ internal sealed class CreateWarehouseDeliveryCommandHandler(
             cancellationToken);
 
         if (shipment is null)
-            return Result.Failure<Guid>(ShipmentErrors.NotFound(request.ShipmentId));
+            return Result<Guid>.Failure(ShipmentErrors.NotFound(request.ShipmentId));
 
         try
         {
@@ -47,18 +47,18 @@ internal sealed class CreateWarehouseDeliveryCommandHandler(
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return Result.Success(deliveryId.Value);
+            return Result<Guid>.Success(deliveryId.Value);
         }
         catch (InvalidOperationException ex)
         {
-            return Result.Failure<Guid>(
+            return Result<Guid>.Failure(
                 ShipmentErrors.Conflict(
                     "InboundLogistics.Shipment.InvalidWarehouseDelivery",
                     ex.Message));
         }
         catch (ArgumentException ex)
         {
-            return Result.Failure<Guid>(
+            return Result<Guid>.Failure(
                 ShipmentErrors.Conflict(
                     "InboundLogistics.Shipment.InvalidWarehouseDelivery",
                     ex.Message));
