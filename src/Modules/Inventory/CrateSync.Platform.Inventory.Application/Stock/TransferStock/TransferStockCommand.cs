@@ -8,6 +8,7 @@ public sealed record TransferStockCommand(
     Guid SourceWarehouseId,
     Guid DestinationWarehouseId,
     Guid ProductVarietyId,
+    string CountryOfOrigin,
     int Quantity,
     string? TransferReference,
     string? Remarks) : ICommand<Result>;
