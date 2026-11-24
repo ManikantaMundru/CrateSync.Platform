@@ -22,30 +22,15 @@ interface WarehouseSummary {
   isActive: boolean
 }
 
-interface ProductSummary {
-  id: string
-  name: string
-  isActive: boolean
-  varietyCount: number
-}
-
-interface ProductVariety {
-  id: string
-  name: string
-  isActive: boolean
-}
-
-interface ProductDetails {
-  id: string
-  name: string
-  isActive: boolean
-  varieties: ProductVariety[]
-}
-
 interface StockSummary {
   id: string
   warehouseId: string
   productVarietyId: string
+  productId: string
+  productName: string
+  varietyName: string
+  warehouseName: string
+  warehouseCode: string
   onHand: number
   reserved: number
   available: number
@@ -65,13 +50,6 @@ interface StockMovement {
   occurredAtUtc: string
 }
 
-interface VarietyLookup {
-  productId: string
-  productName: string
-  varietyName: string
-  isActive: boolean
-}
-
 const warehouses = ref<WarehouseSummary[]>([])
 const stock = ref<StockSummary[]>([])
 const movements = ref<StockMovement[]>([])
@@ -83,10 +61,6 @@ const warehouseFilter = ref('')
 const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
-
-const varietyLookup = ref(
-  new Map<string, VarietyLookup>(),
-)
 
 const warehouseById = computed(
   () =>
@@ -106,21 +80,11 @@ const filteredStock = computed(() => {
     return stock.value
 
   return stock.value.filter((item) => {
-    const variety =
-      varietyLookup.value.get(
-        item.productVarietyId,
-      )
-
-    const warehouse =
-      warehouseById.value.get(
-        item.warehouseId,
-      )
-
     return [
-      variety?.productName,
-      variety?.varietyName,
-      warehouse?.name,
-      warehouse?.code,
+      item.productName,
+      item.varietyName,
+      item.warehouseName,
+      item.warehouseCode,
     ]
       .filter(Boolean)
       .some((value) =>
@@ -203,17 +167,6 @@ function warehouseCode(id: string) {
   return (
     warehouseById.value.get(id)?.code ??
     '—'
-  )
-}
-
-function varietyInfo(id: string) {
-  return (
-    varietyLookup.value.get(id) ?? {
-      productId: '',
-      productName: 'Product',
-      varietyName: 'Variety',
-      isActive: false,
-    }
   )
 }
 
@@ -301,42 +254,10 @@ function movementReference(
 }
 
 async function loadReferenceData() {
-  const [
-    warehouseResult,
-    productResult,
-  ] = await Promise.all([
-    apiFetch<WarehouseSummary[]>(
+  warehouses.value =
+    await apiFetch<WarehouseSummary[]>(
       '/api/Warehouse',
-    ),
-    apiFetch<ProductSummary[]>(
-      '/api/catalog/products',
-    ),
-  ])
-
-  warehouses.value = warehouseResult
-  const details = await Promise.all(
-    productResult.map((product) =>
-      apiFetch<ProductDetails>(
-        `/api/catalog/products/${product.id}`,
-      ),
-    ),
-  )
-
-  const lookup =
-    new Map<string, VarietyLookup>()
-
-  for (const product of details) {
-    for (const variety of product.varieties) {
-      lookup.set(variety.id, {
-        productId: product.id,
-        productName: product.name,
-        varietyName: variety.name,
-        isActive: variety.isActive,
-      })
-    }
-  }
-
-  varietyLookup.value = lookup
+    )
 }
 
 async function loadStock() {
@@ -570,27 +491,19 @@ onMounted(async () => {
               >
                 <td>
                   <strong>
-                    {{
-                      varietyInfo(
-                        item.productVarietyId,
-                      ).productName
-                    }}
+                    {{ item.productName }}
                   </strong>
                 </td>
                 <td>
-                  {{
-                    varietyInfo(
-                      item.productVarietyId,
-                    ).varietyName
-                  }}
+                  {{ item.varietyName }}
                 </td>
                 <td>
                   <div class="inventory-warehouse-cell">
                     <strong>
-                      {{ warehouseName(item.warehouseId) }}
+                      {{ item.warehouseName }}
                     </strong>
                     <small>
-                      {{ warehouseCode(item.warehouseId) }}
+                      {{ item.warehouseCode }}
                     </small>
                   </div>
                 </td>
@@ -633,18 +546,10 @@ onMounted(async () => {
             <div class="inventory-mobile-card-heading">
               <div>
                 <strong>
-                  {{
-                    varietyInfo(
-                      item.productVarietyId,
-                    ).productName
-                  }}
+                  {{ item.productName }}
                 </strong>
                 <span>
-                  {{
-                    varietyInfo(
-                      item.productVarietyId,
-                    ).varietyName
-                  }}
+                  {{ item.varietyName }}
                 </span>
               </div>
 
@@ -659,9 +564,9 @@ onMounted(async () => {
             </div>
 
             <div class="inventory-mobile-warehouse">
-              {{ warehouseName(item.warehouseId) }}
+              {{ item.warehouseName }}
               ·
-              {{ warehouseCode(item.warehouseId) }}
+              {{ item.warehouseCode }}
             </div>
 
             <div class="inventory-mobile-values">
@@ -716,30 +621,14 @@ onMounted(async () => {
                 Stock position
               </p>
               <h2>
-                {{
-                  varietyInfo(
-                    selectedStock.productVarietyId,
-                  ).productName
-                }}
+                {{ selectedStock.productName }}
                 /
-                {{
-                  varietyInfo(
-                    selectedStock.productVarietyId,
-                  ).varietyName
-                }}
+                {{ selectedStock.varietyName }}
               </h2>
               <p>
-                {{
-                  warehouseName(
-                    selectedStock.warehouseId,
-                  )
-                }}
+                {{ selectedStock.warehouseName }}
                 ·
-                {{
-                  warehouseCode(
-                    selectedStock.warehouseId,
-                  )
-                }}
+                {{ selectedStock.warehouseCode }}
               </p>
             </div>
 
