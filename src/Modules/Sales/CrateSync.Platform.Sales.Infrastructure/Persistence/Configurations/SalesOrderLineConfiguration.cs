@@ -21,6 +21,10 @@ internal sealed class SalesOrderLineConfiguration : IEntityTypeConfiguration<Sal
 
         builder.Property(x => x.ProductVarietyId).IsRequired();
 
+        builder.Property(x => x.OriginCountry)
+            .HasMaxLength(2)
+            .IsRequired();
+
         builder.Property(x => x.Quantity)
             .HasConversion(quantity => quantity.Value, value => new CrateQuantity(value))
             .HasColumnName("Quantity")
@@ -50,6 +54,6 @@ internal sealed class SalesOrderLineConfiguration : IEntityTypeConfiguration<Sal
 
         builder.Ignore(x => x.LineTotal);
         builder.HasIndex("SalesOrderId");
-        builder.HasIndex(x => x.ProductVarietyId);
+        builder.HasIndex(x => new { x.ProductVarietyId, x.OriginCountry });
     }
 }
