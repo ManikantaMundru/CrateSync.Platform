@@ -7,6 +7,7 @@ namespace CrateSync.Platform.Inventory.Domain.Stock;
 
 public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
 {
+    private readonly List<SellingPriceChange> _sellingPriceHistory = [];
     private readonly List<StockMovement> _movements = [];
     private readonly List<StockReservation> _reservations = [];
 
@@ -39,6 +40,29 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
     public string? BatchCode { get; private set; }
     public decimal? PackWeightKg { get; private set; }
     public int? FruitsPerPack { get; private set; }
+    public decimal? SellingPrice { get; private set; }
+    public string? SellingCurrency { get; private set; }
+    public DateTimeOffset? SellingPriceUpdatedAtUtc { get; private set; }
+    public IReadOnlyCollection<SellingPriceChange> SellingPriceHistory => _sellingPriceHistory.AsReadOnly();
+
+    public void SetSellingPrice(decimal amount, string currency, Guid userId, string reason, DateTimeOffset now)
+    {
+        if (OnHand.Value <= 0) throw new InvalidOperationException("Stock must be received before pricing.");
+        if (amount <= 0 || amount > 9999999999999999.99m || decimal.Round(amount, 2) != amount)
+            throw new InvalidOperationException("Selling price must be positive and have at most two decimal places.");
+        currency = currency?.Trim().ToUpperInvariant() ?? "";
+        if (currency.Length != 3 || currency.Any(c => c < 'A' || c > 'Z'))
+            throw new InvalidOperationException("A three-letter currency code is required.");
+        if (userId == Guid.Empty || string.IsNullOrWhiteSpace(reason) || reason.Length > 500)
+            throw new InvalidOperationException("A user and price change reason are required.");
+        if (SellingPrice == amount && SellingCurrency == currency) return;
+        _sellingPriceHistory.Add(new SellingPriceChange(SellingPrice, SellingCurrency, amount, currency, userId, reason.Trim(), now));
+        SellingPrice = amount;
+        SellingCurrency = currency;
+        SellingPriceUpdatedAtUtc = now;
+        UpdatedAtUtc = now;
+    }
+
     public StockQuantity OnHand { get; private set; }
     public StockQuantity Reserved { get; private set; }
     public int Available => OnHand.Value - Reserved.Value;
