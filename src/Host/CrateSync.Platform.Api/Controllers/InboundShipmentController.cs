@@ -120,13 +120,13 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         return result.IsFailure ? this.ToProblem(result.Error) : Ok(result.Value);
     }
 
-    [HttpPost("{shipmentId:guid}/costing/{action}")]
-    public async Task<IActionResult> UpdateCosting(Guid shipmentId, string action, [FromBody] ShipmentCostingRequest request, CancellationToken cancellationToken)
+    [HttpPost("{shipmentId:guid}/costing/{operation}")]
+    public async Task<IActionResult> UpdateCosting(Guid shipmentId, string operation, [FromBody] ShipmentCostingRequest request, CancellationToken cancellationToken)
     {
-        if (!await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken)) return Forbid();
-        if (action is not ("currency" or "rate" or "expense" or "reverse")) return BadRequest();
-        if (!Guid.TryParse(User.FindFirstValue(CrateSyncClaimTypes.Subject) ?? User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Forbid();
-        var result = await sender.Send(new UpdateShipmentCostingCommand(shipmentId, action, request.ExpenseId, request.Currency, request.Amount, request.Rate, request.Category, request.DeliveryId, request.LineId, request.Reference, request.Description, userId), cancellationToken);
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken)) return Problem(statusCode: 403, title: "Costing permission denied", detail: "ManageCosts permission is required for this tenant.");
+        if (operation is not ("currency" or "rate" or "expense" or "reverse")) return BadRequest();
+        if (!Guid.TryParse(User.FindFirstValue(CrateSyncClaimTypes.Subject) ?? User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Problem(statusCode: 403, title: "Invalid authenticated user", detail: "A valid user identifier is required to audit costing changes. Sign in again.");
+        var result = await sender.Send(new UpdateShipmentCostingCommand(shipmentId, operation, request.ExpenseId, request.Currency, request.Amount, request.Rate, request.Category, request.DeliveryId, request.LineId, request.Reference, request.Description, userId), cancellationToken);
         return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
