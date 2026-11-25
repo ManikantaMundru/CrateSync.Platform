@@ -11,115 +11,36 @@ namespace CrateSync.Platform.Inventory.Application.Stock.TransferStock;
 
 internal sealed class TransferStockCommandHandler(
     IInventoryBalanceRepository repository,
+    IWarehouseTransferRepository transfers,
     IInventoryUnitOfWork unitOfWork,
     ITenantContext tenantContext,
     TimeProvider timeProvider)
     : ICommandHandler<TransferStockCommand, Result>
 {
-    public async Task<Result> Handle(
-        TransferStockCommand request,
-        CancellationToken cancellationToken)
+    public async Task<Result> Handle(TransferStockCommand request, CancellationToken cancellationToken)
     {
-        var source = await repository.GetBatchAsync(
-            tenantContext.TenantId,
-            request.SourceWarehouseId,
-            request.ProductVarietyId,
-            request.OriginCountry, request.BatchId,
-            cancellationToken);
-
-        if (source is null)
-            return Result.Failure(InventoryErrors.StockNotFound);
-
-        var destination = await repository.GetBatchAsync(
-            tenantContext.TenantId,
-            request.DestinationWarehouseId,
-            request.ProductVarietyId,
-            request.OriginCountry, request.BatchId,
-            cancellationToken);
-
-        var now = timeProvider.GetUtcNow();
-        var reference =
-            StockReference.WarehouseTransfer(
-                request.TransferId);
-
-        var reason = BuildReason(
-            request.TransferReference,
-            request.Remarks);
-
+        var existing = await transfers.GetAsync(tenantContext.TenantId, request.TransferId, cancellationToken);
+        if (existing is not null)
+            return existing.SourceWarehouseId == request.SourceWarehouseId && existing.DestinationWarehouseId == request.DestinationWarehouseId &&
+                existing.ProductVarietyId == request.ProductVarietyId && existing.BatchId == request.BatchId && existing.OriginCountry == request.OriginCountry.Trim().ToUpperInvariant() &&
+                existing.Quantity == request.Quantity && existing.TransportCompany == request.TransportCompany.Trim() && existing.DriverName == request.DriverName.Trim() &&
+                existing.DriverPhone == request.DriverPhone.Trim() && existing.VehicleNumber == request.VehicleNumber?.Trim() &&
+                existing.TransferReference == request.TransferReference?.Trim() && existing.Remarks == request.Remarks?.Trim()
+                ? Result.Success() : Result.Failure(InventoryErrors.Conflict("Inventory.TransferIdConflict", "Transfer ID already used."));
+        var source = await repository.GetBatchAsync(tenantContext.TenantId, request.SourceWarehouseId, request.ProductVarietyId,
+            request.OriginCountry, request.BatchId, cancellationToken);
+        if (source is null) return Result.Failure(InventoryErrors.StockNotFound);
         try
         {
-            var sourceChanged = source.TransferOut(
-                new CrateQuantity(request.Quantity),
-                reference,
-                reason,
-                now);
-
-            if (destination is null)
-            {
-                destination = InventoryBalance.Create(
-                    tenantContext.TenantId,
-                    request.DestinationWarehouseId,
-                    request.ProductVarietyId,
-                    request.OriginCountry,
-                    now, source.BatchId, source.BatchCode, source.PackWeightKg, source.FruitsPerPack);
-
-                repository.Add(destination);
-            }
-
-            var destinationChanged =
-                destination.TransferIn(
-                    new CrateQuantity(request.Quantity),
-                    reference,
-                    reason,
-                    now);
-
-            if (sourceChanged != destinationChanged)
-            {
-                throw new InvalidOperationException(
-                    "Transfer retry state is inconsistent between source and destination warehouses.");
-            }
-
-            if (sourceChanged)
-                await unitOfWork.SaveChangesAsync(
-                    cancellationToken);
-
+            var now = timeProvider.GetUtcNow();
+            var transfer = WarehouseTransfer.Create(request.TransferId, source, request.DestinationWarehouseId, request.Quantity,
+                request.TransportCompany, request.DriverName, request.DriverPhone, request.VehicleNumber, request.TransferReference, request.Remarks, now);
+            source.ReserveForTransfer(new CrateQuantity(request.Quantity), StockReference.WarehouseTransfer(request.TransferId), now);
+            transfers.Add(transfer);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result.Success();
         }
-        catch (DomainException ex)
-        {
-            return Result.Failure(
-                InventoryErrors.Conflict(
-                    ex.Code,
-                    ex.Message));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Result.Failure(
-                InventoryErrors.Conflict(
-                    "Inventory.InvalidTransfer",
-                    ex.Message));
-        }
-    }
-
-    private static string? BuildReason(
-        string? transferReference,
-        string? remarks)
-    {
-        var parts = new[]
-        {
-            string.IsNullOrWhiteSpace(transferReference)
-                ? null
-                : transferReference.Trim(),
-            string.IsNullOrWhiteSpace(remarks)
-                ? null
-                : remarks.Trim()
-        }
-        .Where(x => x is not null)
-        .Cast<string>()
-        .ToArray();
-
-        return parts.Length == 0
-            ? null
-            : string.Join(" · ", parts);
+        catch (DomainException ex) { return Result.Failure(InventoryErrors.Conflict(ex.Code, ex.Message)); }
+        catch (InvalidOperationException ex) { return Result.Failure(InventoryErrors.Conflict("Inventory.InvalidTransfer", ex.Message)); }
     }
 }
