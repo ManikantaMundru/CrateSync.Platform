@@ -483,6 +483,21 @@ public sealed class InboundShipmentTests
         line.ReceivedQuantity.Value.ShouldBe(40);
     }
 
+    [Fact]
+    public void PurchaseCost_CanBeEnteredAfterShipmentIsShipped()
+    {
+        var shipment = CreateShipment();
+        var lineId = shipment.AddLine(Guid.NewGuid(), Guid.NewGuid(),
+            new BatchCode("pending-cost"), new CrateQuantity(100), new PackSize(18m),
+            null, Now);
+        shipment.Lines.Single().UnitCost.ShouldBeNull();
+        shipment.MarkShipped(Now.AddHours(1));
+        shipment.SetLinePurchaseCost(lineId, new Money(250m, new Currency("ZAR")), Now.AddHours(2));
+        shipment.Lines.Single().UnitCost!.Amount.ShouldBe(250m);
+        shipment.Lines.Single().UnitCost!.Currency.Code.ShouldBe("ZAR");
+        shipment.Status.ShouldBe(ShipmentStatus.Shipped);
+    }
+
     private static InboundShipment CreateShipment()
     {
         return InboundShipment.Create(
