@@ -60,6 +60,13 @@ interface ProvisionResult {
 }
 
 const auth = useAuthStore()
+const canManageFinancialRoles = computed(() =>
+  auth.me?.currentTenant?.accessMode === 'SuperAdmin' ||
+  auth.me?.currentTenant?.roles.includes('TenantOwner') === true,
+)
+function canManageUser(user: OrganisationUser) {
+  return canManageFinancialRoles.value || !user.roles.some(role => role === 'TenantOwner' || role === 'Finance')
+}
 const users = ref<OrganisationUser[]>([])
 const warehouses = ref<WarehouseSummary[]>([])
 const loading = ref(true)
@@ -84,12 +91,16 @@ const addForm = reactive({
   userName: '',
   tenantAdmin: false,
   viewer: false,
+  tenantOwner: false,
+  finance: false,
   warehouseRoles: {} as Record<string, string>,
 })
 
 const editForm = reactive({
   tenantAdmin: false,
   viewer: false,
+  tenantOwner: false,
+  finance: false,
   warehouseRoles: {} as Record<string, string>,
 })
 
@@ -229,6 +240,10 @@ onMounted(load)
 
 function displayRole(role: string) {
   switch (role) {
+    case 'TenantOwner':
+      return 'Tenant owner'
+    case 'Finance':
+      return 'Finance'
     case 'TenantAdmin':
       return 'Administrator'
     case 'Viewer':
@@ -274,7 +289,7 @@ function userInitials(user: OrganisationUser) {
 function warehouseAccessLabel(
   user: OrganisationUser,
 ) {
-  if (user.roles.includes('TenantAdmin'))
+  if (user.roles.includes('TenantAdmin') || user.roles.includes('TenantOwner') || user.roles.includes('Finance'))
     return 'All warehouses'
 
   if (user.warehouses.length === 0)
@@ -301,6 +316,8 @@ function openAddModal() {
   addForm.userName = ''
   addForm.tenantAdmin = false
   addForm.viewer = false
+  addForm.tenantOwner = false
+  addForm.finance = false
   resetWarehouseRoles(addForm.warehouseRoles)
   addModalVisible.value = true
 }
@@ -313,6 +330,9 @@ function closeAddModal() {
 }
 
 function openEditModal(user: OrganisationUser) {
+  if (!canManageUser(user)) return
+  editForm.tenantOwner = user.roles.includes('TenantOwner')
+  editForm.finance = user.roles.includes('Finance')
   editModalError.value = null
   selectedUser.value = user
   editForm.tenantAdmin =
@@ -340,8 +360,12 @@ function closeEditModal() {
 function buildRoles(
   tenantAdmin: boolean,
   viewer: boolean,
+  tenantOwner: boolean,
+  finance: boolean,
 ) {
   const roles: string[] = []
+  if (tenantOwner) roles.push('TenantOwner')
+  if (finance) roles.push('Finance')
 
   if (tenantAdmin)
     roles.push('TenantAdmin')
@@ -367,11 +391,15 @@ function buildWarehouses(
 function hasAccess(
   tenantAdmin: boolean,
   viewer: boolean,
+  tenantOwner: boolean,
+  finance: boolean,
   values: Record<string, string>,
 ) {
   return (
     tenantAdmin ||
     viewer ||
+    tenantOwner ||
+    finance ||
     Object.values(values).some(Boolean)
   )
 }
@@ -395,6 +423,8 @@ async function createUser() {
     !hasAccess(
       addForm.tenantAdmin,
       addForm.viewer,
+      addForm.tenantOwner,
+      addForm.finance,
       addForm.warehouseRoles,
     )
   ) {
@@ -427,6 +457,8 @@ async function createUser() {
             roles: buildRoles(
               addForm.tenantAdmin,
               addForm.viewer,
+            addForm.tenantOwner,
+            addForm.finance,
             ),
             warehouses: buildWarehouses(
               addForm.warehouseRoles,
@@ -457,6 +489,8 @@ async function updateAccess() {
     !hasAccess(
       editForm.tenantAdmin,
       editForm.viewer,
+      editForm.tenantOwner,
+      editForm.finance,
       editForm.warehouseRoles,
     )
   ) {
@@ -483,6 +517,8 @@ async function updateAccess() {
           roles: buildRoles(
             editForm.tenantAdmin,
             editForm.viewer,
+          editForm.tenantOwner,
+          editForm.finance,
           ),
           warehouses: buildWarehouses(
             editForm.warehouseRoles,
@@ -811,7 +847,7 @@ async function copyActivationLink() {
 
               <td data-label="Status">
                 <span
-                  v-if="!row.original.isActive"
+                  v-if="canManageUser(row.original) && !row.original.isActive"
                   class="user-status-pill inactive"
                 >
                   <span class="status-dot" />
@@ -844,6 +880,7 @@ async function copyActivationLink() {
                     color="secondary"
                     variant="outline"
                     size="sm"
+                    v-if="canManageUser(row.original)"
                     title="Edit access"
                     @click="openEditModal(row.original)"
                   >
@@ -855,7 +892,7 @@ async function copyActivationLink() {
                   </CButton>
 
                   <CButton
-                    v-if="row.original.requiresActivation"
+                    v-if="canManageUser(row.original) && row.original.requiresActivation"
                     color="warning"
                     variant="outline"
                     size="sm"
@@ -875,6 +912,7 @@ async function copyActivationLink() {
 
                   <CButton
                     v-if="
+                      canManageUser(row.original) &&
                       row.original.isActive &&
                       row.original.userId !==
                         currentUserId
@@ -1058,6 +1096,16 @@ async function copyActivationLink() {
               >
               Viewer
             </label>
+            <template v-if="canManageFinancialRoles">
+              <label class="check-row">
+                <input v-model="addForm.tenantOwner" type="checkbox">
+                Tenant owner
+              </label>
+              <label class="check-row">
+                <input v-model="addForm.finance" type="checkbox">
+                Finance (standalone role, no warehouse assignments)
+              </label>
+            </template>
           </div>
 
           <div class="access-editor form-field-wide">
@@ -1183,6 +1231,16 @@ async function copyActivationLink() {
               >
               Viewer
             </label>
+            <template v-if="canManageFinancialRoles">
+              <label class="check-row">
+                <input v-model="editForm.tenantOwner" type="checkbox">
+                Tenant owner
+              </label>
+              <label class="check-row">
+                <input v-model="editForm.finance" type="checkbox">
+                Finance (standalone role, no warehouse assignments)
+              </label>
+            </template>
           </div>
 
           <div class="access-editor">
