@@ -545,6 +545,53 @@ async function dispatchWarehouseDelivery(
   }
 }
 
+async function markWarehouseDeliveryDelivered(
+  deliveryId: string,
+) {
+  if (!selectedShipment.value)
+    return
+
+  saving.value = true
+  error.value = null
+
+  try {
+    await apiFetch(
+      `/api/InboundShipment/${selectedShipment.value.id}/warehouse-deliveries/${deliveryId}/deliver`,
+      { method: 'PATCH' },
+    )
+
+    success.value =
+      'Warehouse delivery received and inventory updated.'
+
+    await Promise.all([
+      loadShipments(),
+      loadShipment(
+        selectedShipment.value.id,
+      ),
+    ])
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to receive warehouse delivery.'
+  } finally {
+    saving.value = false
+  }
+}
+
+function openClearance() {
+  if (!selectedShipment.value)
+    return
+
+  clearanceForm.authority = 'Customs'
+  clearanceForm.status =
+    selectedShipment.value.customsStatus
+  clearanceForm.referenceNumber = ''
+  clearanceForm.remarks = ''
+  modalError.value = null
+  clearanceVisible.value = true
+}
+
 async function confirmWarehouseDelivery(
   deliveryId: string,
 ) {
@@ -1245,7 +1292,17 @@ onMounted(async () => {
                   </CButton>
 
                   <CButton
-                    v-if="canReceive(delivery.warehouseId) && delivery.status === 'InTransit'"
+                    v-if="canOperate && delivery.status === 'InTransit'"
+                    color="primary"
+                    size="sm"
+                    :disabled="saving"
+                    @click="markWarehouseDeliveryDelivered(delivery.id)"
+                  >
+                    Mark delivered to warehouse
+                  </CButton>
+
+                  <CButton
+                    v-if="canReceive(delivery.warehouseId) && delivery.status === 'DeliveredToWarehouse'"
                     color="primary"
                     size="sm"
                     :disabled="saving"
