@@ -426,7 +426,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             var alreadyAllocated =
                 _deliveries
                     .Where(x =>
-                        x.Status is ShipmentDeliveryStatus.Planned or ShipmentDeliveryStatus.InTransit)
+                        x.Status is ShipmentDeliveryStatus.Planned or ShipmentDeliveryStatus.InTransit or ShipmentDeliveryStatus.DeliveredToWarehouse)
                     .SelectMany(x => x.Allocations)
                     .Where(x => x.ShipmentLineId == allocation.LineId)
                     .Sum(x => x.Quantity);
