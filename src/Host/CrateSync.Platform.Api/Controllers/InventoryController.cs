@@ -1,3 +1,4 @@
+using CrateSync.Platform.Inventory.Application.Stock.PlanFifoAllocation;
 using System.Security.Claims;
 using CrateSync.Platform.Inventory.Application.Stock.SetSellingPrice;
 using CrateSync.Platform.Identity.Domain.Authorization;
@@ -111,6 +112,19 @@ public sealed class InventoryController(
             cancellationToken);
 
         return Ok(result);
+    }
+
+    [HttpGet("fifo-plan")]
+    public async Task<IActionResult> PlanFifo([FromQuery] Guid warehouseId, [FromQuery] Guid productVarietyId,
+        [FromQuery] string originCountry, [FromQuery] int quantity, [FromQuery] string currency,
+        CancellationToken cancellationToken, [FromQuery] decimal? packWeightKg = null, [FromQuery] int? fruitsPerPack = null)
+    {
+        if (!await accessService.CanReadWarehouseAsync(warehouseId, cancellationToken)) return Forbid();
+        if (warehouseId == Guid.Empty || productVarietyId == Guid.Empty || quantity <= 0 ||
+            packWeightKg.HasValue == fruitsPerPack.HasValue || packWeightKg is <= 0 || fruitsPerPack is <= 0 ||
+            string.IsNullOrWhiteSpace(originCountry) || string.IsNullOrWhiteSpace(currency))
+            return BadRequest(new { title = "Invalid FIFO selection criteria." });
+        return Ok(await sender.Send(new PlanFifoAllocationQuery(warehouseId, productVarietyId, originCountry, quantity, packWeightKg, fruitsPerPack, currency), cancellationToken));
     }
 
     [HttpGet("transfer-destinations")]
