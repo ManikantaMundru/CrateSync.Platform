@@ -55,6 +55,12 @@ interface ShipmentLine {
   expectedQuantity: number
   receivedQuantity: number
   regulatorySampleQuantity?: number
+  damagedQuantity?: number
+  missingQuantity?: number
+  pendingAllocationQuantity?: number
+  accountedQuantity?: number
+  remainingQuantity?: number
+  availableForAllocation?: number
   packSizeKg: number | null
   fruitsPerPack?: number | null
   unitCost?: number | null
@@ -69,6 +75,8 @@ interface RegulatorySample {
   referenceNumber: string | null
   remarks?: string
   recordedAtUtc: string
+  reversedAtUtc?: string | null
+  reversalReason?: string | null
 }
 
 interface ClearanceEvent {
@@ -182,10 +190,10 @@ const selectedShipment = ref<ShipmentDetails | null>(null)
 const sampleVisible = ref(false)
 const sampleError = ref<string | null>(null)
 const sampleForm = reactive({ sampleId: '', lineId: '', authority: 'Customs', quantity: 1, referenceNumber: '', remarks: '' })
-const canRecordSample = computed(() => canOperate.value && selectedShipment.value?.status === 'Arrived' && !selectedShipment.value.deliveries?.length && !selectedShipment.value.receipts?.length)
+const canRecordSample = computed(() => canOperate.value && !!selectedShipment.value && ['Arrived', 'Receiving', 'PartiallyReceived'].includes(selectedShipment.value.status) && selectedShipment.value.lines.some(l => (l.availableForAllocation ?? 0) > 0))
 const sampleAvailable = computed(() => {
   const line = selectedShipment.value?.lines.find(l => l.id === sampleForm.lineId)
-  return line ? line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) - line.receivedQuantity : 0
+  return line?.availableForAllocation ?? 0
 })
 function openSample() {
   if (!canRecordSample.value) return
@@ -576,14 +584,39 @@ async function handleShipmentCreated(
   await loadShipment(shipmentId)
 }
 
-function remainingQuantity(
-  line: ShipmentLine,
-) {
-  return Math.max(
-    0,
-    line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) -
-      line.receivedQuantity - (selectedShipment.value?.deliveries ?? []).flatMap(d => d.allocations).filter(a => a.shipmentLineId === line.id).reduce((sum, a) => sum + (a.damagedQuantity ?? 0) + (a.missingQuantity ?? 0), 0),
-  )
+function remainingQuantity(line: ShipmentLine) {
+  return line.remainingQuantity ?? Math.max(0, line.expectedQuantity - line.receivedQuantity - (line.regulatorySampleQuantity ?? 0) - (line.damagedQuantity ?? 0) - (line.missingQuantity ?? 0))
+}
+const reconciliation = computed(() => (selectedShipment.value?.lines ?? []).reduce((t, l) => ({
+  expected: t.expected + l.expectedQuantity, accepted: t.accepted + l.receivedQuantity,
+  sampled: t.sampled + (l.regulatorySampleQuantity ?? 0), damaged: t.damaged + (l.damagedQuantity ?? 0),
+  missing: t.missing + (l.missingQuantity ?? 0), remaining: t.remaining + remainingQuantity(l),
+  available: t.available + (l.availableForAllocation ?? 0),
+}), {expected: 0, accepted: 0, sampled: 0, damaged: 0, missing: 0, remaining: 0, available: 0}))
+const reverseSampleId = ref<string | null>(null)
+const reverseReason = ref('')
+const reverseError = ref<string | null>(null)
+const canReverseSample = computed(() => canOperate.value && !!selectedShipment.value && !['Draft', 'Shipped', 'Cancelled'].includes(selectedShipment.value.status))
+function openReverseSample(sample: RegulatorySample) {
+  if (!canReverseSample.value || sample.reversedAtUtc) return
+  reverseSampleId.value = sample.id
+  reverseReason.value = ''
+  reverseError.value = null
+}
+async function reverseSample() {
+  if (!canReverseSample.value || !selectedShipment.value || !reverseSampleId.value || !reverseReason.value.trim()) return
+  const id = selectedShipment.value.id
+  saving.value = true
+  reverseError.value = null
+  try {
+    await apiFetch(`/api/InboundShipment/${id}/regulatory-samples/${reverseSampleId.value}/reverse`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({reason: reverseReason.value.trim()}),
+    })
+    reverseSampleId.value = null
+    success.value = 'Sample deduction reversed. Packages are available for allocation, not warehouse inventory.'
+    await Promise.all([loadShipments(), loadShipment(id)])
+  } catch (exception) { reverseError.value = exception instanceof Error ? exception.message : 'Unable to reverse sample.' }
+  finally { saving.value = false }
 }
 
 function openWarehouseDelivery() {
@@ -958,6 +991,7 @@ onMounted(async () => {
         <option value="Receiving">Receiving</option>
         <option value="PartiallyReceived">Partially received</option>
         <option value="Received">Received</option>
+        <option value="ReceivedWithDiscrepancies">Received with discrepancies</option>
         <option value="Cancelled">Cancelled</option>
       </select>
     </div>
@@ -1190,6 +1224,19 @@ onMounted(async () => {
               </div>
             </div>
 
+            <div class="border rounded p-3 mb-3">
+              <strong>Shipment reconciliation</strong>
+              <div class="row g-2 mt-1">
+                <div class="col-6">Original: <strong>{{ reconciliation.expected }}</strong></div>
+                <div class="col-6">Accepted: <strong>{{ reconciliation.accepted }}</strong></div>
+                <div class="col-6">Regulatory samples: <strong>{{ reconciliation.sampled }}</strong></div>
+                <div class="col-6">Damaged: <strong>{{ reconciliation.damaged }}</strong></div>
+                <div class="col-6">Missing: <strong>{{ reconciliation.missing }}</strong></div>
+                <div class="col-6">Awaiting receipt: <strong>{{ reconciliation.remaining }}</strong></div>
+                <div class="col-6">Unallocated: <strong>{{ reconciliation.available }}</strong></div>
+                <div class="col-6">Accounted for: <strong>{{ reconciliation.expected - reconciliation.remaining }} / {{ reconciliation.expected }}</strong></div>
+              </div>
+            </div>
             <div class="shipment-lines-list">
               <div
                 v-for="line in selectedShipment.lines"
@@ -1211,42 +1258,13 @@ onMounted(async () => {
 
                   <small v-if="line.regulatorySampleQuantity">{{ line.regulatorySampleQuantity }} packages retained for regulatory testing · {{ line.expectedQuantity }} originally expected</small>
                   <div class="shipment-receipt-progress">
-                    <span>
-                      Received
-                      {{ line.receivedQuantity }}
-                      / {{ line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) }}
-                    </span>
-                    <span>
-                      {{ remainingQuantity(line) }}
-                      remaining
-                    </span>
+                    <span>{{ line.receivedQuantity }} accepted · {{ line.damagedQuantity ?? 0 }} damaged · {{ line.missingQuantity ?? 0 }} missing · {{ line.regulatorySampleQuantity ?? 0 }} sampled</span>
+                    <span>{{ remainingQuantity(line) }} awaiting receipt · {{ line.availableForAllocation ?? 0 }} unallocated</span>
                   </div>
-
-                  <div class="shipment-progress-track">
-                    <span
-                      :style="{
-                        width:
-                          line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) > 0
-                            ? `${Math.min(
-                                100,
-                                (line.receivedQuantity /
-                                  (line.expectedQuantity - (line.regulatorySampleQuantity ?? 0))) *
-                                  100,
-                              )}%`
-                            : '0%',
-                      }"
-                    />
-                  </div>
+                  <div class="shipment-progress-track"><span :style="{width: line.expectedQuantity > 0 ? Math.min(100, (line.expectedQuantity - remainingQuantity(line)) / line.expectedQuantity * 100) + '%' : '0%'}" /></div>
                 </div>
-
-                <span
-                  v-if="
-                    line.receivedQuantity ===
-                    line.expectedQuantity - (line.regulatorySampleQuantity ?? 0)
-                  "
-                  class="shipment-received-complete"
-                >
-                  Complete
+                <span v-if="remainingQuantity(line) === 0" :class="(line.damagedQuantity || line.missingQuantity) ? 'text-warning' : 'shipment-received-complete'">
+                  {{ (line.damagedQuantity || line.missingQuantity) ? 'Complete with discrepancies' : 'Complete' }}
                 </span>
               </div>
             </div>
@@ -1254,7 +1272,7 @@ onMounted(async () => {
 
           <section class="shipment-detail-section">
             <div class="section-heading">
-              <div><h3>Regulatory sample deductions</h3><p>Packages permanently retained by inspection authorities; record before planning transport.</p></div>
+              <div><h3>Regulatory sample deductions</h3><p>Packages permanently retained by inspection authorities; deductions use only unallocated stock.</p></div>
               <CButton v-if="canRecordSample" color="primary" variant="outline" size="sm" @click="openSample">Record retained sample</CButton>
             </div>
             <p v-if="!selectedShipment.regulatorySamples?.length" class="shipment-muted">No retained samples recorded.</p>
@@ -1262,6 +1280,8 @@ onMounted(async () => {
               <strong>{{ sample.authority }} · {{ sample.quantity }} packages</strong>
               <div>{{ selectedShipment.lines.find(l => l.id === sample.shipmentLineId)?.batchCode ?? 'Line' }} · {{ sample.referenceNumber || 'No reference' }} · {{ formatDate(sample.recordedAtUtc) }}</div>
               <small v-if="sample.remarks">{{ sample.remarks }}</small>
+              <div v-if="sample.reversedAtUtc" class="text-warning">Reversed {{ formatDate(sample.reversedAtUtc) }} <span v-if="sample.reversalReason">· {{ sample.reversalReason }}</span></div>
+              <CButton v-else-if="canReverseSample" color="warning" variant="outline" size="sm" :disabled="saving" @click="openReverseSample(sample)">Reverse deduction</CButton>
             </div>
           </section>
 
@@ -1279,7 +1299,7 @@ onMounted(async () => {
                     selectedShipment.status,
                   ) &&
                   selectedShipment.lines.some(
-                    (line) => remainingQuantity(line) > 0,
+                    (line) => (line.availableForAllocation ?? 0) > 0,
                   )
                 "
                 color="primary"
@@ -1744,7 +1764,7 @@ onMounted(async () => {
       <p>Use only for packages confirmed not to be returned. This reduces the quantity available for warehouse allocation.</p>
       <p v-if="sampleError" class="status-message status-error">{{ sampleError }}</p>
       <div class="admin-form admin-form-single">
-        <label class="form-field"><span>Shipment line</span><select v-model="sampleForm.lineId" class="form-select"><option value="">Select batch</option><option v-for="line in selectedShipment?.lines ?? []" :key="line.id" :value="line.id">{{ line.batchCode }} — {{ line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) }} remaining</option></select></label>
+        <label class="form-field"><span>Shipment line</span><select v-model="sampleForm.lineId" class="form-select"><option value="">Select batch</option><option v-for="line in selectedShipment?.lines ?? []" :key="line.id" :value="line.id" :disabled="!(line.availableForAllocation ?? 0)">{{ line.batchCode }} — {{ line.availableForAllocation ?? 0 }} unallocated</option></select></label>
         <label class="form-field"><span>Authority</span><select v-model="sampleForm.authority" class="form-select"><option value="Customs">Customs</option><option value="FoodSafety">Food Safety</option><option value="PlantQuarantine">Plant Quarantine</option><option value="Port">Port</option><option value="Other">Other</option></select></label>
         <label class="form-field"><span>Packages retained (max {{ sampleAvailable }})</span><input v-model.number="sampleForm.quantity" type="number" min="1" :max="sampleAvailable" step="1" class="form-control"></label>
         <label class="form-field"><span>Inspection reference (optional)</span><input v-model="sampleForm.referenceNumber" maxlength="100" class="form-control"></label>
@@ -1752,5 +1772,14 @@ onMounted(async () => {
       </div>
     </CModalBody>
     <CModalFooter><CButton color="secondary" :disabled="saving" @click="sampleVisible = false">Cancel</CButton><CButton color="primary" :disabled="saving || !sampleForm.lineId || !sampleForm.remarks.trim() || sampleForm.quantity <= 0 || sampleForm.quantity > sampleAvailable" @click="saveSample">Record deduction</CButton></CModalFooter>
+  </CModal>
+  <CModal :visible="reverseSampleId !== null" alignment="center" @close="!saving && (reverseSampleId = null)">
+    <CModalHeader><CModalTitle>Reverse regulatory sample deduction</CModalTitle></CModalHeader>
+    <CModalBody>
+      <p>Only reverse an incorrect deduction or a confirmed return to port stock. This reopens the shipment if necessary and does not create warehouse inventory.</p>
+      <p v-if="reverseError" class="status-message status-error">{{ reverseError }}</p>
+      <label class="form-field"><span>Reversal reason (required)</span><textarea v-model="reverseReason" maxlength="500" class="form-control" rows="3"/></label>
+    </CModalBody>
+    <CModalFooter><CButton color="secondary" :disabled="saving" @click="reverseSampleId = null">Cancel</CButton><CButton color="warning" :disabled="saving || !reverseReason.trim()" @click="reverseSample">Reverse deduction</CButton></CModalFooter>
   </CModal>
 </template>
