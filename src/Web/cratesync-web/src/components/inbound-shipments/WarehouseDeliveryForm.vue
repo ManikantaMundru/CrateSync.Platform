@@ -23,6 +23,7 @@ interface ShipmentLine {
   expectedQuantity: number
   receivedQuantity: number
   regulatorySampleQuantity?: number
+  availableForAllocation?: number
 }
 
 interface DeliveryAllocation {
@@ -117,7 +118,7 @@ const alreadyAllocated = (lineId: string) =>
 const availableForAllocation = (
   line: ShipmentLine,
 ) =>
-  Math.max(
+  line.availableForAllocation ?? Math.max(
     0,
     line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) -
       line.receivedQuantity -
