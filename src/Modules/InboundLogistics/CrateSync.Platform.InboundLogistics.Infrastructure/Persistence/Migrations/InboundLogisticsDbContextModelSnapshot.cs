@@ -346,6 +346,9 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<string>("ReferenceNumber").HasMaxLength(100).HasColumnType("nvarchar(100)");
                     b.Property<string>("Remarks").IsRequired().HasMaxLength(500).HasColumnType("nvarchar(500)");
                     b.Property<DateTimeOffset>("RecordedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset?>("ReversedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("ReversalReason").HasMaxLength(500).HasColumnType("nvarchar(500)");
+
                     b.HasKey("Id");
                     b.HasIndex("ShipmentId");
                     b.HasIndex("ShipmentLineId");
