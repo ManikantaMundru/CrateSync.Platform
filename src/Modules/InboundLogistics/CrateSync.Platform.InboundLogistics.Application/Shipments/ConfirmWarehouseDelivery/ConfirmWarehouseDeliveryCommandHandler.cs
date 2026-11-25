@@ -34,7 +34,8 @@ internal sealed class ConfirmWarehouseDeliveryCommandHandler(
             var occurredAtUtc = timeProvider.GetUtcNow();
             var receipts = shipment.ConfirmWarehouseDelivery(
                 ShipmentDeliveryId.From(request.DeliveryId),
-                occurredAtUtc);
+                occurredAtUtc,
+                request.Inspections.Select(x => (x.AllocationId, x.Accepted, x.Damaged, x.Missing, x.Remarks)).ToArray());
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
 
