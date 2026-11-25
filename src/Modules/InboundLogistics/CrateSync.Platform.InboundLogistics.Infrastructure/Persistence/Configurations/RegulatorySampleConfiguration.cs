@@ -14,6 +14,7 @@ internal sealed class RegulatorySampleConfiguration : IEntityTypeConfiguration<R
         builder.Property(x => x.Authority).HasConversion<int>();
         builder.Property(x => x.ReferenceNumber).HasMaxLength(100);
         builder.Property(x => x.Remarks).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.ReversalReason).HasMaxLength(500);
         builder.HasIndex("ShipmentId");
         builder.HasIndex(x => x.ShipmentLineId);
     }
