@@ -11,4 +11,4 @@ public sealed record TransferStockCommand(
     string OriginCountry,
     int Quantity,
     string? TransferReference,
-    string? Remarks) : ICommand<Result>;
+    string? Remarks, Guid BatchId = default) : ICommand<Result>;

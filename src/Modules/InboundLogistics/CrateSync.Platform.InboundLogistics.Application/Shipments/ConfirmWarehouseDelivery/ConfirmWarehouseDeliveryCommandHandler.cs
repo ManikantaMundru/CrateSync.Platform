@@ -41,6 +41,7 @@ internal sealed class ConfirmWarehouseDeliveryCommandHandler(
 
             foreach (var receipt in receipts)
             {
+                var line = shipment.Lines.Single(x => x.Id == receipt.ShipmentLineId);
                 await publisher.Publish(
                     new ShipmentLineReceivedIntegrationEvent(
                         receipt.Id.Value,
@@ -50,7 +51,7 @@ internal sealed class ConfirmWarehouseDeliveryCommandHandler(
                         receipt.ProductVarietyId,
                         shipment.OriginCountry.Value,
                         receipt.Quantity,
-                        receipt.ReceivedAtUtc),
+                        receipt.ReceivedAtUtc, line.Id.Value, line.BatchCode.Value, line.PackWeightKg, line.FruitsPerPack),
                     cancellationToken);
             }
 

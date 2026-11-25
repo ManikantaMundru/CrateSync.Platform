@@ -13,4 +13,4 @@ public sealed record StockResponse(
     string VarietyName = "",
     string WarehouseName = "",
     string WarehouseCode = "",
-    string OriginCountry = "");
+    string OriginCountry = "", Guid BatchId = default, string? BatchCode = null, decimal? PackWeightKg = null, int? FruitsPerPack = null);

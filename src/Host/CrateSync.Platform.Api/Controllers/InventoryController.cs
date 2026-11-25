@@ -25,7 +25,7 @@ public sealed class InventoryController(
         [FromQuery] Guid warehouseId,
         [FromQuery] Guid productVarietyId,
         [FromQuery] string originCountry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, [FromQuery] Guid batchId = default)
     {
         if (!await accessService.CanReadWarehouseAsync(
                 warehouseId,
@@ -38,7 +38,7 @@ public sealed class InventoryController(
             new GetStockQuery(
                 warehouseId,
                 productVarietyId,
-                originCountry),
+                originCountry, batchId),
             cancellationToken);
 
         return result.IsFailure
@@ -91,7 +91,7 @@ public sealed class InventoryController(
         [FromQuery] Guid warehouseId,
         [FromQuery] Guid productVarietyId,
         [FromQuery] string originCountry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, [FromQuery] Guid batchId = default)
     {
         if (!await accessService.CanReadWarehouseAsync(
                 warehouseId,
@@ -104,7 +104,7 @@ public sealed class InventoryController(
             new GetStockMovementsQuery(
                 warehouseId,
                 productVarietyId,
-                originCountry),
+                originCountry, batchId),
             cancellationToken);
 
         return Ok(result);
@@ -148,7 +148,7 @@ public sealed class InventoryController(
                 request.OriginCountry,
                 request.Quantity,
                 request.TransferReference,
-                request.Remarks),
+                request.Remarks, request.BatchId),
             cancellationToken);
 
         return result.IsFailure
@@ -174,7 +174,7 @@ public sealed class InventoryController(
                 request.ProductVarietyId,
                 request.OriginCountry,
                 request.QuantityChange,
-                request.Reason),
+                request.Reason, request.BatchId),
             cancellationToken);
 
         return result.IsFailure

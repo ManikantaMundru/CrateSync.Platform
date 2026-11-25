@@ -20,21 +20,21 @@ internal sealed class TransferStockCommandHandler(
         TransferStockCommand request,
         CancellationToken cancellationToken)
     {
-        var source = await repository.GetAsync(
+        var source = await repository.GetBatchAsync(
             tenantContext.TenantId,
             request.SourceWarehouseId,
             request.ProductVarietyId,
-            request.OriginCountry,
+            request.OriginCountry, request.BatchId,
             cancellationToken);
 
         if (source is null)
             return Result.Failure(InventoryErrors.StockNotFound);
 
-        var destination = await repository.GetAsync(
+        var destination = await repository.GetBatchAsync(
             tenantContext.TenantId,
             request.DestinationWarehouseId,
             request.ProductVarietyId,
-            request.OriginCountry,
+            request.OriginCountry, request.BatchId,
             cancellationToken);
 
         var now = timeProvider.GetUtcNow();
@@ -61,7 +61,7 @@ internal sealed class TransferStockCommandHandler(
                     request.DestinationWarehouseId,
                     request.ProductVarietyId,
                     request.OriginCountry,
-                    now);
+                    now, source.BatchId, source.BatchCode, source.PackWeightKg, source.FruitsPerPack);
 
                 repository.Add(destination);
             }

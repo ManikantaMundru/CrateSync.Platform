@@ -107,11 +107,11 @@ internal static class JourneyTestData
         HttpClient client,
         Guid warehouseId,
         Guid productVarietyId,
-        string originCountry = "ZA")
+        string originCountry = "ZA", Guid batchId = default)
     {
         var response =
             await client.GetAsync(
-                $"/api/inventory/stock?warehouseId={warehouseId}&productVarietyId={productVarietyId}&originCountry={originCountry}");
+                $"/api/inventory/stock?warehouseId={warehouseId}&productVarietyId={productVarietyId}&originCountry={originCountry}&batchId={batchId}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
 

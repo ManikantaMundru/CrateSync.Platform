@@ -14,7 +14,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         Guid warehouseId,
         Guid productVarietyId,
         string originCountry,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, Guid batchId = default)
     {
         originCountry =
             originCountry.Trim().ToUpperInvariant();
@@ -33,7 +33,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                 pv.Name AS VarietyName,
                 w.Name AS WarehouseName,
                 w.Code AS WarehouseCode,
-                b.OriginCountry
+                b.OriginCountry,
+                b.BatchId, b.BatchCode, b.PackWeightKg, b.FruitsPerPack
             FROM inventory.InventoryBalances b
             INNER JOIN warehousing.Warehouses w
                 ON w.Id = b.WarehouseId
@@ -46,7 +47,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
             WHERE b.TenantId = @TenantId
               AND b.WarehouseId = @WarehouseId
               AND b.ProductVarietyId = @ProductVarietyId
-              AND b.OriginCountry = @OriginCountry;
+              AND b.OriginCountry = @OriginCountry AND b.BatchId = @BatchId;
             """;
 
         await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
@@ -54,7 +55,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         return await connection.QuerySingleOrDefaultAsync<StockResponse>(
             new CommandDefinition(
                 sql,
-                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId, OriginCountry = originCountry },
+                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId, OriginCountry = originCountry, BatchId = batchId },
                 cancellationToken: cancellationToken));
     }
 
@@ -84,7 +85,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                 pv.Name AS VarietyName,
                 w.Name AS WarehouseName,
                 w.Code AS WarehouseCode,
-                b.OriginCountry
+                b.OriginCountry,
+                b.BatchId, b.BatchCode, b.PackWeightKg, b.FruitsPerPack
             FROM inventory.InventoryBalances b
             INNER JOIN warehousing.Warehouses w
                 ON w.Id = b.WarehouseId
@@ -117,7 +119,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         Guid warehouseId,
         Guid productVarietyId,
         string originCountry,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, Guid batchId = default)
     {
         originCountry =
             originCountry.Trim().ToUpperInvariant();
@@ -147,7 +149,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
             WHERE b.TenantId = @TenantId
               AND b.WarehouseId = @WarehouseId
               AND b.ProductVarietyId = @ProductVarietyId
-              AND b.OriginCountry = @OriginCountry
+              AND b.OriginCountry = @OriginCountry AND b.BatchId = @BatchId
             ORDER BY m.OccurredAtUtc DESC;
             """;
 
@@ -156,7 +158,7 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
         var rows = await connection.QueryAsync<StockMovementResponse>(
             new CommandDefinition(
                 sql,
-                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId, OriginCountry = originCountry },
+                new { TenantId = tenantId, WarehouseId = warehouseId, ProductVarietyId = productVarietyId, OriginCountry = originCountry, BatchId = batchId },
                 cancellationToken: cancellationToken));
 
         return rows.AsList();

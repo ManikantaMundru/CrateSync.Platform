@@ -14,12 +14,12 @@ internal sealed class ReceiveStockCommandHandler(
 {
     public async Task<Result> Handle(ReceiveStockCommand request, CancellationToken cancellationToken)
     {
-        var balance = await repository.GetAsync(
-            request.TenantId,
-            request.WarehouseId,
-            request.ProductVarietyId,
-            request.OriginCountry,
-            cancellationToken);
+        // A retry of a receipt processed before the migration must not create duplicate batch stock.
+        var reference = request.ReceiptId.HasValue ? StockReference.ShipmentReceipt(request.ReceiptId.Value) : StockReference.Shipment(request.ShipmentId);
+        var legacy = await repository.GetAsync(request.TenantId, request.WarehouseId, request.ProductVarietyId, request.OriginCountry, cancellationToken);
+        if (request.BatchId != Guid.Empty && legacy?.Movements.Any(x => x.Type == StockMovementType.Received && x.Reference == reference) == true)
+            return Result.Success();
+        var balance = request.BatchId == Guid.Empty ? legacy : await repository.GetBatchAsync(request.TenantId, request.WarehouseId, request.ProductVarietyId, request.OriginCountry, request.BatchId, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
 
@@ -30,17 +30,10 @@ internal sealed class ReceiveStockCommandHandler(
                 request.WarehouseId,
                 request.ProductVarietyId,
                 request.OriginCountry,
-                now);
+                now, request.BatchId, request.BatchCode, request.PackWeightKg, request.FruitsPerPack);
 
             repository.Add(balance);
         }
-
-        var reference =
-            request.ReceiptId.HasValue
-                ? StockReference.ShipmentReceipt(
-                    request.ReceiptId.Value)
-                : StockReference.Shipment(
-                    request.ShipmentId);
 
         var changed = balance.Receive(
             new CrateQuantity(request.Quantity),
