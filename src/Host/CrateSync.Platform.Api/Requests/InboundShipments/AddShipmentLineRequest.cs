@@ -5,6 +5,7 @@ public sealed record AddShipmentLineRequest(
     Guid ProductVarietyId,
     string BatchCode,
     int ExpectedQuantity,
-    decimal PackSizeKg,
+    decimal? PackSizeKg,
     decimal? UnitCost = null,
-    string? Currency = null);
+    string? Currency = null,
+    int? FruitsPerPack = null);
