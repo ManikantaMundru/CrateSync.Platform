@@ -87,6 +87,8 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                     b.Property<string>("SellingCurrency").HasMaxLength(3).HasColumnType("nvarchar(3)");
                     b.Property<DateTimeOffset?>("SellingPriceUpdatedAtUtc").HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("OriginalReceivedAtUtc").HasColumnType("datetimeoffset");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "ProductVarietyId");
@@ -127,6 +129,8 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Damaged").HasColumnType("int");
                     b.Property<int?>("Missing").HasColumnType("int");
                     b.Property<string>("ReceivingRemarks").HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<DateTimeOffset?>("OriginalReceivedAtUtc").HasColumnType("datetimeoffset");
+
                     b.HasKey("Id");
                     b.HasIndex("TenantId", "SourceWarehouseId");
                     b.HasIndex("TenantId", "DestinationWarehouseId");
