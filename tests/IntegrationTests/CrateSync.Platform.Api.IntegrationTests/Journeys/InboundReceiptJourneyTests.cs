@@ -109,6 +109,22 @@ public sealed class InboundReceiptJourneyTests(
             $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryBId}/dispatch",
             null)).EnsureSuccessStatusCode();
 
+        var premature = await client.PatchAsync(
+            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/receive", null);
+        premature.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        foreach (var deliveryId in new[] { deliveryAId, deliveryBId })
+            (await client.PatchAsync(
+                $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryId}/deliver",
+                null)).EnsureSuccessStatusCode();
+
+        var delivered = await client.GetFromJsonAsync<ShipmentResponse>(
+            $"/api/InboundShipment/{shipmentId}");
+        delivered.ShouldNotBeNull();
+        delivered.Deliveries!.ShouldAllBe(x => x.Status == "DeliveredToWarehouse");
+        delivered.Lines.Single().ReceivedQuantity.ShouldBe(0);
+        delivered.Receipts!.ShouldBeEmpty();
+
         (await client.PatchAsync(
             $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/receive",
             null)).EnsureSuccessStatusCode();
