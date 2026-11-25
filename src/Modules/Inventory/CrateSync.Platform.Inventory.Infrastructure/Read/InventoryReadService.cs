@@ -34,7 +34,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                 w.Name AS WarehouseName,
                 w.Code AS WarehouseCode,
                 b.OriginCountry,
-                b.BatchId, b.BatchCode, b.PackWeightKg, b.FruitsPerPack
+                b.BatchId, b.BatchCode, b.PackWeightKg, b.FruitsPerPack,
+                b.SellingPrice, b.SellingCurrency, b.SellingPriceUpdatedAtUtc
             FROM inventory.InventoryBalances b
             INNER JOIN warehousing.Warehouses w
                 ON w.Id = b.WarehouseId
@@ -86,7 +87,8 @@ internal sealed class InventoryReadService(ISqlConnectionFactory connectionFacto
                 w.Name AS WarehouseName,
                 w.Code AS WarehouseCode,
                 b.OriginCountry,
-                b.BatchId, b.BatchCode, b.PackWeightKg, b.FruitsPerPack
+                b.BatchId, b.BatchCode, b.PackWeightKg, b.FruitsPerPack,
+                b.SellingPrice, b.SellingCurrency, b.SellingPriceUpdatedAtUtc
             FROM inventory.InventoryBalances b
             INNER JOIN warehousing.Warehouses w
                 ON w.Id = b.WarehouseId

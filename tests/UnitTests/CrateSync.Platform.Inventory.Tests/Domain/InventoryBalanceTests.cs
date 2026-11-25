@@ -482,4 +482,31 @@ public sealed class InventoryBalanceTests
     }
 
 
+    [Fact]
+    public void SellingPrice_RecordsHistoryWithoutChangingStock()
+    {
+        var balance = CreateBalanceWithStock(100);
+        var user = Guid.NewGuid();
+        balance.SetSellingPrice(2100m, "inr", user, "Initial price", Now);
+        balance.SetSellingPrice(1950m, "INR", user, "Market adjustment", Now.AddHours(1));
+        balance.SetSellingPrice(1950m, "INR", user, "Retry", Now.AddHours(2));
+        balance.SellingPrice.ShouldBe(1950m);
+        balance.SellingCurrency.ShouldBe("INR");
+        balance.SellingPriceHistory.Count.ShouldBe(2);
+        balance.SellingPriceHistory.Last().PreviousPrice.ShouldBe(2100m);
+        balance.SellingPriceHistory.Last().UserId.ShouldBe(user);
+        balance.OnHand.Value.ShouldBe(100);
+        balance.Reserved.Value.ShouldBe(0);
+    }
+
+    [Fact]
+    public void SellingPrice_RequiresReceivedStockAndValidAmount()
+    {
+        var empty = CreateBalance();
+        Should.Throw<InvalidOperationException>(() => empty.SetSellingPrice(100m, "INR", Guid.NewGuid(), "Initial", Now));
+        var balance = CreateBalanceWithStock(10);
+        Should.Throw<InvalidOperationException>(() => balance.SetSellingPrice(0m, "INR", Guid.NewGuid(), "Initial", Now));
+        Should.Throw<InvalidOperationException>(() => balance.SetSellingPrice(100m, "INR", Guid.NewGuid(), "", Now));
+        balance.SellingPriceHistory.ShouldBeEmpty();
+    }
 }

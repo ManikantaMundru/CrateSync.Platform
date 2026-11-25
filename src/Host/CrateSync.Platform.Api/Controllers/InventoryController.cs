@@ -1,3 +1,6 @@
+using System.Security.Claims;
+using CrateSync.Platform.Inventory.Application.Stock.SetSellingPrice;
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Warehousing.Application.Warehouses.GetWarehouse;
 using CrateSync.Platform.Warehousing.Application.Warehouses.SearchWarehouses;
 using CrateSync.Platform.Api.Authorization;
@@ -179,6 +182,26 @@ public sealed class InventoryController(
     }
 
     public sealed record TransferInspectionRequest(int Accepted, int Damaged, int Missing, string? Remarks);
+
+    [HttpPut("stock/{balanceId:guid}/selling-price")]
+    public async Task<IActionResult> SetSellingPrice(Guid balanceId, [FromBody] SellingPriceRequest request, CancellationToken cancellationToken)
+    {
+        if (!await accessService.CanAdminWarehouseAsync(request.WarehouseId, cancellationToken)) return Forbid();
+        var subject = User.FindFirstValue(CrateSyncClaimTypes.Subject) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(subject, out var userId)) return Forbid();
+        var result = await sender.Send(new SetSellingPriceCommand(balanceId, request.WarehouseId, request.Price, request.Currency, userId, request.Reason), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
+    }
+
+    [HttpGet("stock/{balanceId:guid}/selling-price/history")]
+    public async Task<IActionResult> GetSellingPriceHistory(Guid balanceId, [FromQuery] Guid warehouseId, CancellationToken cancellationToken)
+    {
+        if (!await accessService.CanReadWarehouseAsync(warehouseId, cancellationToken)) return Forbid();
+        var history = await sender.Send(new GetSellingPriceHistoryQuery(balanceId, warehouseId), cancellationToken);
+        return history is null ? NotFound() : Ok(history);
+    }
+
+    public sealed record SellingPriceRequest(Guid WarehouseId, decimal Price, string Currency, string Reason);
 
     [HttpPost("adjustments")]
     public async Task<IActionResult> Adjust(

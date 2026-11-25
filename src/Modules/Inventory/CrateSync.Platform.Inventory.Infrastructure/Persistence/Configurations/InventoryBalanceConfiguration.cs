@@ -48,6 +48,11 @@ internal sealed class InventoryBalanceConfiguration : IEntityTypeConfiguration<I
         builder.HasIndex(x => new { x.TenantId, x.WarehouseId });
         builder.HasIndex(x => new { x.TenantId, x.ProductVarietyId });
 
+        builder.Property(x => x.SellingPrice).HasColumnType("decimal(18,2)");
+        builder.Property(x => x.SellingCurrency).HasMaxLength(3);
+        builder.HasMany(x => x.SellingPriceHistory).WithOne().HasForeignKey("InventoryBalanceId").OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.SellingPriceHistory).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasMany(x => x.Movements)
             .WithOne()
             .HasForeignKey("InventoryBalanceId")

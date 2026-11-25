@@ -45,6 +45,9 @@ interface StockSummary {
   reserved: number
   available: number
   updatedAtUtc: string
+  sellingPrice: number | null
+  sellingCurrency: string | null
+  sellingPriceUpdatedAtUtc: string | null
 }
 
 interface StockMovement {
@@ -94,6 +97,49 @@ const canTransfer = computed(() => sourceWarehouses.value.some(w => w.isActive))
 const stock = ref<StockSummary[]>([])
 const movements = ref<StockMovement[]>([])
 const selectedStock = ref<StockSummary | null>(null)
+interface PriceChange { id: string; previousPrice: number | null; previousCurrency: string | null; price: number; currency: string; userId: string; reason: string; changedAtUtc: string }
+const priceHistory = ref<PriceChange[]>([])
+const priceVisible = ref(false)
+const priceBusy = ref(false)
+const priceError = ref('')
+const priceTarget = ref<StockSummary | null>(null)
+const priceAmount = ref<number | string>('')
+const priceCurrency = ref('INR')
+const priceReason = ref('')
+function openPrice(item: StockSummary) {
+  if (!canAdmin(item.warehouseId) || item.onHand <= 0) return
+  priceTarget.value = item
+  priceAmount.value = item.sellingPrice ?? ''
+  priceCurrency.value = item.sellingCurrency ?? 'INR'
+  priceReason.value = ''
+  priceError.value = ''
+  priceVisible.value = true
+}
+async function loadPriceHistory(item: StockSummary) {
+  const rows = await apiFetch<PriceChange[]>(`/api/inventory/stock/${item.id}/selling-price/history?warehouseId=${item.warehouseId}`)
+  if (selectedStock.value?.id === item.id) priceHistory.value = rows
+}
+async function savePrice() {
+  const item = priceTarget.value
+  if (!item || !canAdmin(item.warehouseId)) return
+  const amount = Number(priceAmount.value)
+  const currency = priceCurrency.value.trim().toUpperCase()
+  if (!Number.isFinite(amount) || amount <= 0 || !/^[A-Z]{3}$/.test(currency) || !priceReason.value.trim()) {
+    priceError.value = 'Enter a positive price, currency and reason.'
+    return
+  }
+  priceBusy.value = true
+  priceError.value = ''
+  try {
+    await apiFetch(`/api/inventory/stock/${item.id}/selling-price`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ warehouseId: item.warehouseId, price: amount, currency, reason: priceReason.value.trim() }) })
+    priceVisible.value = false
+    await loadStock()
+    const updated = stock.value.find(s => s.id === item.id)
+    if (updated && selectedStock.value?.id === item.id) await selectStock(updated)
+  } catch (e) { priceError.value = e instanceof Error ? e.message : 'Unable to save selling price.' }
+  finally { priceBusy.value = false }
+}
+
 const loading = ref(true)
 const detailsLoading = ref(false)
 const error = ref<string | null>(null)
@@ -409,6 +455,7 @@ async function selectStock(
   item: StockSummary,
 ) {
   selectedStock.value = item
+  priceHistory.value = []
   detailsLoading.value = true
   error.value = null
 
@@ -427,6 +474,7 @@ async function selectStock(
       await apiFetch<StockMovement[]>(
         `/api/inventory/movements?${params.toString()}`,
       )
+    await loadPriceHistory(item)
   } catch (exception) {
     movements.value = []
     error.value =
@@ -837,6 +885,21 @@ onMounted(async () => {
 
           <section class="inventory-movement-section">
             <div class="section-heading">
+              <div><h3>Selling price</h3><p>Per package · specific to this warehouse and batch</p></div>
+              <CButton v-if="canAdmin(selectedStock.warehouseId) && selectedStock.onHand > 0" size="sm" color="primary" variant="outline" @click="openPrice(selectedStock)">{{ selectedStock.sellingPrice == null ? 'Set price' : 'Change price' }}</CButton>
+            </div>
+            <strong>{{ selectedStock.sellingPrice == null ? 'Not priced' : selectedStock.sellingCurrency + ' ' + selectedStock.sellingPrice.toFixed(2) }}</strong>
+            <small v-if="selectedStock.sellingPriceUpdatedAtUtc" class="d-block">{{ formatDateTime(selectedStock.sellingPriceUpdatedAtUtc) }}</small>
+            <h4 class="mt-3">Price history</h4>
+            <div v-for="change in priceHistory" :key="change.id" class="border rounded p-2 mb-2">
+              <strong>{{ change.previousPrice == null ? 'Not priced' : change.previousCurrency + ' ' + change.previousPrice.toFixed(2) }} → {{ change.currency }} {{ change.price.toFixed(2) }}</strong>
+              <div>{{ change.reason }}</div><small>{{ formatDateTime(change.changedAtUtc) }} · User {{ change.userId }}</small>
+            </div>
+            <p v-if="!priceHistory.length" class="shipment-muted">No selling price changes recorded.</p>
+          </section>
+
+          <section class="inventory-movement-section">
+            <div class="section-heading">
               <div>
                 <h3>Recent movements</h3>
                 <p>
@@ -961,5 +1024,16 @@ onMounted(async () => {
       <label class="form-field">Remarks (required for discrepancies)<textarea v-model="receiptRemarks" maxlength="500" class="form-control"/></label>
     </CModalBody>
     <CModalFooter><CButton color="secondary" :disabled="transferBusy" @click="receipt = null">Cancel</CButton><CButton :disabled="transferBusy || !validReceipt" @click="receipt && transitionTransfer(receipt,'receive')">Confirm receipt</CButton></CModalFooter>
+  </CModal>
+  <CModal :visible="priceVisible" @close="!priceBusy && (priceVisible = false)">
+    <CModalHeader><CModalTitle>Warehouse selling price</CModalTitle></CModalHeader>
+    <CModalBody>
+      <p>{{ priceTarget?.warehouseName }} · {{ priceTarget?.batchCode || 'Legacy / unclassified' }}</p>
+      <p v-if="priceError" class="text-danger">{{ priceError }}</p>
+      <label class="form-field">Selling price per package<input v-model.number="priceAmount" type="number" min="0.01" step="0.01" class="form-control"></label>
+      <label class="form-field">Currency<input v-model.trim="priceCurrency" maxlength="3" class="form-control"></label>
+      <label class="form-field">Reason (required)<textarea v-model="priceReason" maxlength="500" class="form-control" rows="3"/></label>
+    </CModalBody>
+    <CModalFooter><CButton color="secondary" :disabled="priceBusy" @click="priceVisible = false">Cancel</CButton><CButton color="primary" :disabled="priceBusy || !priceReason.trim()" @click="savePrice">Save selling price</CButton></CModalFooter>
   </CModal>
 </template>

@@ -13,4 +13,4 @@ public sealed record StockSummaryResponse(
     string VarietyName = "",
     string WarehouseName = "",
     string WarehouseCode = "",
-    string OriginCountry = "", Guid BatchId = default, string? BatchCode = null, decimal? PackWeightKg = null, int? FruitsPerPack = null);
+    string OriginCountry = "", Guid BatchId = default, string? BatchCode = null, decimal? PackWeightKg = null, int? FruitsPerPack = null, decimal? SellingPrice = null, string? SellingCurrency = null, DateTimeOffset? SellingPriceUpdatedAtUtc = null);
