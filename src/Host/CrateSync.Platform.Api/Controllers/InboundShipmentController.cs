@@ -1,3 +1,4 @@
+using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkWarehouseDeliveryDelivered;
 using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
@@ -275,6 +276,20 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             : NoContent();
     }
 
+    [HttpPatch("{shipmentId:guid}/warehouse-deliveries/{deliveryId:guid}/deliver")]
+    public async Task<IActionResult> MarkWarehouseDeliveryDelivered(
+        Guid shipmentId, Guid deliveryId, CancellationToken cancellationToken)
+    {
+        if (!await accessService.IsTenantAdminAsync(cancellationToken))
+            return Forbid();
+
+        var result = await sender.Send(
+            new MarkWarehouseDeliveryDeliveredCommand(shipmentId, deliveryId),
+            cancellationToken);
+
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
+    }
+
     [HttpPatch("{shipmentId:guid}/warehouse-deliveries/{deliveryId:guid}/receive")]
     public async Task<IActionResult> ConfirmWarehouseDelivery(
         Guid shipmentId,
@@ -334,7 +349,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         var tenantWide = await accessService.HasTenantWideReadAsync(cancellationToken);
         var assigned = await accessService.GetAssignedWarehouseIdsAsync(cancellationToken);
         var visibleDeliveries = (result.Value.Deliveries ?? Array.Empty<ShipmentDeliveryResponse>())
-            .Where(x => tenantWide || (assigned.Contains(x.WarehouseId) && x.Status is "InTransit" or "Received"))
+            .Where(x => tenantWide || (assigned.Contains(x.WarehouseId) && x.Status is "DeliveredToWarehouse" or "Received"))
             .ToArray();
         if (!tenantWide && visibleDeliveries.Length == 0)
             return Forbid();
@@ -390,7 +405,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         {
             var shipment = await sender.Send(new GetShipmentQuery(summary.Id), cancellationToken);
             if (!shipment.IsFailure && shipment.Value.Deliveries?.Any(x =>
-                assigned.Contains(x.WarehouseId) && x.Status is "InTransit" or "Received") == true)
+                assigned.Contains(x.WarehouseId) && x.Status is "DeliveredToWarehouse" or "Received") == true)
                 visible.Add(summary);
         }
         return Ok(visible);
