@@ -18,6 +18,6 @@ internal sealed class GetStockMovementsQueryHandler(
             request.WarehouseId,
             request.ProductVarietyId,
             request.OriginCountry,
-            cancellationToken);
+            cancellationToken, request.BatchId);
     }
 }
