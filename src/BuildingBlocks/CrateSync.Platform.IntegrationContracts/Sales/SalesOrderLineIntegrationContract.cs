@@ -4,4 +4,4 @@ public sealed record SalesOrderLineIntegrationContract(
     Guid SalesOrderLineId,
     Guid ProductVarietyId,
     int Quantity,
-    string OriginCountry);
+    string OriginCountry, Guid BatchId = default);
