@@ -14,6 +14,11 @@ internal sealed class InventoryBalanceRepository(InventoryDbContext dbContext) :
         string originCountry,
         CancellationToken cancellationToken = default)
     {
+        return GetBatchAsync(tenantId, warehouseId, productVarietyId, originCountry, Guid.Empty, cancellationToken);
+    }
+
+    public Task<InventoryBalance?> GetBatchAsync(Guid tenantId, Guid warehouseId, Guid productVarietyId, string originCountry, Guid batchId, CancellationToken cancellationToken = default)
+    {
         var normalizedOrigin =
             originCountry.Trim().ToUpperInvariant();
 
@@ -24,7 +29,7 @@ internal sealed class InventoryBalanceRepository(InventoryDbContext dbContext) :
                 x => x.TenantId == tenantId &&
                      x.WarehouseId == warehouseId &&
                      x.ProductVarietyId == productVarietyId &&
-                     x.OriginCountry == normalizedOrigin,
+                     x.OriginCountry == normalizedOrigin && x.BatchId == batchId,
                 cancellationToken);
     }
 
