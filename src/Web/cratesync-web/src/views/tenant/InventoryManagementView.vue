@@ -48,6 +48,7 @@ interface StockSummary {
   sellingPrice: number | null
   sellingCurrency: string | null
   sellingPriceUpdatedAtUtc: string | null
+  originalReceivedAtUtc: string | null
 }
 
 interface StockMovement {
@@ -145,6 +146,36 @@ const detailsLoading = ref(false)
 const error = ref<string | null>(null)
 const warehouseFilter = ref('')
 const originFilter = ref('')
+const ageSort = ref('default')
+function ageDays(item: StockSummary) {
+  return item.originalReceivedAtUtc ? Math.max(0, Math.floor((Date.now() - Date.parse(item.originalReceivedAtUtc)) / 86400000)) : null
+}
+function ageLabel(item: StockSummary) {
+  const days = ageDays(item)
+  return days === null ? 'Unknown' : days === 0 ? 'Today' : days + ' days'
+}
+watch(ageSort, () => { page.value = 1 })
+interface FifoPlan { requested: number; allocated: number; shortfall: number; lines: { balanceId: string; batchId: string; batchCode: string | null; originalReceivedAtUtc: string; quantity: number; sellingPrice: number; currency: string }[] }
+const fifoQuantity = ref<number | string>('')
+const fifoPlan = ref<FifoPlan | null>(null)
+const fifoError = ref('')
+const fifoBusy = ref(false)
+watch(selectedStock, () => { fifoPlan.value = null; fifoError.value = ''; fifoQuantity.value = '' })
+async function previewFifo() {
+  const item = selectedStock.value
+  const quantity = Number(fifoQuantity.value)
+  if (!item || !item.sellingCurrency || !Number.isInteger(quantity) || quantity <= 0) return
+  fifoBusy.value = true; fifoError.value = ''; fifoPlan.value = null
+  try {
+    const params = new URLSearchParams({ warehouseId: item.warehouseId, productVarietyId: item.productVarietyId, originCountry: item.originCountry, currency: item.sellingCurrency, quantity: String(quantity) })
+    if (item.fruitsPerPack != null) params.set('fruitsPerPack', String(item.fruitsPerPack))
+    else if (item.packWeightKg != null) params.set('packWeightKg', String(item.packWeightKg))
+    const plan = await apiFetch<FifoPlan>(`/api/inventory/fifo-plan?${params}`)
+    if (selectedStock.value?.id === item.id) fifoPlan.value = plan
+  } catch (e) { fifoError.value = e instanceof Error ? e.message : 'Unable to plan allocation.' }
+  finally { fifoBusy.value = false }
+}
+
 const search = ref('')
 const page = ref(1)
 const pageSize = ref(10)
@@ -186,7 +217,7 @@ const filteredStock = computed(() => {
   const term =
     search.value.trim().toLowerCase()
 
-  return stock.value.filter((item) => {
+  const rows = stock.value.filter((item) => {
     if (
       originFilter.value &&
       item.originCountry !== originFilter.value
@@ -200,6 +231,7 @@ const filteredStock = computed(() => {
     return [
       item.productName,
       item.varietyName,
+      item.batchCode,
       item.warehouseName,
       item.warehouseCode,
       item.originCountry,
@@ -212,6 +244,12 @@ const filteredStock = computed(() => {
           .includes(term),
       )
   })
+  if (ageSort.value !== 'default') rows.sort((a,b) => {
+    if (!a.originalReceivedAtUtc) return b.originalReceivedAtUtc ? 1 : 0
+    if (!b.originalReceivedAtUtc) return -1
+    return (Date.parse(a.originalReceivedAtUtc) - Date.parse(b.originalReceivedAtUtc)) * (ageSort.value === 'oldest' ? 1 : -1)
+  })
+  return rows
 })
 
 const totalCount = computed(
@@ -619,6 +657,7 @@ onMounted(async () => {
         </select>
       </label>
 
+      <label class="inventory-warehouse-filter"><span>Stock age</span><select v-model="ageSort" class="form-select"><option value="default">Default order</option><option value="oldest">Oldest first</option><option value="newest">Newest first</option></select></label>
       <label class="search-field inventory-search">
         <i
           class="cil-search"
@@ -691,7 +730,7 @@ onMounted(async () => {
                   </strong>
                 </td>
                 <td>
-                  {{ item.varietyName }} · {{ item.batchCode || 'Legacy / unclassified' }} · {{ item.fruitsPerPack != null ? item.fruitsPerPack + ' fruits' : item.packWeightKg != null ? item.packWeightKg + ' kg' : 'Unknown pack' }}
+                  {{ item.varietyName }} · {{ item.batchCode || 'Legacy / unclassified' }} · {{ item.fruitsPerPack != null ? item.fruitsPerPack + ' fruits' : item.packWeightKg != null ? item.packWeightKg + ' kg' : 'Unknown pack' }}<small class="d-block">Age: {{ ageLabel(item) }}</small>
                 </td>
                 <td>
                   <div class="inventory-origin-cell">
@@ -754,7 +793,7 @@ onMounted(async () => {
                   {{ item.productName }}
                 </strong>
                 <span>
-                  {{ item.varietyName }}
+                  {{ item.varietyName }} · {{ item.batchCode || 'Legacy / unclassified' }} · Age: {{ ageLabel(item) }}
                 </span>
               </div>
 
@@ -861,6 +900,15 @@ onMounted(async () => {
               {{ stockStatus(selectedStock).label }}
             </span>
           </header>
+
+          <section class="inventory-movement-section"><h3>Stock age</h3><strong>{{ ageLabel(selectedStock) }}</strong><p>Original receipt: {{ selectedStock.originalReceivedAtUtc ? formatDateTime(selectedStock.originalReceivedAtUtc) : 'Unknown' }}</p><small>Age is measured from original warehouse receipt, not harvest or expiry.</small></section>
+          <section v-if="selectedStock.sellingCurrency && selectedStock.batchCode && (selectedStock.packWeightKg != null || selectedStock.fruitsPerPack != null)" class="inventory-movement-section">
+            <h3>FIFO allocation preview</h3><p>Find oldest available, priced batches matching this warehouse, variety, origin, pack and currency. No stock is reserved.</p>
+            <label class="form-field">Requested packages<input v-model.number="fifoQuantity" type="number" min="1" step="1" class="form-control"></label>
+            <CButton size="sm" :disabled="fifoBusy || Number(fifoQuantity)<=0" @click="previewFifo">Preview allocation</CButton>
+            <p v-if="fifoError" class="text-danger">{{ fifoError }}</p>
+            <div v-if="fifoPlan" class="mt-2"><strong>{{ fifoPlan.allocated }} allocated in preview · {{ fifoPlan.shortfall }} shortfall</strong><div v-for="line in fifoPlan.lines" :key="line.balanceId" class="border rounded p-2 mt-1">{{ line.batchCode }} · {{ line.quantity }} packages · {{ line.currency }} {{ line.sellingPrice.toFixed(2) }} / pack<br><small>Original receipt: {{ formatDateTime(line.originalReceivedAtUtc) }}</small></div></div>
+          </section>
 
           <section class="inventory-detail-kpis">
             <article>
