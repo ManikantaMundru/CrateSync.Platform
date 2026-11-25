@@ -1,3 +1,4 @@
+using CrateSync.Platform.Inventory.Application.Stock.GetStock;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Sales;
@@ -88,6 +89,26 @@ public sealed class SalesOrderController(
             : StatusCode(
                 StatusCodes.Status201Created,
                 result.Value);
+    }
+
+    public sealed record AddBatchLineRequest(Guid ProductVarietyId, string OriginCountry, Guid BatchId, int Quantity);
+
+    [HttpPost("{id:guid}/batch-lines")]
+    public async Task<IActionResult> AddBatchLine(Guid id, [FromBody] AddBatchLineRequest request, CancellationToken cancellationToken)
+    {
+        var order = await sender.Send(new GetSalesOrderQuery(id), cancellationToken);
+        if (order.IsFailure) return this.ToProblem(order.Error);
+        if (!await accessService.CanAdminWarehouseAsync(order.Value.WarehouseId, cancellationToken)) return Forbid();
+        if (request.BatchId == Guid.Empty || request.Quantity <= 0 || string.IsNullOrWhiteSpace(request.OriginCountry)) return BadRequest();
+        var stock = await sender.Send(new GetStockQuery(order.Value.WarehouseId, request.ProductVarietyId, request.OriginCountry, request.BatchId), cancellationToken);
+        if (stock.IsFailure) return this.ToProblem(stock.Error);
+        var row = stock.Value;
+        if (row.Available < request.Quantity || row.SellingPrice is not > 0 || string.IsNullOrWhiteSpace(row.SellingCurrency) ||
+            string.IsNullOrWhiteSpace(row.BatchCode) || (row.PackWeightKg.HasValue == row.FruitsPerPack.HasValue))
+            return Conflict(new { title = "Stock is insufficient, unpriced or unclassified." });
+        var result = await sender.Send(new AddSalesOrderLineCommand(id, row.ProductVarietyId, request.Quantity,
+            row.PackWeightKg ?? (decimal)row.FruitsPerPack!.Value, row.SellingPrice.Value, row.SellingCurrency, row.OriginCountry, row.BatchId, row.BatchCode, row.FruitsPerPack), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : StatusCode(201, result.Value);
     }
 
     [HttpPut("{id:guid}/lines/{lineId:guid}")]
