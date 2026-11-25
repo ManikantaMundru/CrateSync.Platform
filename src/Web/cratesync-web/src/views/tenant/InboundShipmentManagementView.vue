@@ -18,6 +18,11 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const isOwner = computed(() => auth.me?.currentTenant?.accessMode === 'SuperAdmin' || auth.me?.currentTenant?.roles.includes('TenantOwner') === true)
+const canOperate = computed(() => isOwner.value || (auth.me?.currentTenant?.roles.includes('TenantAdmin') === true && auth.me?.currentTenant?.roles.includes('Finance') !== true))
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import InboundShipmentForm from '@/components/inbound-shipments/InboundShipmentForm.vue'
@@ -783,6 +788,7 @@ onMounted(async () => {
       <CButton
         color="primary"
         class="users-add-button"
+        v-if="isOwner"
         @click="openCreate"
       >
         <i class="button-icon cil-plus" aria-hidden="true" />
@@ -957,7 +963,7 @@ onMounted(async () => {
 
           <div class="shipment-actions">
             <CButton
-              v-if="selectedShipment.status === 'Draft'"
+              v-if="canOperate && selectedShipment.status === 'Draft'"
               color="primary"
               size="sm"
               @click="transition('ship')"
@@ -965,7 +971,7 @@ onMounted(async () => {
               Mark shipped
             </CButton>
             <CButton
-              v-if="selectedShipment.status === 'Shipped'"
+              v-if="canOperate && selectedShipment.status === 'Shipped'"
               color="primary"
               size="sm"
               @click="transition('arrive')"
@@ -1015,6 +1021,7 @@ onMounted(async () => {
                 color="secondary"
                 variant="outline"
                 size="sm"
+                v-if="canOperate"
                 @click="openClearance"
               >
                 Update clearance
@@ -1114,7 +1121,7 @@ onMounted(async () => {
 
               <CButton
                 v-if="
-                  selectedShipment.isClearedForWarehouseDispatch &&
+                  canOperate && selectedShipment.isClearedForWarehouseDispatch &&
                   ['Arrived', 'Receiving', 'PartiallyReceived'].includes(
                     selectedShipment.status,
                   ) &&
@@ -1222,7 +1229,7 @@ onMounted(async () => {
 
                 <div class="warehouse-delivery-actions">
                   <CButton
-                    v-if="delivery.status === 'Planned'"
+                    v-if="canOperate && delivery.status === 'Planned'"
                     color="primary"
                     variant="outline"
                     size="sm"
@@ -1237,7 +1244,7 @@ onMounted(async () => {
                   </CButton>
 
                   <CButton
-                    v-if="delivery.status === 'InTransit'"
+                    v-if="canOperate && delivery.status === 'InTransit'"
                     color="primary"
                     size="sm"
                     :disabled="saving"
@@ -1305,6 +1312,7 @@ onMounted(async () => {
                 color="secondary"
                 variant="outline"
                 size="sm"
+                v-if="canOperate"
                 @click="openDocument"
               >
                 Add reference
