@@ -10,7 +10,7 @@ public sealed record ShipmentLineReceivedIntegrationEvent(
     Guid ProductVarietyId,
     string OriginCountry,
     int Quantity,
-    DateTimeOffset OccurredAtUtc) : IIntegrationEvent
+    DateTimeOffset OccurredAtUtc, Guid BatchId = default, string? BatchCode = null, decimal? PackWeightKg = null, int? FruitsPerPack = null) : IIntegrationEvent
 {
     public Guid Id { get; } = Guid.NewGuid();
 }
