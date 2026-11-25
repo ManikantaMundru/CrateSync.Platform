@@ -8,6 +8,10 @@ internal sealed class TransferStockCommandValidator
     public TransferStockCommandValidator()
     {
         RuleFor(x => x.TransferId).NotEmpty();
+        RuleFor(x => x.TransportCompany).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.DriverName).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.DriverPhone).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.VehicleNumber).MaximumLength(50);
         RuleFor(x => x.SourceWarehouseId).NotEmpty();
         RuleFor(x => x.DestinationWarehouseId).NotEmpty();
 

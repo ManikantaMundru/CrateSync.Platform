@@ -8,4 +8,4 @@ public sealed record TransferStockRequest(
     string OriginCountry,
     int Quantity,
     string? TransferReference,
-    string? Remarks, Guid BatchId = default);
+    string? Remarks, Guid BatchId = default, string TransportCompany = "", string DriverName = "", string DriverPhone = "", string? VehicleNumber = null);

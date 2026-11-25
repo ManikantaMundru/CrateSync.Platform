@@ -11,4 +11,4 @@ public sealed record TransferStockCommand(
     string OriginCountry,
     int Quantity,
     string? TransferReference,
-    string? Remarks, Guid BatchId = default) : ICommand<Result>;
+    string? Remarks, Guid BatchId = default, string TransportCompany = "", string DriverName = "", string DriverPhone = "", string? VehicleNumber = null) : ICommand<Result>;

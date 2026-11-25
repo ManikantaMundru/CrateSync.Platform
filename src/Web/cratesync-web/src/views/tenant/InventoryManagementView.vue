@@ -10,6 +10,7 @@ import {
   CCard,
   CCardBody,
   CSpinner,
+  CModal, CModalHeader, CModalTitle, CModalBody, CModalFooter,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -59,7 +60,31 @@ interface StockMovement {
   occurredAtUtc: string
 }
 
+interface TransferRow { id: string; sourceWarehouseId: string; destinationWarehouseId: string; productVarietyId: string; batchCode: string | null; originCountry: string; packWeightKg: number | null; fruitsPerPack: number | null; quantity: number; status: string; transportCompany: string; driverName: string; driverPhone: string; vehicleNumber: string | null; transferReference: string | null; accepted: number | null; damaged: number | null; missing: number | null; receivingRemarks: string | null }
+const transfers = ref<TransferRow[]>([])
+const transferError = ref('')
+const transferBusy = ref(false)
+const receipt = ref<TransferRow | null>(null)
+const accepted = ref(0), damaged = ref(0), missing = ref(0), receiptRemarks = ref('')
 const viewMode = ref<'list' | 'transfer'>('list')
+function canAdmin(id: string) { return tenantOperations.value || auth.me?.currentTenant?.warehouses.some(w => w.warehouseId === id && w.role === 'WarehouseAdmin') === true }
+function warehouseName(id: string) { return warehouses.value.find(w => w.id === id)?.name ?? transferDestinations.value.find(w => w.id === id)?.name ?? id }
+async function loadTransfers() {
+  try { transfers.value = await apiFetch<TransferRow[]>('/api/inventory/transfers') }
+  catch (e) { transferError.value = e instanceof Error ? e.message : 'Unable to load transfers.' }
+}
+function openReceipt(t: TransferRow) { receipt.value = t; accepted.value = t.quantity; damaged.value = 0; missing.value = 0; receiptRemarks.value = ''; transferError.value = '' }
+const validReceipt = computed(() => !!receipt.value && [accepted.value, damaged.value, missing.value].every(n => Number.isInteger(n) && n >= 0) && accepted.value + damaged.value + missing.value === receipt.value.quantity && (!(damaged.value || missing.value) || !!receiptRemarks.value.trim()))
+async function transitionTransfer(t: TransferRow, action: string) {
+  transferBusy.value = true; transferError.value = ''
+  try {
+    await apiFetch(`/api/inventory/transfers/${t.id}/${action}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(action === 'receive' ? { accepted: accepted.value, damaged: damaged.value, missing: missing.value, remarks: receiptRemarks.value.trim() || null } : {}) })
+    receipt.value = null; selectedStock.value = null; movements.value = []
+    await Promise.all([loadStock(), loadTransfers()])
+  } catch (e) { transferError.value = e instanceof Error ? e.message : 'Unable to update transfer.' }
+  finally { transferBusy.value = false }
+}
+
 const warehouses = ref<WarehouseSummary[]>([])
 const auth = useAuthStore()
 const transferDestinations = ref<WarehouseSummary[]>([])
@@ -311,7 +336,7 @@ async function handleTransferCompleted(
   batchId: string,
 ) {
   viewMode.value = 'list'
-  await loadStock()
+  await Promise.all([loadStock(), loadTransfers()])
 
   const destination =
     stock.value.find(
@@ -416,7 +441,8 @@ async function selectStock(
 onMounted(async () => {
   try {
     await loadReferenceData()
-    await loadStock()
+    if (canTransfer.value) transferDestinations.value = await apiFetch<WarehouseSummary[]>('/api/inventory/transfer-destinations')
+    await Promise.all([loadStock(), loadTransfers()])
   } catch (exception) {
     error.value =
       exception instanceof Error
@@ -908,4 +934,32 @@ onMounted(async () => {
       </aside>
     </div>
   </section>
+  <section v-if="viewMode === 'list'" class="mt-3">
+    <h3>Warehouse transfers</h3>
+    <p>Planned transfers reserve stock; dispatched transfers remain in transit until received.</p>
+    <p v-if="transferError" class="text-danger">{{ transferError }}</p>
+    <div v-for="t in transfers" :key="t.id" class="border rounded p-3 mb-2">
+      <strong>{{ t.transferReference || t.id.slice(0,8) }} · {{ friendly(t.status) }}</strong>
+      <div>{{ warehouseName(t.sourceWarehouseId) }} → {{ warehouseName(t.destinationWarehouseId) }}</div>
+      <div>{{ t.batchCode || 'Legacy / unclassified' }} · {{ t.originCountry }} · {{ t.quantity }} packages · {{ t.fruitsPerPack != null ? t.fruitsPerPack + ' fruits/pack' : t.packWeightKg != null ? t.packWeightKg + ' kg/pack' : 'Unknown pack' }}</div>
+      <div>{{ t.transportCompany }} · {{ t.driverName }} · {{ t.driverPhone }} · {{ t.vehicleNumber || 'No vehicle number' }}</div>
+      <div v-if="t.accepted != null">{{ t.accepted }} accepted · {{ t.damaged }} damaged · {{ t.missing }} missing · {{ t.receivingRemarks }}</div>
+      <CButton v-if="t.status === 'Planned' && canAdmin(t.sourceWarehouseId)" size="sm" :disabled="transferBusy" @click="transitionTransfer(t,'dispatch')">Dispatch</CButton>
+      <CButton v-if="t.status === 'Planned' && canAdmin(t.sourceWarehouseId)" size="sm" color="secondary" :disabled="transferBusy" @click="transitionTransfer(t,'cancel')">Cancel</CButton>
+      <CButton v-if="t.status === 'InTransit' && canAdmin(t.destinationWarehouseId)" size="sm" :disabled="transferBusy" @click="openReceipt(t)">Confirm receipt</CButton>
+    </div>
+    <p v-if="!transfers.length">No transfers recorded.</p>
+  </section>
+  <CModal :visible="receipt !== null" @close="!transferBusy && (receipt = null)">
+    <CModalHeader><CModalTitle>Inspect transferred packages</CModalTitle></CModalHeader>
+    <CModalBody>
+      <p>{{ receipt?.quantity }} expected packages</p>
+      <p v-if="transferError" class="text-danger">{{ transferError }}</p>
+      <label class="form-field">Accepted<input v-model.number="accepted" type="number" min="0" step="1" class="form-control"></label>
+      <label class="form-field">Damaged<input v-model.number="damaged" type="number" min="0" step="1" class="form-control"></label>
+      <label class="form-field">Missing<input v-model.number="missing" type="number" min="0" step="1" class="form-control"></label>
+      <label class="form-field">Remarks (required for discrepancies)<textarea v-model="receiptRemarks" maxlength="500" class="form-control"/></label>
+    </CModalBody>
+    <CModalFooter><CButton color="secondary" :disabled="transferBusy" @click="receipt = null">Cancel</CButton><CButton :disabled="transferBusy || !validReceipt" @click="receipt && transitionTransfer(receipt,'receive')">Confirm receipt</CButton></CModalFooter>
+  </CModal>
 </template>

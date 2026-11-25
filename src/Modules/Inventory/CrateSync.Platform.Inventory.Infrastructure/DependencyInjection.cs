@@ -23,6 +23,7 @@ public static class DependencyInjection
                 sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "inventory")));
 
         services.AddScoped<IInventoryBalanceRepository, InventoryBalanceRepository>();
+        services.AddScoped<IWarehouseTransferRepository, WarehouseTransferRepository>();
         services.AddScoped<IInventoryUnitOfWork, InventoryUnitOfWork>();
         services.AddScoped<IInventoryReadService, InventoryReadService>();
 

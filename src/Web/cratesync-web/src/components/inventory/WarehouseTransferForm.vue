@@ -64,6 +64,7 @@ const form = reactive({
   quantity: 0,
   transferReference: '',
   remarks: '',
+  transportCompany: '', driverName: '', driverPhone: '', vehicleNumber: '',
 })
 
 const sourcePositions = computed(() =>
@@ -172,6 +173,7 @@ async function submitTransfer() {
     return
   }
 
+  if (!form.transportCompany.trim() || !form.driverName.trim() || !form.driverPhone.trim() || !Number.isInteger(form.quantity)) { error.value = 'Enter transport company, driver, phone and a whole package quantity.'; return }
   saving.value = true
   error.value = null
 
@@ -186,6 +188,7 @@ async function submitTransfer() {
         },
         body: JSON.stringify({
           transferId: form.transferId,
+          transportCompany: form.transportCompany.trim(), driverName: form.driverName.trim(), driverPhone: form.driverPhone.trim(), vehicleNumber: form.vehicleNumber.trim() || null,
           sourceWarehouseId:
             form.sourceWarehouseId,
           destinationWarehouseId:
@@ -239,7 +242,7 @@ async function submitTransfer() {
           <h1>Warehouse transfer</h1>
         </div>
         <p>
-          Move available stock between warehouses and keep both inventory movements linked.
+          Reserve stock for dispatch. Destination inventory changes only after physical receipt.
         </p>
       </div>
     </header>
@@ -252,6 +255,15 @@ async function submitTransfer() {
         {{ error }}
       </div>
 
+      <section class="shipment-create-section">
+        <h3>Transport details</h3>
+        <div class="shipment-core-grid">
+          <label class="form-field"><span>Transport company *</span><input v-model="form.transportCompany" maxlength="150" class="form-control"></label>
+          <label class="form-field"><span>Driver name *</span><input v-model="form.driverName" maxlength="150" class="form-control"></label>
+          <label class="form-field"><span>Driver phone *</span><input v-model="form.driverPhone" maxlength="50" class="form-control"></label>
+          <label class="form-field"><span>Vehicle number</span><input v-model="form.vehicleNumber" maxlength="50" class="form-control"></label>
+        </div>
+      </section>
       <section class="shipment-create-section">
         <div class="shipment-create-section-heading">
           <div class="shipment-section-title">
@@ -480,7 +492,7 @@ async function submitTransfer() {
             size="sm"
             class="me-2"
           />
-          Confirm transfer
+          Create transfer
         </CButton>
       </div>
     </footer>

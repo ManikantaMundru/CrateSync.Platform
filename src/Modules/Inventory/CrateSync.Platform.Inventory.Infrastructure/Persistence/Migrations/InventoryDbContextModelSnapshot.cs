@@ -79,6 +79,40 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                     b.ToTable("InventoryBalances", "inventory");
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.Inventory.Domain.Stock.WarehouseTransfer", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("TenantId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("SourceWarehouseId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("DestinationWarehouseId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("ProductVarietyId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("OriginCountry").IsRequired().HasMaxLength(2).HasColumnType("nvarchar(2)");
+                    b.Property<Guid>("BatchId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("BatchCode").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<decimal?>("PackWeightKg").HasColumnType("decimal(18,3)");
+                    b.Property<int?>("FruitsPerPack").HasColumnType("int");
+                    b.Property<int>("Quantity").HasColumnType("int");
+                    b.Property<string>("Status").IsConcurrencyToken().IsRequired().HasMaxLength(40).HasColumnType("nvarchar(40)");
+                    b.Property<string>("TransportCompany").IsRequired().HasMaxLength(150).HasColumnType("nvarchar(150)");
+                    b.Property<string>("DriverName").IsRequired().HasMaxLength(150).HasColumnType("nvarchar(150)");
+                    b.Property<string>("DriverPhone").IsRequired().HasMaxLength(50).HasColumnType("nvarchar(50)");
+                    b.Property<string>("VehicleNumber").HasMaxLength(50).HasColumnType("nvarchar(50)");
+                    b.Property<string>("TransferReference").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("Remarks").HasMaxLength(250).HasColumnType("nvarchar(250)");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset?>("DispatchedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset?>("ReceivedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<DateTimeOffset?>("CancelledAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<int?>("Accepted").HasColumnType("int");
+                    b.Property<int?>("Damaged").HasColumnType("int");
+                    b.Property<int?>("Missing").HasColumnType("int");
+                    b.Property<string>("ReceivingRemarks").HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.HasKey("Id");
+                    b.HasIndex("TenantId", "SourceWarehouseId");
+                    b.HasIndex("TenantId", "DestinationWarehouseId");
+                    b.ToTable("WarehouseTransfers", "inventory");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.Inventory.Domain.Stock.StockMovement", b =>
                 {
                     b.Property<Guid>("Id")

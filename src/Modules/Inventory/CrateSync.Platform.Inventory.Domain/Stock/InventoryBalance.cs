@@ -182,6 +182,30 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         return true;
     }
 
+    public void ReserveForTransfer(CrateQuantity quantity, StockReference reference, DateTimeOffset now)
+    {
+        if (quantity.Value > Available) throw new InsufficientStockException(Available, quantity.Value);
+        Reserved = new StockQuantity(Reserved.Value + quantity.Value);
+        UpdatedAtUtc = now;
+        AddMovement(StockMovementType.Reserved, 0, quantity.Value, reference, null, now);
+    }
+
+    public void ReleaseTransfer(CrateQuantity quantity, StockReference reference, DateTimeOffset now)
+    {
+        if (!_movements.Any(m => m.Type == StockMovementType.Reserved && m.Reference == reference && m.ReservedChange == quantity.Value)
+            || _movements.Any(m => m.Reference == reference && (m.Type == StockMovementType.ReservationReleased || m.Type == StockMovementType.TransferOut)))
+            throw new InvalidOperationException("Transfer reservation is not active.");
+        Reserved = new StockQuantity(Reserved.Value - quantity.Value);
+        UpdatedAtUtc = now;
+        AddMovement(StockMovementType.ReservationReleased, 0, -quantity.Value, reference, null, now);
+    }
+
+    public void DispatchTransfer(CrateQuantity quantity, StockReference reference, DateTimeOffset now)
+    {
+        ReleaseTransfer(quantity, reference, now);
+        TransferOut(quantity, reference, null, now);
+    }
+
     public bool TransferOut(
         CrateQuantity quantity,
         StockReference reference,
