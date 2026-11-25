@@ -28,6 +28,11 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("BatchId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("BatchCode").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<decimal?>("PackWeightKg").HasColumnType("decimal(18,3)");
+                    b.Property<int?>("FruitsPerPack").HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -68,7 +73,7 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "WarehouseId");
 
-                    b.HasIndex("TenantId", "WarehouseId", "ProductVarietyId", "OriginCountry")
+                    b.HasIndex("TenantId", "WarehouseId", "ProductVarietyId", "OriginCountry", "BatchId")
                         .IsUnique();
 
                     b.ToTable("InventoryBalances", "inventory");
