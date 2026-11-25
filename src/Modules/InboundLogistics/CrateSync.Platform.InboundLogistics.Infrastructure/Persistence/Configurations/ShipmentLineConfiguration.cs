@@ -57,21 +57,13 @@ internal sealed class ShipmentLineConfiguration : IEntityTypeConfiguration<Shipm
             .HasColumnType("decimal(18,3)")
             .IsRequired();
 
-        builder.OwnsOne(x => x.UnitCost, money =>
-        {
-            money.Property(x => x.Amount)
-                .HasColumnName("UnitCost")
-                .HasColumnType("decimal(18,2)")
-                .IsRequired();
-
-            money.OwnsOne(x => x.Currency, currency =>
-            {
-                currency.Property(x => x.Code)
-                    .HasColumnName("Currency")
-                    .HasMaxLength(3)
-                    .IsRequired();
-            });
-        });
+        builder.Ignore(x => x.UnitCost);
+        builder.Property(x => x.PurchaseCostAmount)
+            .HasColumnName("UnitCost")
+            .HasColumnType("decimal(18,2)");
+        builder.Property(x => x.PurchaseCostCurrency)
+            .HasColumnName("Currency")
+            .HasMaxLength(3);
 
         builder.HasIndex("ShipmentId");
 
