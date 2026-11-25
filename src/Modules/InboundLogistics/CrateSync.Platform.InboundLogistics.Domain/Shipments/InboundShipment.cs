@@ -469,6 +469,20 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         UpdatedAtUtc = occurredOnUtc;
     }
 
+    public void MarkWarehouseDeliveryDelivered(
+        ShipmentDeliveryId deliveryId,
+        DateTimeOffset occurredOnUtc)
+    {
+        if (Status == ShipmentStatus.Cancelled)
+            throw new InvalidOperationException("A cancelled shipment cannot be delivered.");
+        var delivery = _deliveries.SingleOrDefault(x => x.Id == deliveryId)
+            ?? throw new InvalidOperationException("Warehouse delivery was not found.");
+        if (delivery.Status == ShipmentDeliveryStatus.DeliveredToWarehouse)
+            return;
+        delivery.MarkDelivered();
+        UpdatedAtUtc = occurredOnUtc;
+    }
+
     public IReadOnlyCollection<ShipmentReceipt> ConfirmWarehouseDelivery(
         ShipmentDeliveryId deliveryId,
         DateTimeOffset occurredOnUtc)
@@ -484,8 +498,8 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 .ToArray();
         }
 
-        if (delivery.Status != ShipmentDeliveryStatus.InTransit)
-            throw new InvalidOperationException("Only in-transit deliveries can be received.");
+        if (delivery.Status != ShipmentDeliveryStatus.DeliveredToWarehouse)
+            throw new InvalidOperationException("Only delivered transports can be received.");
 
         var receipts = new List<ShipmentReceipt>();
 
