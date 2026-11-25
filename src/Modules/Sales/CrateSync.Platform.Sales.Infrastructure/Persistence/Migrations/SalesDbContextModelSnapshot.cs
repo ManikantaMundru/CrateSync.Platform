@@ -112,6 +112,10 @@ namespace CrateSync.Platform.Sales.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("SalesOrderId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("BatchId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("BatchCode").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<int?>("FruitsPerPack").HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ProductVarietyId", "OriginCountry");

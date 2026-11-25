@@ -151,8 +151,13 @@ export const router = createRouter({
             title: 'Inventory',
           },
         },
+        {
+          path: 'tenant/:tenantId/sales',
+          name: 'sales',
+          component: () => import('@/views/tenant/SalesManagementView.vue'),
+          meta: { requiresTenant: true, title: 'Sales' },
+        },
         ...[
-          ['sales', 'Sales'],
           ['finance', 'Finance'],
         ].map(([path, title]) => ({
           path: `tenant/:tenantId/${path}`,

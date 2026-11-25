@@ -20,6 +20,7 @@ internal sealed class SalesOrderLineConfiguration : IEntityTypeConfiguration<Sal
             .IsRequired();
 
         builder.Property(x => x.ProductVarietyId).IsRequired();
+        builder.Property(x => x.BatchCode).HasMaxLength(100);
 
         builder.Property(x => x.OriginCountry)
             .HasMaxLength(2)

@@ -33,7 +33,7 @@ internal sealed class AddSalesOrderLineCommandHandler(
                 new PackSize(request.PackSize),
                 new Money(request.UnitPrice, new Currency(request.Currency)),
                 timeProvider.GetUtcNow(),
-                request.OriginCountry);
+                request.OriginCountry, request.BatchId, request.BatchCode, request.FruitsPerPack);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result<Guid>.Success(line.Id.Value);

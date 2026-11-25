@@ -13,17 +13,23 @@ public sealed class SalesOrderLine : Entity<SalesOrderLineId>
         CrateQuantity quantity,
         PackSize packSize,
         Money unitPrice,
-        string originCountry)
+        string originCountry, Guid batchId = default, string? batchCode = null, int? fruitsPerPack = null)
         : base(id)
     {
         if (productVarietyId == Guid.Empty) throw new ArgumentException("Product variety ID cannot be empty.", nameof(productVarietyId));
         ProductVarietyId = productVarietyId;
         OriginCountry = NormalizeOriginCountry(originCountry);
+        BatchId = batchId;
+        BatchCode = batchCode;
+        FruitsPerPack = fruitsPerPack;
         Quantity = quantity;
         PackSize = packSize;
         UnitPrice = unitPrice;
     }
 
+    public Guid BatchId { get; private set; }
+    public string? BatchCode { get; private set; }
+    public int? FruitsPerPack { get; private set; }
     public Guid ProductVarietyId { get; private set; }
     public string OriginCountry { get; private set; } = null!;
     public CrateQuantity Quantity { get; private set; }
@@ -33,6 +39,7 @@ public sealed class SalesOrderLine : Entity<SalesOrderLineId>
 
     internal void Update(CrateQuantity quantity, PackSize packSize, Money unitPrice)
     {
+        if (BatchId != Guid.Empty) throw new InvalidOperationException("Remove and re-add a batch line to change its quantity or price.");
         Quantity = quantity;
         PackSize = packSize;
         UnitPrice = unitPrice;

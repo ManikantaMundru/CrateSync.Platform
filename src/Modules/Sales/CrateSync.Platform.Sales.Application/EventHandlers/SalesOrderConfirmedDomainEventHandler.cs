@@ -29,7 +29,7 @@ internal sealed class SalesOrderConfirmedDomainEventHandler(
                     x.Id.Value,
                     x.ProductVarietyId,
                     x.Quantity.Value,
-                    x.OriginCountry))
+                    x.OriginCountry, x.BatchId))
             .ToArray();
 
         await publisher.Publish(

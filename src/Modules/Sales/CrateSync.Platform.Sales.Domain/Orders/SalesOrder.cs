@@ -82,9 +82,10 @@ public sealed class SalesOrder : AggregateRoot<SalesOrderId>
         PackSize packSize,
         Money unitPrice,
         DateTimeOffset occurredAtUtc,
-        string originCountry = "ZZ")
+        string originCountry = "ZZ", Guid batchId = default, string? batchCode = null, int? fruitsPerPack = null)
     {
         EnsureDraft();
+        if (batchId != Guid.Empty && (string.IsNullOrWhiteSpace(batchCode) || batchCode.Length > 100 || fruitsPerPack is <= 0)) throw new InvalidOperationException("Invalid batch packaging.");
 
         if (string.IsNullOrWhiteSpace(originCountry))
             throw new ArgumentException(
@@ -96,7 +97,7 @@ public sealed class SalesOrder : AggregateRoot<SalesOrderId>
 
         if (_lines.Any(x =>
                 x.ProductVarietyId == productVarietyId &&
-                x.OriginCountry == normalizedOrigin))
+                x.OriginCountry == normalizedOrigin && x.BatchId == batchId))
         {
             throw new InvalidOperationException(
                 "Product variety and origin already exist on this order.");
@@ -110,7 +111,7 @@ public sealed class SalesOrder : AggregateRoot<SalesOrderId>
             quantity,
             packSize,
             unitPrice,
-            normalizedOrigin);
+            normalizedOrigin, batchId, batchCode, fruitsPerPack);
 
         _lines.Add(line);
         UpdatedAtUtc = occurredAtUtc;
