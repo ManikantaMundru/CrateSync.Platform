@@ -14,13 +14,11 @@ using CrateSync.Platform.Sales.Application.Orders.UpdateOrderLine;
 using CrateSync.Platform.Sales.Domain.Orders;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 
 namespace CrateSync.Platform.Api.Controllers;
 
 [ApiController]
 [Route("api/sales-orders")]
-[Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
 public sealed class SalesOrderController(
     ISender sender,
     ICurrentTenantAccessService accessService)
@@ -31,7 +29,7 @@ public sealed class SalesOrderController(
         [FromBody] CreateSalesOrderRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.CanOperateWarehouseAsync(
+        if (!await accessService.CanAdminWarehouseAsync(
                 request.WarehouseId,
                 cancellationToken))
         {
@@ -299,7 +297,7 @@ public sealed class SalesOrderController(
         if (order.IsFailure)
             return this.ToProblem(order.Error);
 
-        return await accessService.CanOperateWarehouseAsync(
+        return await accessService.CanAdminWarehouseAsync(
                 order.Value.WarehouseId,
                 cancellationToken)
             ? null
