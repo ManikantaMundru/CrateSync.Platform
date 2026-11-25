@@ -308,6 +308,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
     public async Task<IActionResult> ConfirmWarehouseDelivery(
         Guid shipmentId,
         Guid deliveryId,
+        [FromBody] WarehouseReceiptInspection[] inspections,
         CancellationToken cancellationToken)
     {
         var shipment = await sender.Send(
@@ -331,7 +332,8 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         var result = await sender.Send(
             new ConfirmWarehouseDeliveryCommand(
                 shipmentId,
-                deliveryId),
+                deliveryId,
+                inspections),
             cancellationToken);
 
         return result.IsFailure
