@@ -86,7 +86,8 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             request.ExpectedQuantity,
             request.PackSizeKg,
             request.UnitCost,
-            request.Currency);
+            request.Currency,
+            request.FruitsPerPack);
 
         var result = await sender.Send(command, cancellationToken);
 
@@ -382,7 +383,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             Lines = shipment.Lines.Select(line => new
             {
                 line.Id, line.ProductId, line.ProductVarietyId, line.BatchCode,
-                line.ExpectedQuantity, line.ReceivedQuantity, line.PackSizeKg
+                line.ExpectedQuantity, line.ReceivedQuantity, line.PackSizeKg, line.FruitsPerPack
             }),
             shipment.ContainerNumber, shipment.BillOfLadingNumber,
             shipment.PortOfLoading, shipment.PortOfDischarge, shipment.VesselName,
