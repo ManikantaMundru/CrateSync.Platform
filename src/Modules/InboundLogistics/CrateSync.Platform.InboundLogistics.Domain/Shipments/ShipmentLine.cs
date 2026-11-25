@@ -14,7 +14,7 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
         BatchCode batchCode,
         CrateQuantity expectedQuantity,
         PackSize packSize,
-        Money unitCost)
+        Money? unitCost)
         : base(id)
     {
         if (productId == Guid.Empty) throw new ArgumentException("Product ID cannot be empty.", nameof(productId));
@@ -27,7 +27,7 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
         ExpectedQuantity = expectedQuantity;
         ReceivedQuantity = CrateQuantity.Zero;
         PackSize = packSize ?? throw new ArgumentNullException(nameof(packSize));
-        UnitCost = unitCost ?? throw new ArgumentNullException(nameof(unitCost));
+        SetPurchaseCost(unitCost);
     }
 
     public Guid ProductId { get; private set; }
@@ -42,7 +42,18 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
 
     public PackSize PackSize { get; private set; } = null!;
 
-    public Money UnitCost { get; private set; } = null!;
+    public decimal? PurchaseCostAmount { get; private set; }
+    public string? PurchaseCostCurrency { get; private set; }
+
+    public Money? UnitCost => PurchaseCostAmount is decimal amount && PurchaseCostCurrency is string currency
+        ? new Money(amount, new Currency(currency))
+        : null;
+
+    internal void SetPurchaseCost(Money? cost)
+    {
+        PurchaseCostAmount = cost?.Amount;
+        PurchaseCostCurrency = cost?.Currency.Code;
+    }
 
     public bool IsFullyReceived => ReceivedQuantity.Value == ExpectedQuantity.Value;
 
