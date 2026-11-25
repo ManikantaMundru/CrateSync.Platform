@@ -107,11 +107,11 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 throw new InvalidOperationException("Sample ID already used for a different deduction.");
             return existing.Id;
         }
-        if (Status != ShipmentStatus.Arrived || _deliveries.Count != 0 || _receipts.Count != 0)
-            throw new InvalidOperationException("Record retained samples after arrival and before planning any warehouse delivery.");
+        if (Status is not ShipmentStatus.Arrived and not ShipmentStatus.Receiving and not ShipmentStatus.PartiallyReceived)
+            throw new InvalidOperationException("Record retained samples only on an open arrived shipment.");
         var line = _lines.SingleOrDefault(x => x.Id == lineId)
             ?? throw new InvalidOperationException("Shipment line was not found.");
-        if (quantity > line.ExpectedQuantity.Value - SampleQuantity(lineId))
+        if (quantity > AvailableForAllocation(line))
             throw new InvalidOperationException("Sample quantity exceeds remaining shipment packages.");
         _regulatorySamples.Add(new RegulatorySample(sampleId, lineId.Value, authority, quantity, referenceNumber, remarks, occurredOnUtc));
         UpdatedAtUtc = occurredOnUtc;
@@ -120,14 +120,45 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     }
 
     private int SampleQuantity(ShipmentLineId lineId) =>
-        _regulatorySamples.Where(x => x.ShipmentLineId == lineId.Value).Sum(x => x.Quantity);
+        _regulatorySamples.Where(x => x.ShipmentLineId == lineId.Value && !x.ReversedAtUtc.HasValue).Sum(x => x.Quantity);
+
+    private int DiscrepancyQuantity(ShipmentLineId lineId) =>
+        _deliveries.Where(d => d.Status == ShipmentDeliveryStatus.Received).SelectMany(d => d.Allocations)
+            .Where(a => a.ShipmentLineId == lineId).Sum(a => (a.DamagedQuantity ?? 0) + (a.MissingQuantity ?? 0));
+
+    private int AccountedQuantity(ShipmentLine line) =>
+        line.ReceivedQuantity.Value + SampleQuantity(line.Id) + DiscrepancyQuantity(line.Id);
+
+    private int AvailableForAllocation(ShipmentLine line) =>
+        line.ExpectedQuantity.Value - AccountedQuantity(line) -
+        _deliveries.Where(d => d.Status is ShipmentDeliveryStatus.Planned or ShipmentDeliveryStatus.InTransit or ShipmentDeliveryStatus.DeliveredToWarehouse)
+            .SelectMany(d => d.Allocations).Where(a => a.ShipmentLineId == line.Id).Sum(a => a.Quantity);
+
+    public void ReverseRegulatorySample(Guid sampleId, string reason, DateTimeOffset now)
+    {
+        if (Status is ShipmentStatus.Draft or ShipmentStatus.Shipped or ShipmentStatus.Cancelled)
+            throw new InvalidOperationException("Sample cannot be reversed in this shipment status.");
+        var sample = _regulatorySamples.SingleOrDefault(x => x.Id == sampleId)
+            ?? throw new InvalidOperationException("Regulatory sample was not found.");
+        if (sample.ReversedAtUtc.HasValue) { sample.Reverse(reason, now); return; }
+        sample.Reverse(reason, now);
+        UpdatedAtUtc = now;
+        if (Status is ShipmentStatus.Received or ShipmentStatus.ReceivedWithDiscrepancies)
+        {
+            Status = _deliveries.Any(d => d.Status == ShipmentDeliveryStatus.Received) || _receipts.Count > 0
+                ? ShipmentStatus.PartiallyReceived : ShipmentStatus.Arrived;
+            ReceivedAtUtc = null;
+        }
+    }
 
     private void UpdateReceiptCompletion(DateTimeOffset occurredOnUtc)
     {
-        if (Status == ShipmentStatus.Received || _lines.Count == 0 ||
-            !_lines.All(x => x.ReceivedQuantity.Value + SampleQuantity(x.Id) == x.ExpectedQuantity.Value))
+        if (Status is ShipmentStatus.Received or ShipmentStatus.ReceivedWithDiscrepancies || _lines.Count == 0 ||
+            _deliveries.Any(d => d.Status is ShipmentDeliveryStatus.Planned or ShipmentDeliveryStatus.InTransit or ShipmentDeliveryStatus.DeliveredToWarehouse) ||
+            !_lines.All(x => AccountedQuantity(x) == x.ExpectedQuantity.Value))
             return;
-        Status = ShipmentStatus.Received;
+        Status = _lines.Any(x => DiscrepancyQuantity(x.Id) > 0)
+            ? ShipmentStatus.ReceivedWithDiscrepancies : ShipmentStatus.Received;
         ReceivedAtUtc = occurredOnUtc;
         RaiseDomainEvent(new ShipmentReceivedDomainEvent(Id, TenantId, SupplierId, occurredOnUtc));
     }
@@ -384,7 +415,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                     occurredOnUtc));
         }
 
-        if (quantity.Value > line.ExpectedQuantity.Value - line.ReceivedQuantity.Value - SampleQuantity(line.Id))
+        if (quantity.Value > line.ExpectedQuantity.Value - AccountedQuantity(line))
             throw new InvalidOperationException("Receipt exceeds quantity net of regulatory samples.");
         line.Receive(quantity);
 
@@ -400,28 +431,10 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         _receipts.Add(receipt);
         UpdatedAtUtc = occurredOnUtc;
 
-        if (_lines.All(x => x.ReceivedQuantity.Value + SampleQuantity(x.Id) == x.ExpectedQuantity.Value))
-        {
-            Status = ShipmentStatus.Received;
-            ReceivedAtUtc = occurredOnUtc;
-
-            RaiseDomainEvent(
-                new ShipmentReceivedDomainEvent(
-                    Id,
-                    TenantId,
-                    SupplierId,
-                    occurredOnUtc));
-
-            return receipt.Id;
-        }
-
         Status = ShipmentStatus.PartiallyReceived;
-
-        RaiseDomainEvent(
-            new ShipmentPartiallyReceivedDomainEvent(
-                Id,
-                TenantId,
-                occurredOnUtc));
+        UpdateReceiptCompletion(occurredOnUtc);
+        if (Status == ShipmentStatus.PartiallyReceived)
+            RaiseDomainEvent(new ShipmentPartiallyReceivedDomainEvent(Id, TenantId, occurredOnUtc));
 
         return receipt.Id;
     }
@@ -477,20 +490,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 throw new InvalidOperationException(
                     $"Shipment line '{allocation.LineId.Value}' was not found.");
 
-            var alreadyAllocated =
-                _deliveries
-                    .Where(x =>
-                        x.Status is ShipmentDeliveryStatus.Planned or ShipmentDeliveryStatus.InTransit or ShipmentDeliveryStatus.DeliveredToWarehouse)
-                    .SelectMany(x => x.Allocations)
-                    .Where(x => x.ShipmentLineId == allocation.LineId)
-                    .Sum(x => x.Quantity);
-
-            var remaining =
-                line.ExpectedQuantity.Value - SampleQuantity(line.Id) -
-                line.ReceivedQuantity.Value -
-                alreadyAllocated - _deliveries.SelectMany(x => x.Allocations)
-                    .Where(x => x.ShipmentLineId == allocation.LineId)
-                    .Sum(x => (x.DamagedQuantity ?? 0) + (x.MissingQuantity ?? 0));
+            var remaining = AvailableForAllocation(line);
 
             if (allocation.Quantity <= 0 ||
                 allocation.Quantity > remaining)
@@ -580,7 +580,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                 ((entry.Damaged > 0 || entry.Missing > 0) && string.IsNullOrWhiteSpace(entry.Remarks)))
                 throw new InvalidOperationException("Invalid inspection quantities or missing discrepancy remarks.");
             var line = _lines.Single(x => x.Id == allocation.ShipmentLineId);
-            if (entry.Accepted > line.ExpectedQuantity.Value - line.ReceivedQuantity.Value)
+            if (entry.Accepted > line.ExpectedQuantity.Value - AccountedQuantity(line))
                 throw new InvalidOperationException("Accepted quantity exceeds remaining shipment quantity.");
         }
 
@@ -598,16 +598,15 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 
         delivery.MarkReceived(occurredOnUtc);
         UpdatedAtUtc = occurredOnUtc;
-        // A shortage is accounted for, not available for another transport.
-        // Keep the shipment partially received when accepted stock is below expected.
         if (Status == ShipmentStatus.Arrived)
             Status = ShipmentStatus.PartiallyReceived;
+        UpdateReceiptCompletion(occurredOnUtc);
         return receipts;
     }
 
     public void Cancel(DateTimeOffset occurredOnUtc)
     {
-        if (Status is ShipmentStatus.Received or ShipmentStatus.Cancelled)
+        if (Status is ShipmentStatus.Received or ShipmentStatus.ReceivedWithDiscrepancies or ShipmentStatus.Cancelled)
             throw new InvalidOperationException($"Shipment in status '{Status}' cannot be cancelled.");
 
         if (Status is ShipmentStatus.Receiving or ShipmentStatus.PartiallyReceived)

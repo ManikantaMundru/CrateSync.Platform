@@ -143,7 +143,9 @@ public sealed class InboundReceiptJourneyTests(
                 $"/api/InboundShipment/{shipmentId}");
 
         shipment.ShouldNotBeNull();
-        shipment.Status.ShouldBe("PartiallyReceived");
+        shipment.Status.ShouldBe("ReceivedWithDiscrepancies");
+        shipment.Lines.Single().AccountedQuantity.ShouldBe(40);
+        shipment.Lines.Single().RemainingQuantity.ShouldBe(0);
         shipment.Lines.Single().ReceivedQuantity.ShouldBe(37);
         shipment.Deliveries.ShouldNotBeNull();
         shipment.Deliveries.Count.ShouldBe(2);
