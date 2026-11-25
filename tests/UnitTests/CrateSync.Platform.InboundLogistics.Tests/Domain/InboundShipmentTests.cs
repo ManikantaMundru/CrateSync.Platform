@@ -498,6 +498,20 @@ public sealed class InboundShipmentTests
         shipment.Status.ShouldBe(ShipmentStatus.Shipped);
     }
 
+    [Fact]
+    public void CountBasedPackaging_PreservesFruitCountAndPackageQuantity()
+    {
+        var shipment = CreateShipment();
+        shipment.AddLine(Guid.NewGuid(), Guid.NewGuid(), new BatchCode("count-113"),
+            new CrateQuantity(100), PackSize.ByCount(113), new Money(18.50m, new Currency("USD")), Now);
+
+        var line = shipment.Lines.Single();
+        line.PackSize.FruitCount.ShouldBe(113);
+        line.PackSize.WeightKg.ShouldBeNull();
+        line.ExpectedQuantity.Value.ShouldBe(100);
+        line.UnitCost!.Amount.ShouldBe(18.50m);
+    }
+
     private static InboundShipment CreateShipment()
     {
         return InboundShipment.Create(
