@@ -231,7 +231,8 @@ router.beforeEach(async (to) => {
     const financial = roles.includes('TenantOwner') || roles.includes('Finance')
     if (to.meta.title === 'Finance' && !financial)
       return current?.path ?? { name: 'home' }
-    if (to.name === 'inbound-shipments' && !financial && !roles.includes('TenantAdmin') && !roles.includes('Viewer'))
+    if (!financial && !roles.includes('TenantAdmin') && !roles.includes('Viewer') &&
+      !['tenant-dashboard', 'inventory', 'inbound-shipments'].includes(String(to.name)))
       return current?.path ?? { name: 'home' }
   }
   return true
