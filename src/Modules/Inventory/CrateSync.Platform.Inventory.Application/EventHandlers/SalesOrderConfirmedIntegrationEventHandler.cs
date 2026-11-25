@@ -23,11 +23,11 @@ internal sealed class SalesOrderConfirmedIntegrationEventHandler(
 
         foreach (var line in notification.Lines)
         {
-            var balance = await repository.GetAsync(
+            var balance = await repository.GetBatchAsync(
                 notification.TenantId,
                 notification.WarehouseId,
                 line.ProductVarietyId,
-                line.OriginCountry,
+                line.OriginCountry, line.BatchId,
                 cancellationToken);
 
             if (balance is null)
