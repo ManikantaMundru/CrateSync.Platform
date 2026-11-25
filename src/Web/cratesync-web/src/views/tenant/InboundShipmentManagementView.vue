@@ -28,6 +28,7 @@ const canOperate = computed(() => isOwner.value || (auth.me?.currentTenant?.role
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import InboundShipmentForm from '@/components/inbound-shipments/InboundShipmentForm.vue'
+import ShipmentCostingPanel from '@/components/inbound-shipments/ShipmentCostingPanel.vue'
 import WarehouseDeliveryForm from '@/components/inbound-shipments/WarehouseDeliveryForm.vue'
 
 interface ShipmentSummary {
@@ -1216,6 +1217,7 @@ onMounted(async () => {
             </div>
           </section>
 
+          <ShipmentCostingPanel v-if="canManageCosts && selectedShipment" :key="selectedShipment.id" :shipment-id="selectedShipment.id" :status="selectedShipment.status" :lines="selectedShipment.lines" :deliveries="selectedShipment.deliveries ?? []" :can-edit="canManageCosts" />
           <section class="shipment-detail-section">
             <div class="section-heading">
               <div>
