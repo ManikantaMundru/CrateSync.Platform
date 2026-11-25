@@ -79,7 +79,8 @@ public sealed class SalesOrderController(
                 request.Quantity,
                 request.PackSize,
                 request.UnitPrice,
-                request.Currency),
+                request.Currency,
+                request.OriginCountry),
             cancellationToken);
 
         return result.IsFailure

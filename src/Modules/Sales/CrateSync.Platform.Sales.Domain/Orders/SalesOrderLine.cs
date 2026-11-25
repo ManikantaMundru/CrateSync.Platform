@@ -12,17 +12,20 @@ public sealed class SalesOrderLine : Entity<SalesOrderLineId>
         Guid productVarietyId,
         CrateQuantity quantity,
         PackSize packSize,
-        Money unitPrice)
+        Money unitPrice,
+        string originCountry)
         : base(id)
     {
         if (productVarietyId == Guid.Empty) throw new ArgumentException("Product variety ID cannot be empty.", nameof(productVarietyId));
         ProductVarietyId = productVarietyId;
+        OriginCountry = NormalizeOriginCountry(originCountry);
         Quantity = quantity;
         PackSize = packSize;
         UnitPrice = unitPrice;
     }
 
     public Guid ProductVarietyId { get; private set; }
+    public string OriginCountry { get; private set; } = null!;
     public CrateQuantity Quantity { get; private set; }
     public PackSize PackSize { get; private set; }
     public Money UnitPrice { get; private set; }
@@ -34,4 +37,17 @@ public sealed class SalesOrderLine : Entity<SalesOrderLineId>
         PackSize = packSize;
         UnitPrice = unitPrice;
     }
+    private static string NormalizeOriginCountry(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException("Origin country is required.", nameof(value));
+
+        var normalized = value.Trim().ToUpperInvariant();
+
+        if (normalized.Length != 2)
+            throw new ArgumentException("Origin country must be a two-letter country code.", nameof(value));
+
+        return normalized;
+    }
+
 }

@@ -11,15 +11,20 @@ internal sealed class InventoryBalanceRepository(InventoryDbContext dbContext) :
         Guid tenantId,
         Guid warehouseId,
         Guid productVarietyId,
+        string originCountry,
         CancellationToken cancellationToken = default)
     {
+        var normalizedOrigin =
+            originCountry.Trim().ToUpperInvariant();
+
         return dbContext.InventoryBalances
             .Include(x => x.Reservations)
             .Include(x => x.Movements)
             .SingleOrDefaultAsync(
                 x => x.TenantId == tenantId &&
                      x.WarehouseId == warehouseId &&
-                     x.ProductVarietyId == productVarietyId,
+                     x.ProductVarietyId == productVarietyId &&
+                     x.OriginCountry == normalizedOrigin,
                 cancellationToken);
     }
 

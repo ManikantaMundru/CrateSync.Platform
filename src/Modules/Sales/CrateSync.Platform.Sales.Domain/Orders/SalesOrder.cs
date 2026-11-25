@@ -81,12 +81,26 @@ public sealed class SalesOrder : AggregateRoot<SalesOrderId>
         CrateQuantity quantity,
         PackSize packSize,
         Money unitPrice,
-        DateTimeOffset occurredAtUtc)
+        DateTimeOffset occurredAtUtc,
+        string originCountry = "ZZ")
     {
         EnsureDraft();
 
-        if (_lines.Any(x => x.ProductVarietyId == productVarietyId))
-            throw new InvalidOperationException("Product variety already exists on this order.");
+        if (string.IsNullOrWhiteSpace(originCountry))
+            throw new ArgumentException(
+                "Origin country is required.",
+                nameof(originCountry));
+
+        var normalizedOrigin =
+            originCountry.Trim().ToUpperInvariant();
+
+        if (_lines.Any(x =>
+                x.ProductVarietyId == productVarietyId &&
+                x.OriginCountry == normalizedOrigin))
+        {
+            throw new InvalidOperationException(
+                "Product variety and origin already exist on this order.");
+        }
 
         EnsureCurrency(unitPrice);
 
@@ -95,7 +109,8 @@ public sealed class SalesOrder : AggregateRoot<SalesOrderId>
             productVarietyId,
             quantity,
             packSize,
-            unitPrice);
+            unitPrice,
+            normalizedOrigin);
 
         _lines.Add(line);
         UpdatedAtUtc = occurredAtUtc;

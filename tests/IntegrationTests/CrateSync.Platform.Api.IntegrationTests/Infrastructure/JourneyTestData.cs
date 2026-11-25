@@ -17,7 +17,8 @@ internal static class JourneyTestData
         CustomWebApplicationFactory factory,
         Guid warehouseId,
         Guid productVarietyId,
-        int quantity)
+        int quantity,
+        string originCountry = "ZA")
     {
         using var scope = factory.Services.CreateScope();
 
@@ -31,6 +32,7 @@ internal static class JourneyTestData
             factory.TenantId,
             warehouseId,
             productVarietyId,
+            originCountry,
             now.AddMinutes(-1));
 
         balance.Receive(
@@ -69,7 +71,8 @@ internal static class JourneyTestData
         HttpClient client,
         Guid salesOrderId,
         Guid productVarietyId,
-        int quantity)
+        int quantity,
+        string originCountry = "ZA")
     {
         var response = await client.PostAsJsonAsync(
             $"/api/sales-orders/{salesOrderId}/lines",
@@ -78,7 +81,8 @@ internal static class JourneyTestData
                 quantity,
                 18m,
                 250m,
-                "ZAR"));
+                "ZAR",
+                originCountry));
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
 
@@ -102,11 +106,12 @@ internal static class JourneyTestData
     public static async Task<StockResponse> GetStockAsync(
         HttpClient client,
         Guid warehouseId,
-        Guid productVarietyId)
+        Guid productVarietyId,
+        string originCountry = "ZA")
     {
         var response =
             await client.GetAsync(
-                $"/api/inventory/stock?warehouseId={warehouseId}&productVarietyId={productVarietyId}");
+                $"/api/inventory/stock?warehouseId={warehouseId}&productVarietyId={productVarietyId}&originCountry={originCountry}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
 

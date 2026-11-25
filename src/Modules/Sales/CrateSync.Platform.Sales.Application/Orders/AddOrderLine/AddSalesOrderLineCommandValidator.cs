@@ -12,5 +12,6 @@ internal sealed class AddSalesOrderLineCommandValidator : AbstractValidator<AddS
         RuleFor(x => x.PackSize).GreaterThan(0);
         RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Currency).NotEmpty().Length(3);
+        RuleFor(x => x.OriginCountry).NotEmpty().Length(2);
     }
 }

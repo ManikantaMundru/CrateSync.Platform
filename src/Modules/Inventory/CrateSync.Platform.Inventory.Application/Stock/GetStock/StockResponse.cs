@@ -12,4 +12,5 @@ public sealed record StockResponse(
     string ProductName = "",
     string VarietyName = "",
     string WarehouseName = "",
-    string WarehouseCode = "");
+    string WarehouseCode = "",
+    string OriginCountry = "");

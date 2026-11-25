@@ -8,6 +8,7 @@ internal sealed class AdjustStockCommandValidator : AbstractValidator<AdjustStoc
     {
         RuleFor(x => x.WarehouseId).NotEmpty();
         RuleFor(x => x.ProductVarietyId).NotEmpty();
+        RuleFor(x => x.OriginCountry).NotEmpty().Length(2);
         RuleFor(x => x.QuantityChange).NotEqual(0);
         RuleFor(x => x.Reason).NotEmpty().MaximumLength(250);
     }

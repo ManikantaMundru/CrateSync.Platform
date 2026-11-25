@@ -22,6 +22,7 @@ public sealed class InventoryController(
     public async Task<IActionResult> GetStock(
         [FromQuery] Guid warehouseId,
         [FromQuery] Guid productVarietyId,
+        [FromQuery] string originCountry,
         CancellationToken cancellationToken)
     {
         if (!await accessService.CanReadWarehouseAsync(
@@ -34,7 +35,8 @@ public sealed class InventoryController(
         var result = await sender.Send(
             new GetStockQuery(
                 warehouseId,
-                productVarietyId),
+                productVarietyId,
+                originCountry),
             cancellationToken);
 
         return result.IsFailure
@@ -46,6 +48,7 @@ public sealed class InventoryController(
     public async Task<IActionResult> Search(
         [FromQuery] Guid? warehouseId,
         [FromQuery] Guid? productVarietyId,
+        [FromQuery] string? originCountry,
         CancellationToken cancellationToken)
     {
         if (warehouseId.HasValue &&
@@ -59,7 +62,8 @@ public sealed class InventoryController(
         var result = await sender.Send(
             new SearchStockQuery(
                 warehouseId,
-                productVarietyId),
+                productVarietyId,
+                originCountry),
             cancellationToken);
 
         if (warehouseId.HasValue ||
@@ -84,6 +88,7 @@ public sealed class InventoryController(
     public async Task<IActionResult> GetMovements(
         [FromQuery] Guid warehouseId,
         [FromQuery] Guid productVarietyId,
+        [FromQuery] string originCountry,
         CancellationToken cancellationToken)
     {
         if (!await accessService.CanReadWarehouseAsync(
@@ -96,7 +101,8 @@ public sealed class InventoryController(
         var result = await sender.Send(
             new GetStockMovementsQuery(
                 warehouseId,
-                productVarietyId),
+                productVarietyId,
+                originCountry),
             cancellationToken);
 
         return Ok(result);
@@ -123,6 +129,7 @@ public sealed class InventoryController(
                 request.SourceWarehouseId,
                 request.DestinationWarehouseId,
                 request.ProductVarietyId,
+                request.OriginCountry,
                 request.Quantity,
                 request.TransferReference,
                 request.Remarks),
@@ -149,6 +156,7 @@ public sealed class InventoryController(
             new AdjustStockCommand(
                 request.WarehouseId,
                 request.ProductVarietyId,
+                request.OriginCountry,
                 request.QuantityChange,
                 request.Reason),
             cancellationToken);

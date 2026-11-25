@@ -28,7 +28,8 @@ internal sealed class SalesOrderConfirmedDomainEventHandler(
                 new SalesOrderLineIntegrationContract(
                     x.Id.Value,
                     x.ProductVarietyId,
-                    x.Quantity.Value))
+                    x.Quantity.Value,
+                    x.OriginCountry))
             .ToArray();
 
         await publisher.Publish(

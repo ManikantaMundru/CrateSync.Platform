@@ -7,6 +7,7 @@ public sealed record ReceiveStockCommand(
     Guid TenantId,
     Guid WarehouseId,
     Guid ProductVarietyId,
+    string OriginCountry,
     int Quantity,
     Guid ShipmentId,
     Guid? ReceiptId = null) : ICommand<Result>;

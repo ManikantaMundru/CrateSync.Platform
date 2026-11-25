@@ -9,4 +9,5 @@ public sealed record AddSalesOrderLineCommand(
     int Quantity,
     decimal PackSize,
     decimal UnitPrice,
-    string Currency) : ICommand<Result<Guid>>;
+    string Currency,
+    string OriginCountry) : ICommand<Result<Guid>>;

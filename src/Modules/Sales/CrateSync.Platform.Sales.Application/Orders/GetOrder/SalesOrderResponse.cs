@@ -26,4 +26,5 @@ public sealed record SalesOrderLineResponse(
     decimal PackSize,
     decimal UnitPrice,
     string Currency,
-    decimal LineTotal);
+    decimal LineTotal,
+    string OriginCountry = "ZZ");

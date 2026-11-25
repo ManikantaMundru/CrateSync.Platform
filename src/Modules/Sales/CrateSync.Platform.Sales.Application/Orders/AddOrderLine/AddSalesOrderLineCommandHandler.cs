@@ -32,7 +32,8 @@ internal sealed class AddSalesOrderLineCommandHandler(
                 new CrateQuantity(request.Quantity),
                 new PackSize(request.PackSize),
                 new Money(request.UnitPrice, new Currency(request.Currency)),
-                timeProvider.GetUtcNow());
+                timeProvider.GetUtcNow(),
+                request.OriginCountry);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result<Guid>.Success(line.Id.Value);

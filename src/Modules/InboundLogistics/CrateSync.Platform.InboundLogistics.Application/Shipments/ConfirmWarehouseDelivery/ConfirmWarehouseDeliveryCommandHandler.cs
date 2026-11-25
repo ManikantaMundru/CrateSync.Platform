@@ -47,6 +47,7 @@ internal sealed class ConfirmWarehouseDeliveryCommandHandler(
                         shipment.TenantId,
                         receipt.WarehouseId,
                         receipt.ProductVarietyId,
+                        shipment.OriginCountry.Value,
                         receipt.Quantity,
                         receipt.ReceivedAtUtc),
                     cancellationToken);

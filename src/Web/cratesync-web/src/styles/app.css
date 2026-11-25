@@ -6503,3 +6503,50 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Inventory origin country */
+.inventory-origin-cell {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.inventory-origin-cell strong {
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.inventory-origin-cell small {
+  color: #8391a5;
+  font-size: 0.66rem;
+}
+
+.inventory-mobile-origin {
+  color: #6b7b90;
+  font-size: 0.72rem;
+}
+
+.inventory-mobile-origin strong,
+.inventory-detail-origin strong {
+  color: #334155;
+  font-weight: 700;
+}
+
+.inventory-detail-origin {
+  margin: 0.15rem 0;
+  color: #6b7b90;
+  font-size: 0.74rem;
+}
+
+[data-coreui-theme="dark"] .inventory-origin-cell strong,
+[data-coreui-theme="dark"] .inventory-mobile-origin strong,
+[data-coreui-theme="dark"] .inventory-detail-origin strong {
+  color: #edf3f0;
+}
+
+[data-coreui-theme="dark"] .inventory-origin-cell small,
+[data-coreui-theme="dark"] .inventory-mobile-origin,
+[data-coreui-theme="dark"] .inventory-detail-origin {
+  color: #91a29c;
+}
