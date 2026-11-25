@@ -36,6 +36,10 @@ interface StockSummary {
   warehouseName: string
   warehouseCode: string
   originCountry: string
+  batchId: string
+  batchCode: string | null
+  packWeightKg: number | null
+  fruitsPerPack: number | null
   onHand: number
   reserved: number
   available: number
@@ -304,6 +308,7 @@ async function handleTransferCompleted(
   destinationWarehouseId: string,
   productVarietyId: string,
   originCountry: string,
+  batchId: string,
 ) {
   viewMode.value = 'list'
   await loadStock()
@@ -316,7 +321,7 @@ async function handleTransferCompleted(
         item.productVarietyId ===
           productVarietyId &&
         item.originCountry ===
-          originCountry,
+          originCountry && item.batchId === batchId,
     )
 
   if (destination)
@@ -390,6 +395,7 @@ async function selectStock(
           item.productVarietyId,
         originCountry:
           item.originCountry,
+        batchId: item.batchId,
       })
 
     movements.value =
@@ -583,7 +589,7 @@ onMounted(async () => {
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Variety</th>
+                <th>Variety / batch / pack</th>
                 <th>Origin</th>
                 <th>Warehouse</th>
                 <th>On hand</th>
@@ -611,7 +617,7 @@ onMounted(async () => {
                   </strong>
                 </td>
                 <td>
-                  {{ item.varietyName }}
+                  {{ item.varietyName }} · {{ item.batchCode || 'Legacy / unclassified' }} · {{ item.fruitsPerPack != null ? item.fruitsPerPack + ' fruits' : item.packWeightKg != null ? item.packWeightKg + ' kg' : 'Unknown pack' }}
                 </td>
                 <td>
                   <div class="inventory-origin-cell">
@@ -756,7 +762,7 @@ onMounted(async () => {
               <h2>
                 {{ selectedStock.productName }}
                 /
-                {{ selectedStock.varietyName }}
+                {{ selectedStock.varietyName }} · {{ selectedStock.batchCode || 'Legacy / unclassified' }} · {{ selectedStock.fruitsPerPack != null ? selectedStock.fruitsPerPack + ' fruits' : selectedStock.packWeightKg != null ? selectedStock.packWeightKg + ' kg' : 'Unknown pack' }}
               </h2>
               <p class="inventory-detail-origin">
                 Origin:
