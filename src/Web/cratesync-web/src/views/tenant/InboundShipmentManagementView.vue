@@ -561,7 +561,7 @@ async function markWarehouseDeliveryDelivered(
     )
 
     success.value =
-      'Warehouse delivery received and inventory updated.'
+      'Transport marked delivered. Stock is awaiting warehouse receipt.'
 
     await Promise.all([
       loadShipments(),
@@ -573,23 +573,10 @@ async function markWarehouseDeliveryDelivered(
     error.value =
       exception instanceof Error
         ? exception.message
-        : 'Unable to receive warehouse delivery.'
+        : 'Unable to mark transport delivered.'
   } finally {
     saving.value = false
   }
-}
-
-function openClearance() {
-  if (!selectedShipment.value)
-    return
-
-  clearanceForm.authority = 'Customs'
-  clearanceForm.status =
-    selectedShipment.value.customsStatus
-  clearanceForm.referenceNumber = ''
-  clearanceForm.remarks = ''
-  modalError.value = null
-  clearanceVisible.value = true
 }
 
 async function confirmWarehouseDelivery(
