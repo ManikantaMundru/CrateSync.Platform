@@ -18,7 +18,7 @@ internal sealed class GetStockQueryHandler(
             request.WarehouseId,
             request.ProductVarietyId,
             request.OriginCountry,
-            cancellationToken);
+            cancellationToken, request.BatchId);
 
         return response is null
             ? Result<StockResponse>.Failure(InventoryErrors.StockNotFound)
