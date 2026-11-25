@@ -3,5 +3,5 @@ using CrateSync.Platform.BuildingBlocks.Application.Queries;
 
 namespace CrateSync.Platform.Inventory.Application.Stock.GetStock;
 
-public sealed record GetStockQuery(Guid WarehouseId, Guid ProductVarietyId, string OriginCountry)
+public sealed record GetStockQuery(Guid WarehouseId, Guid ProductVarietyId, string OriginCountry, Guid BatchId = default)
     : IQuery<Result<StockResponse>>;
