@@ -8,4 +8,4 @@ public sealed record AdjustStockCommand(
     Guid ProductVarietyId,
     string OriginCountry,
     int QuantityChange,
-    string Reason) : ICommand<Result>;
+    string Reason, Guid BatchId = default) : ICommand<Result>;
