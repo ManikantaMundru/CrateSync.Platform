@@ -26,7 +26,9 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
         BatchCode = batchCode ?? throw new ArgumentNullException(nameof(batchCode));
         ExpectedQuantity = expectedQuantity;
         ReceivedQuantity = CrateQuantity.Zero;
-        PackSize = packSize ?? throw new ArgumentNullException(nameof(packSize));
+        ArgumentNullException.ThrowIfNull(packSize);
+        PackWeightKg = packSize.WeightKg;
+        FruitsPerPack = packSize.FruitCount;
         SetPurchaseCost(unitCost);
     }
 
@@ -40,7 +42,11 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
 
     public CrateQuantity ReceivedQuantity { get; private set; }
 
-    public PackSize PackSize { get; private set; } = null!;
+    public decimal? PackWeightKg { get; private set; }
+    public int? FruitsPerPack { get; private set; }
+    public PackSize PackSize => FruitsPerPack is int count
+        ? PackSize.ByCount(count)
+        : new PackSize(PackWeightKg!.Value);
 
     public decimal? PurchaseCostAmount { get; private set; }
     public string? PurchaseCostCurrency { get; private set; }
