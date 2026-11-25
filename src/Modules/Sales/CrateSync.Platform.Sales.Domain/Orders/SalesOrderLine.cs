@@ -39,6 +39,7 @@ public sealed class SalesOrderLine : Entity<SalesOrderLineId>
 
     internal void Update(CrateQuantity quantity, PackSize packSize, Money unitPrice)
     {
+        if (BatchId != Guid.Empty) throw new InvalidOperationException("Remove and re-add a batch line to change its quantity or price.");
         Quantity = quantity;
         PackSize = packSize;
         UnitPrice = unitPrice;
