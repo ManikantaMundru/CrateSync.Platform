@@ -58,6 +58,14 @@ public sealed class TenantUsersController(
             !await CanManageTargetAsync(existingUser.Id, cancellationToken))
             return Forbid();
 
+        if (existingUser is not null)
+        {
+            var members = await tenantUserManagementService.GetUsersAsync(
+                tenantContext.TenantId, cancellationToken);
+            if (members.Any(x => x.UserId == existingUser.Id))
+                return Conflict(new { title = "User already belongs to this tenant", detail = "Use Edit access to change an existing membership." });
+        }
+
         var result =
             await tenantUserManagementService.CreateOrAddAsync(
                 tenantContext.TenantId,
@@ -165,17 +173,12 @@ public sealed class TenantUsersController(
         if (!await CanManageTargetAsync(userId, cancellationToken))
             return Forbid();
 
-        if (IsCurrentUser(userId) &&
-            !request.Roles.Contains(TenantRole.TenantAdmin) &&
-            !request.Roles.Contains(TenantRole.TenantOwner))
-        {
-            return Conflict(new
-            {
-                title = "Cannot remove your own TenantAdmin access",
-                detail =
-                    "Another TenantAdmin must change your administrator access."
-            });
-        }
+        if (IsCurrentUser(userId))
+            return Conflict(new { title = "Cannot change your own access", detail = "Another authorized administrator must change your access." });
+
+        if (!request.Roles.Contains(TenantRole.TenantOwner) &&
+            await IsLastActiveOwnerAsync(userId, cancellationToken))
+            return Conflict(new { title = "Cannot remove the last active tenant owner" });
 
         var validation =
             await ValidateAccessAsync(
@@ -243,6 +246,9 @@ public sealed class TenantUsersController(
             });
         }
 
+        if (await IsLastActiveOwnerAsync(userId, cancellationToken))
+            return Conflict(new { title = "Cannot deactivate the last active tenant owner" });
+
         var updated =
             await tenantUserManagementService
                 .SetMembershipActiveAsync(
@@ -287,9 +293,11 @@ public sealed class TenantUsersController(
             !await accessService.HasPermissionAsync(TenantPermission.ManageFinancialRoles, cancellationToken))
             return Forbid();
 
-        if (roles.Contains(TenantRole.Finance) &&
-            (roles.Count != 1 || warehouses.Count != 0))
-            return BadRequest(new { title = "Finance must be a standalone role without warehouse assignments" });
+        if (roles.Count > 1 || (roles.Count != 0 && warehouses.Count != 0))
+            return BadRequest(new { title = "Select one primary role. Tenant-wide roles cannot have warehouse assignments." });
+
+        if (warehouses.Select(x => x.Role).Distinct().Count() > 1)
+            return BadRequest(new { title = "Use the same warehouse role for every assignment." });
 
         if (warehouses.Any(
                 warehouse =>
@@ -321,7 +329,7 @@ public sealed class TenantUsersController(
                         warehouse.WarehouseId),
                     cancellationToken);
 
-            if (result.IsFailure)
+            if (result.IsFailure || !result.Value.IsActive)
             {
                 return BadRequest(new
                 {
@@ -333,6 +341,13 @@ public sealed class TenantUsersController(
         }
 
         return null;
+    }
+
+    private async Task<bool> IsLastActiveOwnerAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var users = await tenantUserManagementService.GetUsersAsync(tenantContext.TenantId, cancellationToken);
+        var owners = users.Where(x => x.IsMembershipActive && x.Roles.Contains(TenantRole.TenantOwner)).ToArray();
+        return owners.Length == 1 && owners[0].UserId == userId;
     }
 
     private async Task<bool> CanManageTargetAsync(Guid userId, CancellationToken cancellationToken)
