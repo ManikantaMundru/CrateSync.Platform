@@ -1,3 +1,5 @@
+using CrateSync.Platform.Warehousing.Application.Warehouses.GetWarehouse;
+using CrateSync.Platform.Warehousing.Application.Warehouses.SearchWarehouses;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Inventory;
@@ -108,20 +110,34 @@ public sealed class InventoryController(
         return Ok(result);
     }
 
+    [HttpGet("transfer-destinations")]
+    public async Task<IActionResult> GetTransferDestinations(CancellationToken cancellationToken)
+    {
+        var assigned = await accessService.GetAssignedWarehouseIdsAsync(cancellationToken);
+        var allowed = await accessService.IsTenantAdminAsync(cancellationToken);
+        foreach (var id in assigned)
+            allowed |= await accessService.CanAdminWarehouseAsync(id, cancellationToken);
+        if (!allowed) return Forbid();
+
+        var warehouses = await sender.Send(new SearchWarehousesQuery(null, true), cancellationToken);
+        return Ok(warehouses.Select(x => new { x.Id, x.Name, x.Code, x.IsActive }));
+    }
+
     [HttpPost("transfers")]
     public async Task<IActionResult> Transfer(
         [FromBody] TransferStockRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.CanOperateWarehouseAsync(
+        if (!await accessService.CanAdminWarehouseAsync(
                 request.SourceWarehouseId,
-                cancellationToken) ||
-            !await accessService.CanOperateWarehouseAsync(
-                request.DestinationWarehouseId,
                 cancellationToken))
         {
             return Forbid();
         }
+
+        var destination = await sender.Send(new GetWarehouseQuery(request.DestinationWarehouseId), cancellationToken);
+        if (destination.IsFailure) return this.ToProblem(destination.Error);
+        if (!destination.Value.IsActive) return BadRequest(new { title = "Destination warehouse is inactive" });
 
         var result = await sender.Send(
             new TransferStockCommand(
