@@ -9,6 +9,7 @@ public sealed class WarehouseTransfer
     public Guid DestinationWarehouseId { get; private set; }
     public Guid ProductVarietyId { get; private set; }
     public string OriginCountry { get; private set; } = null!;
+    public DateTimeOffset? OriginalReceivedAtUtc { get; private set; }
     public Guid BatchId { get; private set; }
     public string? BatchCode { get; private set; }
     public decimal? PackWeightKg { get; private set; }
@@ -40,7 +41,7 @@ public sealed class WarehouseTransfer
             throw new InvalidOperationException("Valid transport company, driver and phone are required.");
         return new WarehouseTransfer { Id = id, TenantId = source.TenantId, SourceWarehouseId = source.WarehouseId,
             DestinationWarehouseId = destination, ProductVarietyId = source.ProductVarietyId, OriginCountry = source.OriginCountry,
-            BatchId = source.BatchId, BatchCode = source.BatchCode, PackWeightKg = source.PackWeightKg, FruitsPerPack = source.FruitsPerPack,
+            OriginalReceivedAtUtc = source.OriginalReceivedAtUtc, BatchId = source.BatchId, BatchCode = source.BatchCode, PackWeightKg = source.PackWeightKg, FruitsPerPack = source.FruitsPerPack,
             Quantity = quantity, TransportCompany = company.Trim(), DriverName = driver.Trim(), DriverPhone = phone.Trim(),
             VehicleNumber = vehicle?.Trim(), TransferReference = reference?.Trim(), Remarks = remarks?.Trim(), CreatedAtUtc = now };
     }
