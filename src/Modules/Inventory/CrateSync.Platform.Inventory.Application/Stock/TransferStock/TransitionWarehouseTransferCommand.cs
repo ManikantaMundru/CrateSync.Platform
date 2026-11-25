@@ -48,7 +48,7 @@ internal sealed class TransitionWarehouseTransferCommandHandler(IWarehouseTransf
                                 transfer.BatchId, transfer.BatchCode, transfer.PackWeightKg, transfer.FruitsPerPack);
                             balances.Add(destination);
                         }
-                        destination.TransferIn(new CrateQuantity(request.Accepted), reference, null, now);
+                        destination.TransferIn(new CrateQuantity(request.Accepted), reference, null, now, transfer.OriginalReceivedAtUtc);
                     }
                     break;
                 default: return Result.Failure(InventoryErrors.Conflict("Inventory.InvalidTransferAction", "Unknown action."));

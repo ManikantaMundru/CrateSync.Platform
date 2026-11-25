@@ -36,6 +36,14 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
     public Guid WarehouseId { get; private set; }
     public Guid ProductVarietyId { get; private set; }
     public string OriginCountry { get; private set; } = null!;
+    public DateTimeOffset? OriginalReceivedAtUtc { get; private set; }
+    private void TrackOriginalReceipt(DateTimeOffset? receivedAtUtc)
+    {
+        if (BatchId == Guid.Empty || receivedAtUtc is null) return;
+        if (OriginalReceivedAtUtc is null || receivedAtUtc < OriginalReceivedAtUtc)
+            OriginalReceivedAtUtc = receivedAtUtc;
+    }
+
     public Guid BatchId { get; private set; }
     public string? BatchCode { get; private set; }
     public decimal? PackWeightKg { get; private set; }
@@ -90,7 +98,7 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
             createdAtUtc) { BatchId = batchId, BatchCode = batchCode, PackWeightKg = packWeightKg, FruitsPerPack = fruitsPerPack };
     }
 
-    public bool Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc)
+    public bool Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc, DateTimeOffset? originalReceivedAtUtc = null)
     {
         if (
             _movements.Any(
@@ -104,6 +112,7 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         OnHand = new StockQuantity(OnHand.Value + quantity.Value);
         UpdatedAtUtc = occurredAtUtc;
 
+        TrackOriginalReceipt(originalReceivedAtUtc ?? occurredAtUtc);
         AddMovement(StockMovementType.Received, quantity.Value, 0, reference, null, occurredAtUtc);
 
         RaiseDomainEvent(new StockReceivedDomainEvent(
@@ -265,7 +274,7 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         CrateQuantity quantity,
         StockReference reference,
         string? reason,
-        DateTimeOffset occurredAtUtc)
+        DateTimeOffset occurredAtUtc, DateTimeOffset? originalReceivedAtUtc = null)
     {
         if (_movements.Any(
                 x =>
@@ -278,6 +287,7 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
         OnHand = new StockQuantity(OnHand.Value + quantity.Value);
         UpdatedAtUtc = occurredAtUtc;
 
+        TrackOriginalReceipt(originalReceivedAtUtc);
         AddMovement(
             StockMovementType.TransferIn,
             quantity.Value,

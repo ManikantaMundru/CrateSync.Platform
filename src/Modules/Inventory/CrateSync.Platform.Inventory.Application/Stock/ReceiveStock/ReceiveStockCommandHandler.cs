@@ -38,7 +38,7 @@ internal sealed class ReceiveStockCommandHandler(
         var changed = balance.Receive(
             new CrateQuantity(request.Quantity),
             reference,
-            now);
+            now, request.OriginalReceivedAtUtc);
 
         if (changed)
             await unitOfWork.SaveChangesAsync(cancellationToken);
