@@ -22,8 +22,10 @@ internal sealed class AddShipmentLineCommandValidator : AbstractValidator<AddShi
         RuleFor(x => x.ExpectedQuantity)
             .GreaterThan(0);
 
-        RuleFor(x => x.PackSizeKg)
-            .GreaterThan(0);
+        RuleFor(x => x).Must(x => x.PackSizeKg.HasValue != x.FruitsPerPack.HasValue)
+            .WithMessage("Specify either kilograms per pack or fruit count per pack.");
+        RuleFor(x => x.PackSizeKg).GreaterThan(0m).When(x => x.PackSizeKg.HasValue);
+        RuleFor(x => x.FruitsPerPack).GreaterThan(0).When(x => x.FruitsPerPack.HasValue);
 
         RuleFor(x => x).Must(x => x.UnitCost.HasValue == (x.Currency is not null))
             .WithMessage("Purchase cost and currency must be supplied together.");
