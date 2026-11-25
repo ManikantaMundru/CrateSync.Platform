@@ -18,11 +18,11 @@ internal sealed class AdjustStockCommandHandler(
 {
     public async Task<Result> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
     {
-        var balance = await repository.GetAsync(
+        var balance = await repository.GetBatchAsync(
             tenantContext.TenantId,
             request.WarehouseId,
             request.ProductVarietyId,
-            request.OriginCountry,
+            request.OriginCountry, request.BatchId,
             cancellationToken);
 
         if (balance is null)
