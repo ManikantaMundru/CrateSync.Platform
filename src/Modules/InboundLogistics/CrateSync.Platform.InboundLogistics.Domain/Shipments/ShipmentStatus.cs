@@ -8,5 +8,6 @@ public enum ShipmentStatus
     Receiving = 4,
     PartiallyReceived = 5,
     Received = 6,
-    Cancelled = 7
+    Cancelled = 7,
+    ReceivedWithDiscrepancies = 8
 }
