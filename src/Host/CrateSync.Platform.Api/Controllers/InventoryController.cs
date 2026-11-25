@@ -25,7 +25,7 @@ public sealed class InventoryController(
         [FromQuery] Guid warehouseId,
         [FromQuery] Guid productVarietyId,
         [FromQuery] string originCountry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, [FromQuery] Guid batchId = default)
     {
         if (!await accessService.CanReadWarehouseAsync(
                 warehouseId,
@@ -38,7 +38,7 @@ public sealed class InventoryController(
             new GetStockQuery(
                 warehouseId,
                 productVarietyId,
-                originCountry),
+                originCountry, batchId),
             cancellationToken);
 
         return result.IsFailure
@@ -91,7 +91,7 @@ public sealed class InventoryController(
         [FromQuery] Guid warehouseId,
         [FromQuery] Guid productVarietyId,
         [FromQuery] string originCountry,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, [FromQuery] Guid batchId = default)
     {
         if (!await accessService.CanReadWarehouseAsync(
                 warehouseId,
@@ -104,7 +104,7 @@ public sealed class InventoryController(
             new GetStockMovementsQuery(
                 warehouseId,
                 productVarietyId,
-                originCountry),
+                originCountry, batchId),
             cancellationToken);
 
         return Ok(result);
