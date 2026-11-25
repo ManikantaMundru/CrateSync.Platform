@@ -203,6 +203,7 @@ router.beforeEach(async (to) => {
     to.meta.requiresTenantAdmin &&
     auth.me?.currentTenant?.accessMode !==
       'SuperAdmin' &&
+    auth.me?.currentTenant?.roles.includes('TenantOwner') !== true &&
     auth.me?.currentTenant?.roles.includes(
       'TenantAdmin',
     ) !== true
@@ -224,5 +225,14 @@ router.beforeEach(async (to) => {
     }
   }
 
+  const current = auth.me?.currentTenant
+  if (to.meta.requiresTenant && current?.accessMode !== 'SuperAdmin') {
+    const roles = current?.roles ?? []
+    const financial = roles.includes('TenantOwner') || roles.includes('Finance')
+    if (to.meta.title === 'Finance' && !financial)
+      return current?.path ?? { name: 'home' }
+    if (to.name === 'inbound-shipments' && !financial && !roles.includes('TenantAdmin') && !roles.includes('Viewer'))
+      return current?.path ?? { name: 'home' }
+  }
   return true
 })
