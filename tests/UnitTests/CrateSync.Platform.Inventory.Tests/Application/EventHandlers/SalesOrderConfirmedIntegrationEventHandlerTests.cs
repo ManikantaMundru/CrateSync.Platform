@@ -36,19 +36,19 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
         var repository =
             Substitute.For<IInventoryBalanceRepository>();
 
-        repository.GetAsync(
+        repository.GetBatchAsync(
                 tenantId,
                 warehouseId,
                 varietyA,
-                "ZA",
+                "ZA", Guid.Empty,
                 Arg.Any<CancellationToken>())
             .Returns(balanceA);
 
-        repository.GetAsync(
+        repository.GetBatchAsync(
                 tenantId,
                 warehouseId,
                 varietyB,
-                "ZA",
+                "ZA", Guid.Empty,
                 Arg.Any<CancellationToken>())
             .Returns(balanceB);
 
@@ -123,19 +123,19 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
         var repository =
             Substitute.For<IInventoryBalanceRepository>();
 
-        repository.GetAsync(
+        repository.GetBatchAsync(
                 tenantId,
                 warehouseId,
                 varietyA,
-                "ZA",
+                "ZA", Guid.Empty,
                 Arg.Any<CancellationToken>())
             .Returns(balanceA);
 
-        repository.GetAsync(
+        repository.GetBatchAsync(
                 tenantId,
                 warehouseId,
                 varietyB,
-                "ZA",
+                "ZA", Guid.Empty,
                 Arg.Any<CancellationToken>())
             .Returns(balanceB);
 
@@ -192,6 +192,23 @@ public sealed class SalesOrderConfirmedIntegrationEventHandlerTests
         await publisher.DidNotReceive().Publish(
             Arg.Any<StockReservedIntegrationEvent>(),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfirmedOrder_ReservesOnlyRequestedBatch()
+    {
+        var tenant = Guid.NewGuid();
+        var warehouse = Guid.NewGuid();
+        var variety = Guid.NewGuid();
+        var batch = Guid.NewGuid();
+        var balance = InventoryBalance.Create(tenant, warehouse, variety, "ZA", Now, batch, "BATCH-A", 18m);
+        balance.Receive(new CrateQuantity(100), StockReference.Shipment(Guid.NewGuid()), Now);
+        var repository = Substitute.For<IInventoryBalanceRepository>();
+        repository.GetBatchAsync(tenant, warehouse, variety, "ZA", batch, Arg.Any<CancellationToken>()).Returns(balance);
+        var handler = new SalesOrderConfirmedIntegrationEventHandler(repository, Substitute.For<IInventoryUnitOfWork>(), new FakeTimeProvider(Now), Substitute.For<IPublisher>());
+        await handler.Handle(new SalesOrderConfirmedIntegrationEvent(tenant, Guid.NewGuid(), warehouse,
+            [new SalesOrderLineIntegrationContract(Guid.NewGuid(), variety, 30, "ZA", batch)], Now), CancellationToken.None);
+        balance.Reserved.Value.ShouldBe(30);
     }
 
     private static InventoryBalance CreateBalanceWithStock(
