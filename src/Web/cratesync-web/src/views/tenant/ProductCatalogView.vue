@@ -85,7 +85,7 @@ const canManageCatalog = computed(
     auth.me?.currentTenant?.roles.includes(
       'TenantOwner',
     ) === true ||
-    currentTenant?.roles.includes(
+    auth.me?.currentTenant?.roles.includes(
       'TenantAdmin',
     ) === true,
 )
