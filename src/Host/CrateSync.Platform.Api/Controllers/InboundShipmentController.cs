@@ -119,6 +119,16 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         return result.IsFailure ? this.ToProblem(result.Error) : StatusCode(StatusCodes.Status201Created, new { id = result.Value });
     }
 
+    [HttpPost("{shipmentId:guid}/regulatory-samples/{sampleId:guid}/reverse")]
+    public async Task<IActionResult> ReverseSample(Guid shipmentId, Guid sampleId, [FromBody] ReverseRegulatorySampleRequest request, CancellationToken cancellationToken)
+    {
+        var accessResult = await EnsureShipmentOperationAccessAsync(shipmentId, cancellationToken);
+        if (accessResult is not null) return accessResult;
+        var result = await sender.Send(new ReverseRegulatorySampleCommand(shipmentId, sampleId, request.Reason), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
+    }
+
+    public sealed record ReverseRegulatorySampleRequest(string Reason);
     public sealed record RecordRegulatorySampleRequest(Guid SampleId, Guid LineId, ClearanceAuthority Authority, int Quantity, string? ReferenceNumber, string Remarks);
 
     [HttpPut("{shipmentId:guid}/references")]
@@ -397,14 +407,14 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             Lines = shipment.Lines.Select(line => new
             {
                 line.Id, line.ProductId, line.ProductVarietyId, line.BatchCode,
-                line.ExpectedQuantity, line.ReceivedQuantity, line.PackSizeKg, line.FruitsPerPack, line.RegulatorySampleQuantity
+                line.ExpectedQuantity, line.ReceivedQuantity, line.PackSizeKg, line.FruitsPerPack, line.RegulatorySampleQuantity, line.DamagedQuantity, line.MissingQuantity, line.PendingAllocationQuantity, line.AccountedQuantity, line.RemainingQuantity, line.AvailableForAllocation
             }),
             shipment.ContainerNumber, shipment.BillOfLadingNumber,
             shipment.PortOfLoading, shipment.PortOfDischarge, shipment.VesselName,
             shipment.VoyageNumber, shipment.CustomsBrokerName, shipment.BillOfEntryNumber,
             shipment.BillOfEntryDate, shipment.OutOfChargeAtUtc, shipment.CustomsStatus,
             shipment.PlantQuarantineStatus, shipment.FoodSafetyStatus,
-            shipment.ClearanceEvents, RegulatorySamples = shipment.RegulatorySamples?.Select(s => new { s.Id, s.ShipmentLineId, s.Authority, s.Quantity, s.ReferenceNumber, s.RecordedAtUtc }), Documents = Array.Empty<object>(),
+            shipment.ClearanceEvents, RegulatorySamples = shipment.RegulatorySamples?.Select(s => new { s.Id, s.ShipmentLineId, s.Authority, s.Quantity, s.ReferenceNumber, s.RecordedAtUtc, s.ReversedAtUtc }), Documents = Array.Empty<object>(),
             Receipts = (shipment.Receipts ?? Array.Empty<ShipmentReceiptResponse>()).Where(x => tenantWide || assigned.Contains(x.WarehouseId)),
             Deliveries = visibleDeliveries, shipment.IsClearedForWarehouseDispatch
         });
