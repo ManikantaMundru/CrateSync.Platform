@@ -13,6 +13,9 @@ const currentTenant = computed(
   () => auth.me?.currentTenant ?? null,
 )
 
+const tenantWide = computed(() => currentTenant.value?.accessMode === 'SuperAdmin' || currentTenant.value?.roles.some(r => ['TenantAdmin', 'TenantOwner', 'Finance', 'Viewer'].includes(r)) === true)
+const financial = computed(() => currentTenant.value?.accessMode === 'SuperAdmin' || currentTenant.value?.roles.some(r => ['TenantOwner', 'Finance'].includes(r)) === true)
+
 function displayRole(role: string) {
   return role === 'TenantAdmin'
     ? 'Administrator'
@@ -61,7 +64,7 @@ function displayRole(role: string) {
     </div>
 
     <div class="metric-grid">
-      <CCard class="metric-card">
+      <CCard v-if="tenantWide" class="metric-card">
         <CCardBody>
           <span>Sales</span>
           <strong>Ready</strong>
@@ -91,7 +94,7 @@ function displayRole(role: string) {
         </CCardBody>
       </CCard>
 
-      <CCard class="metric-card">
+      <CCard v-if="financial" class="metric-card">
         <CCardBody>
           <span>Finance</span>
           <strong>Ready</strong>
