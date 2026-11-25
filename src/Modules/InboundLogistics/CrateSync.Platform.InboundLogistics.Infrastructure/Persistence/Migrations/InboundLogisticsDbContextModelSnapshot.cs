@@ -336,6 +336,22 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.ToTable("ShipmentReceipts", "logistics");
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.RegulatorySample", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("ShipmentId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("ShipmentLineId").HasColumnType("uniqueidentifier");
+                    b.Property<int>("Authority").HasColumnType("int");
+                    b.Property<int>("Quantity").HasColumnType("int");
+                    b.Property<string>("ReferenceNumber").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("Remarks").IsRequired().HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<DateTimeOffset>("RecordedAtUtc").HasColumnType("datetimeoffset");
+                    b.HasKey("Id");
+                    b.HasIndex("ShipmentId");
+                    b.HasIndex("ShipmentLineId");
+                    b.ToTable("RegulatorySamples", "logistics");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentLine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -433,6 +449,13 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.RegulatorySample", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
+                        .WithMany("RegulatorySamples").HasForeignKey("ShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentLine", b =>
                 {
                     b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null)
@@ -460,6 +483,7 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Navigation("Lines");
 
                     b.Navigation("Receipts");
+                    b.Navigation("RegulatorySamples");
                 });
 #pragma warning restore 612, 618
         }

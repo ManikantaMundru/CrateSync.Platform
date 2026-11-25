@@ -16,6 +16,7 @@ internal sealed class InboundShipmentRepository(InboundLogisticsDbContext dbCont
     {
         return _dbContext.InboundShipments
             .Include(x => x.Lines)
+            .Include(x => x.RegulatorySamples)
             .Include(x => x.ClearanceEvents)
             .Include(x => x.Documents)
             .Include(x => x.Receipts)

@@ -109,6 +109,10 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
 
         builder.HasIndex(x => new { x.TenantId, x.ExpectedArrivalAtUtc });
 
+        builder.HasMany(x => x.RegulatorySamples)
+            .WithOne().HasForeignKey("ShipmentId").OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.RegulatorySamples).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasMany(x => x.Lines)
             .WithOne()
             .HasForeignKey("ShipmentId")

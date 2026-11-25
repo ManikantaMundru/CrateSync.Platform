@@ -22,6 +22,7 @@ interface ShipmentLine {
   batchCode: string
   expectedQuantity: number
   receivedQuantity: number
+  regulatorySampleQuantity?: number
 }
 
 interface DeliveryAllocation {
@@ -118,7 +119,7 @@ const availableForAllocation = (
 ) =>
   Math.max(
     0,
-    line.expectedQuantity -
+    line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) -
       line.receivedQuantity -
       alreadyAllocated(line.id) - (props.shipment.deliveries ?? []).flatMap(d => d.allocations).filter(a => a.shipmentLineId === line.id).reduce((total, a) => total + (a.damagedQuantity ?? 0) + (a.missingQuantity ?? 0), 0),
   )

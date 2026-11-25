@@ -512,6 +512,25 @@ public sealed class InboundShipmentTests
         line.UnitCost!.Amount.ShouldBe(18.50m);
     }
 
+    [Fact]
+    public void RegulatorySamples_ShouldReduceAllocatableQuantityWithoutChangingOriginalQuantity()
+    {
+        var shipment = CreateClearedArrivedShipment();
+        var line = shipment.Lines.Single();
+        var sampleId = Guid.NewGuid();
+        shipment.RecordRegulatorySample(sampleId, line.Id, ClearanceAuthority.Customs, 6, "TEST-001", "Retained for testing", Now.AddDays(2));
+        shipment.RecordRegulatorySample(sampleId, line.Id, ClearanceAuthority.Customs, 6, "TEST-001", "Retained for testing", Now.AddDays(2));
+        shipment.RegulatorySamples.Count.ShouldBe(1);
+        line.ExpectedQuantity.Value.ShouldBe(100);
+        Should.Throw<InvalidOperationException>(() => shipment.CreateWarehouseDelivery(WarehouseId, "Fruit Logistics", "Driver", "123", null, "Port", "Warehouse", null, null, [(line.Id, 95)], Now.AddDays(2)));
+        var deliveryId = shipment.CreateWarehouseDelivery(WarehouseId, "Fruit Logistics", "Driver", "123", null, "Port", "Warehouse", null, null, [(line.Id, 94)], Now.AddDays(2));
+        shipment.DispatchWarehouseDelivery(deliveryId, Now.AddDays(2).AddHours(1));
+        shipment.MarkWarehouseDeliveryDelivered(deliveryId, Now.AddDays(2).AddHours(2));
+        shipment.ConfirmWarehouseDelivery(deliveryId, Now.AddDays(2).AddHours(3));
+        line.ReceivedQuantity.Value.ShouldBe(94);
+        shipment.Status.ShouldBe(ShipmentStatus.Received);
+    }
+
     private static InboundShipment CreateShipment()
     {
         return InboundShipment.Create(

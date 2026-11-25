@@ -7,6 +7,7 @@ namespace CrateSync.Platform.InboundLogistics.Domain.Shipments;
 public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 {
     private readonly List<ShipmentLine> _lines = [];
+    private readonly List<RegulatorySample> _regulatorySamples = [];
     private readonly List<ShipmentClearanceEvent> _clearanceEvents = [];
     private readonly List<ShipmentDocument> _documents = [];
     private readonly List<ShipmentReceipt> _receipts = [];
@@ -89,6 +90,47 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
     public PlantQuarantineStatus PlantQuarantineStatus { get; private set; }
 
     public FoodSafetyStatus FoodSafetyStatus { get; private set; }
+
+    public IReadOnlyCollection<RegulatorySample> RegulatorySamples => _regulatorySamples.AsReadOnly();
+
+    public Guid RecordRegulatorySample(Guid sampleId, ShipmentLineId lineId, ClearanceAuthority authority,
+        int quantity, string? referenceNumber, string remarks, DateTimeOffset occurredOnUtc)
+    {
+        if (sampleId == Guid.Empty || quantity <= 0 || !Enum.IsDefined(authority) ||
+            string.IsNullOrWhiteSpace(remarks) || remarks.Length > 500 || referenceNumber?.Length > 100)
+            throw new InvalidOperationException("Invalid sample quantity, authority, reference or remarks.");
+        var existing = _regulatorySamples.SingleOrDefault(x => x.Id == sampleId);
+        if (existing is not null)
+        {
+            if (existing.ShipmentLineId != lineId.Value || existing.Authority != authority || existing.Quantity != quantity ||
+                existing.ReferenceNumber != referenceNumber?.Trim() || existing.Remarks != remarks.Trim())
+                throw new InvalidOperationException("Sample ID already used for a different deduction.");
+            return existing.Id;
+        }
+        if (Status != ShipmentStatus.Arrived || _deliveries.Count != 0 || _receipts.Count != 0)
+            throw new InvalidOperationException("Record retained samples after arrival and before planning any warehouse delivery.");
+        var line = _lines.SingleOrDefault(x => x.Id == lineId)
+            ?? throw new InvalidOperationException("Shipment line was not found.");
+        if (quantity > line.ExpectedQuantity.Value - SampleQuantity(lineId))
+            throw new InvalidOperationException("Sample quantity exceeds remaining shipment packages.");
+        _regulatorySamples.Add(new RegulatorySample(sampleId, lineId.Value, authority, quantity, referenceNumber, remarks, occurredOnUtc));
+        UpdatedAtUtc = occurredOnUtc;
+        UpdateReceiptCompletion(occurredOnUtc);
+        return sampleId;
+    }
+
+    private int SampleQuantity(ShipmentLineId lineId) =>
+        _regulatorySamples.Where(x => x.ShipmentLineId == lineId.Value).Sum(x => x.Quantity);
+
+    private void UpdateReceiptCompletion(DateTimeOffset occurredOnUtc)
+    {
+        if (Status == ShipmentStatus.Received || _lines.Count == 0 ||
+            !_lines.All(x => x.ReceivedQuantity.Value + SampleQuantity(x.Id) == x.ExpectedQuantity.Value))
+            return;
+        Status = ShipmentStatus.Received;
+        ReceivedAtUtc = occurredOnUtc;
+        RaiseDomainEvent(new ShipmentReceivedDomainEvent(Id, TenantId, SupplierId, occurredOnUtc));
+    }
 
     public IReadOnlyCollection<ShipmentLine> Lines => _lines.AsReadOnly();
 
@@ -342,6 +384,8 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                     occurredOnUtc));
         }
 
+        if (quantity.Value > line.ExpectedQuantity.Value - line.ReceivedQuantity.Value - SampleQuantity(line.Id))
+            throw new InvalidOperationException("Receipt exceeds quantity net of regulatory samples.");
         line.Receive(quantity);
 
         var receipt = new ShipmentReceipt(
@@ -356,7 +400,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         _receipts.Add(receipt);
         UpdatedAtUtc = occurredOnUtc;
 
-        if (_lines.All(x => x.IsFullyReceived))
+        if (_lines.All(x => x.ReceivedQuantity.Value + SampleQuantity(x.Id) == x.ExpectedQuantity.Value))
         {
             Status = ShipmentStatus.Received;
             ReceivedAtUtc = occurredOnUtc;
@@ -442,7 +486,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
                     .Sum(x => x.Quantity);
 
             var remaining =
-                line.ExpectedQuantity.Value -
+                line.ExpectedQuantity.Value - SampleQuantity(line.Id) -
                 line.ReceivedQuantity.Value -
                 alreadyAllocated - _deliveries.SelectMany(x => x.Allocations)
                     .Where(x => x.ShipmentLineId == allocation.LineId)
