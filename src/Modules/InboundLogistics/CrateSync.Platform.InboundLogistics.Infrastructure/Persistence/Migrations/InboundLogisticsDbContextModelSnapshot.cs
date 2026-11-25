@@ -344,8 +344,12 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<int>("ExpectedQuantity")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("PackSize")
-                        .HasColumnType("decimal(18,3)");
+                    b.Property<decimal?>("PackWeightKg")
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("PackSize");
+
+                    b.Property<int?>("FruitsPerPack")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uniqueidentifier");
