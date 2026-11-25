@@ -22,6 +22,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const isOwner = computed(() => auth.me?.currentTenant?.accessMode === 'SuperAdmin' || auth.me?.currentTenant?.roles.includes('TenantOwner') === true)
+const canManageCosts = computed(() => isOwner.value || auth.me?.currentTenant?.roles.includes('Finance') === true)
 const canReceive = (warehouseId: string) => canOperate.value || auth.me?.currentTenant?.warehouses.some(w => w.warehouseId === warehouseId && w.role === 'WarehouseAdmin') === true
 const canOperate = computed(() => isOwner.value || (auth.me?.currentTenant?.roles.includes('TenantAdmin') === true && auth.me?.currentTenant?.roles.includes('Finance') !== true))
 import { countries } from '@/data/countries'
@@ -54,8 +55,8 @@ interface ShipmentLine {
   expectedQuantity: number
   receivedQuantity: number
   packSizeKg: number
-  unitCost: number
-  currency: string
+  unitCost?: number | null
+  currency?: string | null
 }
 
 interface ClearanceEvent {
@@ -161,6 +162,46 @@ const suppliers = ref<SupplierSummary[]>([])
 const warehouses = ref<WarehouseSummary[]>([])
 const products = ref<ProductSummary[]>([])
 const selectedShipment = ref<ShipmentDetails | null>(null)
+const costLineId = ref<string | null>(null)
+const costAmount = ref<number | string>('')
+const costCurrency = ref('USD')
+const costError = ref<string | null>(null)
+
+function openPurchaseCost(line: ShipmentLine) {
+  if (!canManageCosts.value) return
+  costLineId.value = line.id
+  costAmount.value = line.unitCost ?? ''
+  costCurrency.value = line.currency ?? 'USD'
+  costError.value = null
+}
+
+async function savePurchaseCost() {
+  if (!canManageCosts.value || !selectedShipment.value || !costLineId.value) return
+  const amount = Number(costAmount.value)
+  const currency = costCurrency.value.trim().toUpperCase()
+  if (costAmount.value === '' || !Number.isFinite(amount) || amount < 0 || !/^[A-Z]{3}$/.test(currency)) {
+    costError.value = 'Enter a non-negative purchase cost and three-letter currency.'
+    return
+  }
+  const shipmentId = selectedShipment.value.id
+  saving.value = true
+  costError.value = null
+  try {
+    await apiFetch(`/api/InboundShipment/${shipmentId}/lines/${costLineId.value}/purchase-cost`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unitCost: amount, currency }),
+    })
+    costLineId.value = null
+    await loadShipment(shipmentId)
+    success.value = 'Purchase cost saved.'
+  } catch (exception) {
+    costError.value = exception instanceof Error ? exception.message : 'Unable to save purchase cost.'
+  } finally {
+    saving.value = false
+  }
+}
+
 const loading = ref(true)
 const detailsLoading = ref(false)
 const saving = ref(false)
@@ -1105,6 +1146,13 @@ onMounted(async () => {
                     {{ line.packSizeKg }} kg pack
                   </small>
 
+                  <div v-if="canManageCosts" class="purchase-cost-summary">
+                    <span>Purchase cost per crate: {{ line.unitCost == null ? 'Pending' : line.unitCost.toFixed(2) + ' ' + line.currency }}</span>
+                    <CButton v-if="selectedShipment.status !== 'Cancelled'" color="secondary" variant="outline" size="sm" :disabled="saving" @click="openPurchaseCost(line)">
+                      {{ line.unitCost == null ? 'Enter cost' : 'Edit cost' }}
+                    </CButton>
+                  </div>
+
                   <div class="shipment-receipt-progress">
                     <span>
                       Received
@@ -1588,4 +1636,18 @@ onMounted(async () => {
       </CModalFooter>
     </CModal>
   </section>
+  <CModal :visible="costLineId !== null && canManageCosts" alignment="center" @close="!saving && (costLineId = null)">
+    <CModalHeader><CModalTitle>Confidential purchase cost</CModalTitle></CModalHeader>
+    <CModalBody>
+      <form id="purchase-cost-form" class="admin-form admin-form-single" @submit.prevent="savePurchaseCost">
+        <p v-if="costError" class="status-message status-error">{{ costError }}</p>
+        <label class="form-field"><span>Purchase cost per crate</span><input v-model.number="costAmount" type="number" min="0" step="0.01" required class="form-control"></label>
+        <label class="form-field"><span>Currency (ISO code)</span><input v-model.trim="costCurrency" maxlength="3" required class="form-control"></label>
+      </form>
+    </CModalBody>
+    <CModalFooter>
+      <CButton color="secondary" :disabled="saving" @click="costLineId = null">Cancel</CButton>
+      <CButton color="primary" type="submit" form="purchase-cost-form" :disabled="saving">Save cost</CButton>
+    </CModalFooter>
+  </CModal>
 </template>
