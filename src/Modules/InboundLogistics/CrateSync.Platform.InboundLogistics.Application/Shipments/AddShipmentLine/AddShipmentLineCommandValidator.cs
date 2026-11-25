@@ -25,11 +25,11 @@ internal sealed class AddShipmentLineCommandValidator : AbstractValidator<AddShi
         RuleFor(x => x.PackSizeKg)
             .GreaterThan(0);
 
-        RuleFor(x => x.UnitCost)
-            .GreaterThanOrEqualTo(0);
-
-        RuleFor(x => x.Currency)
-            .NotEmpty()
-            .Length(3);
+        RuleFor(x => x).Must(x => x.UnitCost.HasValue == (x.Currency is not null))
+            .WithMessage("Purchase cost and currency must be supplied together.");
+        RuleFor(x => x.UnitCost).GreaterThanOrEqualTo(0m).LessThanOrEqualTo(9999999999999999.99m)
+            .When(x => x.UnitCost.HasValue);
+        RuleFor(x => x.Currency).NotEmpty().Matches("^[A-Za-z]{3}$")
+            .When(x => x.Currency is not null);
     }
 }
