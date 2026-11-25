@@ -11,7 +11,7 @@ public interface IInventoryReadService
         Guid warehouseId,
         Guid productVarietyId,
         string originCountry,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Guid batchId = default);
 
     Task<IReadOnlyCollection<StockSummaryResponse>> SearchStockAsync(
         Guid tenantId,
@@ -25,5 +25,5 @@ public interface IInventoryReadService
         Guid warehouseId,
         Guid productVarietyId,
         string originCountry,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default, Guid batchId = default);
 }
