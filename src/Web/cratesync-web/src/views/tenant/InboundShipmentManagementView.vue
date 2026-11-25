@@ -54,7 +54,8 @@ interface ShipmentLine {
   batchCode: string
   expectedQuantity: number
   receivedQuantity: number
-  packSizeKg: number
+  packSizeKg: number | null
+  fruitsPerPack?: number | null
   unitCost?: number | null
   currency?: string | null
 }
@@ -831,6 +832,7 @@ onMounted(async () => {
     v-if="viewMode === 'create'"
     :suppliers="suppliers"
     :products="products"
+    :can-enter-costs="isOwner"
     @cancel="showShipmentList"
     @created="handleShipmentCreated"
   />
@@ -1143,7 +1145,7 @@ onMounted(async () => {
                 <div class="shipment-line-main">
                   <strong>{{ line.batchCode }}</strong>
                   <small>
-                    {{ line.packSizeKg }} kg pack
+                    {{ line.fruitsPerPack != null ? `${line.fruitsPerPack} fruits / pack` : `${line.packSizeKg} kg / pack` }}
                   </small>
 
                   <div v-if="canManageCosts" class="purchase-cost-summary">
