@@ -51,7 +51,7 @@ internal sealed class SalesOrderReadService(ISqlConnectionFactory connectionFact
                 UnitPrice,
                 Currency,
                 Quantity * UnitPrice AS LineTotal,
-                OriginCountry
+                OriginCountry, BatchId, BatchCode, FruitsPerPack
             FROM sales.SalesOrderLines
             WHERE SalesOrderId = @SalesOrderId
             ORDER BY Id;
