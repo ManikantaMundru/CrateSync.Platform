@@ -171,9 +171,11 @@ public sealed class InboundReceiptJourneyTests(
             await JourneyTestData.GetStockAsync(
                 client,
                 warehouseAId,
-                productVarietyId);
+                productVarietyId, batchId: lineId);
 
         stockA.OnHand.ShouldBe(12);
+        stockA.BatchId.ShouldBe(lineId);
+        stockA.PackWeightKg.ShouldBe(18m);
 
         var stockB =
             await JourneyTestData.GetStockAsync(
@@ -182,6 +184,8 @@ public sealed class InboundReceiptJourneyTests(
                 productVarietyId);
 
         stockB.OnHand.ShouldBe(25);
+        stockB.BatchId.ShouldBe(lineId);
+        stockB.PackWeightKg.ShouldBe(18m);
     }
 
     private static async Task<Guid> CreateDeliveryAsync(
