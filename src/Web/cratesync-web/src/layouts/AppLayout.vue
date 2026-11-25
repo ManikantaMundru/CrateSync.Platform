@@ -139,7 +139,8 @@ const tenantLinks = computed(() => {
   const financial = isSuperAdminSession.value || roles.includes('TenantOwner') || roles.includes('Finance')
   const tenantWide = financial || roles.includes('TenantAdmin') || roles.includes('Viewer')
   return links.filter(link => (link.suffix !== '/finance' || financial) &&
-    (tenantWide || ['', '/shipments', '/inventory'].includes(link.suffix))).map((link) => ({
+    (tenantWide || ['', '/shipments', '/inventory'].includes(link.suffix) ||
+      (currentTenant.value?.warehouses.some(w => w.role === 'WarehouseAdmin') === true && ['/customers', '/sales'].includes(link.suffix)))).map((link) => ({
     ...link,
     to:
       `/tenant/${tenantId.value}${link.suffix}`,
