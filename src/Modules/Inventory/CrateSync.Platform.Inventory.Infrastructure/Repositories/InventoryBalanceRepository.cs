@@ -47,5 +47,9 @@ internal sealed class InventoryBalanceRepository(InventoryDbContext dbContext) :
             .ToListAsync(cancellationToken);
     }
 
+    public Task<InventoryBalance?> GetByIdAsync(Guid tenantId, Guid balanceId, CancellationToken cancellationToken = default) =>
+        dbContext.InventoryBalances.Include(x => x.SellingPriceHistory)
+            .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.Id == InventoryBalanceId.From(balanceId), cancellationToken);
+
     public void Add(InventoryBalance balance) => dbContext.InventoryBalances.Add(balance);
 }
