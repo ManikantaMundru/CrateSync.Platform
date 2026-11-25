@@ -284,6 +284,11 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<Guid>("ShipmentLineId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("AcceptedQuantity").HasColumnType("int");
+                    b.Property<int?>("DamagedQuantity").HasColumnType("int");
+                    b.Property<int?>("MissingQuantity").HasColumnType("int");
+                    b.Property<string>("ReceivingRemarks").HasMaxLength(500).HasColumnType("nvarchar(500)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DeliveryId");
