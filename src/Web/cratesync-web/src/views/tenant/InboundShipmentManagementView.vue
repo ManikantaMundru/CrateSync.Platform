@@ -84,6 +84,10 @@ interface ShipmentDeliveryAllocation {
   deliveryId: string
   shipmentLineId: string
   quantity: number
+  acceptedQuantity?: number | null
+  damagedQuantity?: number | null
+  missingQuantity?: number | null
+  receivingRemarks?: string | null
 }
 
 interface ShipmentDelivery {
@@ -621,39 +625,42 @@ async function markWarehouseDeliveryDelivered(
   }
 }
 
-async function confirmWarehouseDelivery(
-  deliveryId: string,
-) {
-  if (!selectedShipment.value)
-    return
-
-  saving.value = true
-  error.value = null
-
-  try {
-    await apiFetch(
-      `/api/InboundShipment/${selectedShipment.value.id}/warehouse-deliveries/${deliveryId}/receive`,
-      { method: 'PATCH' },
-    )
-
-    success.value =
-      'Warehouse delivery received and inventory updated.'
-
-    await Promise.all([
-      loadShipments(),
-      loadShipment(
-        selectedShipment.value.id,
-      ),
-    ])
-  } catch (exception) {
-    error.value =
-      exception instanceof Error
-        ? exception.message
-        : 'Unable to receive warehouse delivery.'
-  } finally {
-    saving.value = false
-  }
+const receiptDeliveryId = ref<string | null>(null)
+const inspectionRows = ref<{ allocationId: string; label: string; expected: number; accepted: number; damaged: number; missing: number; remarks: string }[]>([])
+const inspectionError = ref<string | null>(null)
+function openReceipt(delivery: ShipmentDelivery) {
+  if (!canReceive(delivery.warehouseId)) return
+  receiptDeliveryId.value = delivery.id
+  inspectionError.value = null
+  inspectionRows.value = delivery.allocations.map(a => ({
+    allocationId: a.id, label: selectedShipment.value?.lines.find(l => l.id === a.shipmentLineId)?.batchCode ?? 'Line',
+    expected: a.quantity, accepted: a.quantity, damaged: 0, missing: 0, remarks: '',
+  }))
 }
+function validInspection(row: typeof inspectionRows.value[number]) {
+  return [row.accepted, row.damaged, row.missing].every(n => typeof n === 'number' && Number.isInteger(n) && n >= 0)
+    && row.accepted + row.damaged + row.missing === row.expected
+    && (!(row.damaged || row.missing) || !!row.remarks.trim())
+}
+async function confirmWarehouseDelivery() {
+  const deliveryId = receiptDeliveryId.value
+  if (!selectedShipment.value || !deliveryId || !inspectionRows.value.length || !inspectionRows.value.every(validInspection)) return
+  const shipmentId = selectedShipment.value.id
+  saving.value = true
+  inspectionError.value = null
+  try {
+    await apiFetch(`/api/InboundShipment/${shipmentId}/warehouse-deliveries/${deliveryId}/receive`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inspectionRows.value.map(({ allocationId, accepted, damaged, missing, remarks }) => ({ allocationId, accepted, damaged, missing, remarks: remarks.trim() || null }))),
+    })
+    receiptDeliveryId.value = null
+    success.value = 'Inspection recorded. Accepted packages added to inventory.'
+    await Promise.all([loadShipments(), loadShipment(shipmentId)])
+  } catch (exception) {
+    inspectionError.value = exception instanceof Error ? exception.message : 'Unable to confirm receipt.'
+  } finally { saving.value = false }
+}
+
 
 function openClearance() {
   if (!selectedShipment.value)
@@ -1292,7 +1299,8 @@ onMounted(async () => {
                       )?.batchCode || 'Line'
                     }}
                     ·
-                    {{ allocation.quantity }} crates
+                    {{ allocation.quantity }} packages
+                    <template v-if="allocation.acceptedQuantity != null"> · {{ allocation.acceptedQuantity }} accepted · {{ allocation.damagedQuantity }} damaged · {{ allocation.missingQuantity }} missing<span v-if="allocation.receivingRemarks"> · {{ allocation.receivingRemarks }}</span></template>
                   </span>
                 </div>
 
@@ -1343,11 +1351,7 @@ onMounted(async () => {
                     color="primary"
                     size="sm"
                     :disabled="saving"
-                    @click="
-                      confirmWarehouseDelivery(
-                        delivery.id,
-                      )
-                    "
+                    @click="openReceipt(delivery)"
                   >
                     Confirm warehouse receipt
                   </CButton>
@@ -1650,6 +1654,27 @@ onMounted(async () => {
     <CModalFooter>
       <CButton color="secondary" :disabled="saving" @click="costLineId = null">Cancel</CButton>
       <CButton color="primary" type="submit" form="purchase-cost-form" :disabled="saving">Save cost</CButton>
+    </CModalFooter>
+  </CModal>
+  <CModal :visible="receiptDeliveryId !== null" size="lg" alignment="center" @close="!saving && (receiptDeliveryId = null)">
+    <CModalHeader><CModalTitle>Confirm physical warehouse receipt</CModalTitle></CModalHeader>
+    <CModalBody>
+      <p>Inspect every allocation. Only accepted packages will enter available inventory.</p>
+      <p v-if="inspectionError" class="status-message status-error">{{ inspectionError }}</p>
+      <div v-for="row in inspectionRows" :key="row.allocationId" class="border rounded p-3 mb-3">
+        <strong>{{ row.label }} · {{ row.expected }} expected packages</strong>
+        <div class="row g-2 mt-1">
+          <label class="col"><span>Accepted</span><input v-model.number="row.accepted" type="number" min="0" step="1" class="form-control"></label>
+          <label class="col"><span>Damaged</span><input v-model.number="row.damaged" type="number" min="0" step="1" class="form-control"></label>
+          <label class="col"><span>Missing</span><input v-model.number="row.missing" type="number" min="0" step="1" class="form-control"></label>
+        </div>
+        <label class="form-field mt-2"><span>Receiving remarks (required for discrepancies)</span><textarea v-model="row.remarks" maxlength="500" class="form-control" rows="2"/></label>
+        <small v-if="!validInspection(row)" class="text-danger">Quantities must equal expected packages; discrepancies require remarks.</small>
+      </div>
+    </CModalBody>
+    <CModalFooter>
+      <CButton color="secondary" :disabled="saving" @click="receiptDeliveryId = null">Cancel</CButton>
+      <CButton color="primary" :disabled="saving || !inspectionRows.length || !inspectionRows.every(validInspection)" @click="confirmWarehouseDelivery">Confirm receipt</CButton>
     </CModalFooter>
   </CModal>
 </template>

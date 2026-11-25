@@ -444,7 +444,9 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
             var remaining =
                 line.ExpectedQuantity.Value -
                 line.ReceivedQuantity.Value -
-                alreadyAllocated;
+                alreadyAllocated - _deliveries.SelectMany(x => x.Allocations)
+                    .Where(x => x.ShipmentLineId == allocation.LineId)
+                    .Sum(x => (x.DamagedQuantity ?? 0) + (x.MissingQuantity ?? 0));
 
             if (allocation.Quantity <= 0 ||
                 allocation.Quantity > remaining)
@@ -495,43 +497,67 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 
     public IReadOnlyCollection<ShipmentReceipt> ConfirmWarehouseDelivery(
         ShipmentDeliveryId deliveryId,
-        DateTimeOffset occurredOnUtc)
+        DateTimeOffset occurredOnUtc,
+        IReadOnlyCollection<(Guid AllocationId, int Accepted, int Damaged, int Missing, string? Remarks)>? inspections = null)
     {
-        var delivery =
-            _deliveries.SingleOrDefault(x => x.Id == deliveryId)
+        var delivery = _deliveries.SingleOrDefault(x => x.Id == deliveryId)
             ?? throw new InvalidOperationException("Warehouse delivery was not found.");
 
         if (delivery.Status == ShipmentDeliveryStatus.Received)
         {
-            return _receipts
-                .Where(x => x.DeliveryId == deliveryId.Value)
-                .ToArray();
+            if (inspections is not null && (inspections.Count != delivery.Allocations.Count ||
+                inspections.Select(x => x.AllocationId).Distinct().Count() != inspections.Count ||
+                inspections.Any(x => !delivery.Allocations.Any(a => a.Id.Value == x.AllocationId &&
+                    (a.AcceptedQuantity ?? a.Quantity) == x.Accepted &&
+                    (a.DamagedQuantity ?? 0) == x.Damaged && (a.MissingQuantity ?? 0) == x.Missing &&
+                    (a.ReceivingRemarks ?? "") == (x.Remarks?.Trim() ?? "")))))
+                throw new InvalidOperationException("Delivery was already received with different inspection quantities.");
+            return _receipts.Where(x => x.DeliveryId == deliveryId.Value).ToArray();
         }
 
         if (delivery.Status != ShipmentDeliveryStatus.DeliveredToWarehouse)
             throw new InvalidOperationException("Only delivered transports can be received.");
+        if (Status is not ShipmentStatus.Arrived and not ShipmentStatus.Receiving and not ShipmentStatus.PartiallyReceived)
+            throw new InvalidOperationException("Shipment cannot be received in its current status.");
+
+        var entries = inspections ?? delivery.Allocations.Select(a =>
+            (a.Id.Value, a.Quantity, 0, 0, (string?)null)).ToArray();
+        if (entries.Count != delivery.Allocations.Count || entries.Select(x => x.AllocationId).Distinct().Count() != entries.Count)
+            throw new InvalidOperationException("Provide exactly one inspection for every allocation.");
+
+        // Validate the complete inspection before mutating the aggregate.
+        foreach (var entry in entries)
+        {
+            var allocation = delivery.Allocations.SingleOrDefault(a => a.Id.Value == entry.AllocationId)
+                ?? throw new InvalidOperationException("Unknown delivery allocation.");
+            if (entry.Accepted < 0 || entry.Damaged < 0 || entry.Missing < 0 ||
+                (long)entry.Accepted + entry.Damaged + entry.Missing != allocation.Quantity ||
+                entry.Remarks?.Length > 500 ||
+                ((entry.Damaged > 0 || entry.Missing > 0) && string.IsNullOrWhiteSpace(entry.Remarks)))
+                throw new InvalidOperationException("Invalid inspection quantities or missing discrepancy remarks.");
+            var line = _lines.Single(x => x.Id == allocation.ShipmentLineId);
+            if (entry.Accepted > line.ExpectedQuantity.Value - line.ReceivedQuantity.Value)
+                throw new InvalidOperationException("Accepted quantity exceeds remaining shipment quantity.");
+        }
 
         var receipts = new List<ShipmentReceipt>();
-
-        foreach (var allocation in delivery.Allocations)
+        foreach (var entry in entries)
         {
+            var allocation = delivery.Allocations.Single(a => a.Id.Value == entry.AllocationId);
+            allocation.RecordInspection(entry.Accepted, entry.Damaged, entry.Missing, entry.Remarks);
+            if (entry.Accepted == 0) continue;
             var receiptId = ShipmentReceiptId.New();
-
-            ReceiveLine(
-                receiptId,
-                allocation.ShipmentLineId,
-                delivery.WarehouseId,
-                new CrateQuantity(allocation.Quantity),
-                occurredOnUtc,
-                delivery.Id);
-
-            receipts.Add(
-                _receipts.Single(x => x.Id == receiptId));
+            ReceiveLine(receiptId, allocation.ShipmentLineId, delivery.WarehouseId,
+                new CrateQuantity(entry.Accepted), occurredOnUtc, delivery.Id);
+            receipts.Add(_receipts.Single(x => x.Id == receiptId));
         }
 
         delivery.MarkReceived(occurredOnUtc);
         UpdatedAtUtc = occurredOnUtc;
-
+        // A shortage is accounted for, not available for another transport.
+        // Keep the shipment partially received when accepted stock is below expected.
+        if (Status == ShipmentStatus.Arrived)
+            Status = ShipmentStatus.PartiallyReceived;
         return receipts;
     }
 

@@ -184,7 +184,11 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 a.Id,
                 a.DeliveryId,
                 a.ShipmentLineId,
-                a.Quantity
+                a.Quantity,
+                a.AcceptedQuantity,
+                a.DamagedQuantity,
+                a.MissingQuantity,
+                a.ReceivingRemarks
             FROM logistics.ShipmentDeliveryAllocations a
             INNER JOIN logistics.ShipmentDeliveries d
                 ON d.Id = a.DeliveryId

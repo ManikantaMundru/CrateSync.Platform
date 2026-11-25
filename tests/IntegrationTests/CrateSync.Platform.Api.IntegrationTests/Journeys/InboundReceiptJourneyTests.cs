@@ -109,8 +109,13 @@ public sealed class InboundReceiptJourneyTests(
             $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryBId}/dispatch",
             null)).EnsureSuccessStatusCode();
 
-        var premature = await client.PatchAsync(
-            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/receive", null);
+        var beforeDelivery = await client.GetFromJsonAsync<ShipmentResponse>($"/api/InboundShipment/{shipmentId}");
+        var allocationA = beforeDelivery!.Deliveries!.Single(d => d.Id == deliveryAId).Allocations.Single().Id;
+        var allocationB = beforeDelivery.Deliveries!.Single(d => d.Id == deliveryBId).Allocations.Single().Id;
+        var inspectionA = new[] { new { allocationId = allocationA, accepted = 12, damaged = 2, missing = 1, remarks = "Damaged and missing packages" } };
+        var inspectionB = new[] { new { allocationId = allocationB, accepted = 25, damaged = 0, missing = 0, remarks = (string?)null } };
+        var premature = await client.PatchAsJsonAsync(
+            $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/receive", inspectionA);
         premature.StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
         foreach (var deliveryId in new[] { deliveryAId, deliveryBId })
@@ -125,33 +130,37 @@ public sealed class InboundReceiptJourneyTests(
         delivered.Lines.Single().ReceivedQuantity.ShouldBe(0);
         delivered.Receipts!.ShouldBeEmpty();
 
-        (await client.PatchAsync(
+        (await client.PatchAsJsonAsync(
             $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryAId}/receive",
-            null)).EnsureSuccessStatusCode();
+            inspectionA)).EnsureSuccessStatusCode();
 
-        (await client.PatchAsync(
+        (await client.PatchAsJsonAsync(
             $"/api/InboundShipment/{shipmentId}/warehouse-deliveries/{deliveryBId}/receive",
-            null)).EnsureSuccessStatusCode();
+            inspectionB)).EnsureSuccessStatusCode();
 
         var shipment =
             await client.GetFromJsonAsync<ShipmentResponse>(
                 $"/api/InboundShipment/{shipmentId}");
 
         shipment.ShouldNotBeNull();
-        shipment.Status.ShouldBe("Received");
-        shipment.Lines.Single().ReceivedQuantity.ShouldBe(40);
+        shipment.Status.ShouldBe("PartiallyReceived");
+        shipment.Lines.Single().ReceivedQuantity.ShouldBe(37);
         shipment.Deliveries.ShouldNotBeNull();
         shipment.Deliveries.Count.ShouldBe(2);
         shipment.Deliveries.ShouldAllBe(
             x => x.Status == "Received");
 
+        var inspected = shipment.Deliveries.Single(d => d.Id == deliveryAId).Allocations.Single();
+        inspected.AcceptedQuantity.ShouldBe(12);
+        inspected.DamagedQuantity.ShouldBe(2);
+        inspected.MissingQuantity.ShouldBe(1);
         shipment.Receipts.ShouldNotBeNull();
         shipment.Receipts.Count.ShouldBe(2);
         shipment.Receipts.ShouldContain(
             x =>
                 x.WarehouseId == warehouseAId &&
                 x.DeliveryId == deliveryAId &&
-                x.Quantity == 15);
+                x.Quantity == 12);
         shipment.Receipts.ShouldContain(
             x =>
                 x.WarehouseId == warehouseBId &&
@@ -164,7 +173,7 @@ public sealed class InboundReceiptJourneyTests(
                 warehouseAId,
                 productVarietyId);
 
-        stockA.OnHand.ShouldBe(15);
+        stockA.OnHand.ShouldBe(12);
 
         var stockB =
             await JourneyTestData.GetStockAsync(

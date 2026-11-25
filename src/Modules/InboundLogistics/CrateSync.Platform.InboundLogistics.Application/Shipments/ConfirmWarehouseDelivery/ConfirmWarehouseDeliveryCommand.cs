@@ -5,4 +5,7 @@ namespace CrateSync.Platform.InboundLogistics.Application.Shipments.ConfirmWareh
 
 public sealed record ConfirmWarehouseDeliveryCommand(
     Guid ShipmentId,
-    Guid DeliveryId) : ICommand<Result>;
+    Guid DeliveryId,
+    IReadOnlyCollection<WarehouseReceiptInspection> Inspections) : ICommand<Result>;
+
+public sealed record WarehouseReceiptInspection(Guid AllocationId, int Accepted, int Damaged, int Missing, string? Remarks);

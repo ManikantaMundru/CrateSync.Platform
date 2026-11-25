@@ -33,6 +33,8 @@ internal sealed class ShipmentDeliveryAllocationConfiguration
 
         builder.Property(x => x.Quantity).IsRequired();
 
+        builder.Property(x => x.ReceivingRemarks).HasMaxLength(500);
+
         builder.HasIndex("DeliveryId");
         builder.HasIndex(x => x.ShipmentLineId);
     }
