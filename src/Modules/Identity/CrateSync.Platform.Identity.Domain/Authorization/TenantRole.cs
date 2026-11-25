@@ -6,5 +6,7 @@ namespace CrateSync.Platform.Identity.Domain.Authorization;
 public enum TenantRole
 {
     TenantAdmin = 1,
-    Viewer = 5
+    Viewer = 5,
+    TenantOwner = 6,
+    Finance = 7
 }
