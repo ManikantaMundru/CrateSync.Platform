@@ -460,6 +460,14 @@ public sealed class InboundShipmentTests
             deliveryId,
             Now.AddDays(2).AddHours(1));
 
+        Should.Throw<InvalidOperationException>(() =>
+            shipment.ConfirmWarehouseDelivery(deliveryId, Now.AddDays(2).AddHours(2)));
+
+        shipment.MarkWarehouseDeliveryDelivered(deliveryId, Now.AddDays(2).AddHours(3));
+        shipment.Deliveries.Single().Status.ShouldBe(ShipmentDeliveryStatus.DeliveredToWarehouse);
+        line.ReceivedQuantity.Value.ShouldBe(0);
+        shipment.Receipts.ShouldBeEmpty();
+
         var receipts =
             shipment.ConfirmWarehouseDelivery(
                 deliveryId,
