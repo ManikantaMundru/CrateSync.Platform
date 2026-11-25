@@ -6,5 +6,5 @@ public sealed record AddShipmentLineRequest(
     string BatchCode,
     int ExpectedQuantity,
     decimal PackSizeKg,
-    decimal UnitCost,
-    string Currency);
+    decimal? UnitCost = null,
+    string? Currency = null);
