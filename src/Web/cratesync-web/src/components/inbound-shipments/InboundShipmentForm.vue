@@ -3,7 +3,6 @@ import {
   computed,
   reactive,
   ref,
-  watch,
 } from 'vue'
 import {
   CButton,
@@ -43,8 +42,6 @@ interface DraftLine {
   batchCode: string
   expectedQuantity: number
   packSizeKg: number
-  unitCost: number
-  currency: string
   varieties: ProductVariety[]
 }
 
@@ -62,7 +59,6 @@ const saving = ref(false)
 const submitted = ref(false)
 const error = ref<string | null>(null)
 const freightExpanded = ref(true)
-const shipmentCurrency = ref('USD')
 
 const form = reactive({
   supplierId: '',
@@ -84,8 +80,6 @@ const lines = ref<DraftLine[]>([
     batchCode: '',
     expectedQuantity: 1,
     packSizeKg: 1,
-    unitCost: 0,
-    currency: 'USD',
     varieties: [],
   },
 ])
@@ -118,27 +112,6 @@ const totalDraftWeightKg = computed(() =>
   ),
 )
 
-const totalDraftValue = computed(() =>
-  lines.value.reduce(
-    (total, line) =>
-      total +
-      Math.max(
-        0,
-        Number(line.expectedQuantity) || 0,
-      ) *
-        Math.max(
-          0,
-          Number(line.unitCost) || 0,
-        ),
-    0,
-  ),
-)
-
-watch(shipmentCurrency, (currency) => {
-  for (const line of lines.value)
-    line.currency = currency
-})
-
 function addLine() {
   lines.value.push({
     productId: '',
@@ -146,8 +119,6 @@ function addLine() {
     batchCode: '',
     expectedQuantity: 1,
     packSizeKg: 1,
-    unitCost: 0,
-    currency: shipmentCurrency.value,
     varieties: [],
   })
 }
@@ -184,32 +155,6 @@ function generateShipmentReference() {
 
   form.trackingNumber =
     `SHP-${year}-${suffix}`
-}
-
-function formatDraftMoney(value: number) {
-  return new Intl.NumberFormat(
-    undefined,
-    {
-      style: 'currency',
-      currency: shipmentCurrency.value,
-      maximumFractionDigits: 2,
-    },
-  ).format(value)
-}
-
-function currencySymbol() {
-  switch (shipmentCurrency.value) {
-    case 'USD':
-      return '$'
-    case 'EUR':
-      return '€'
-    case 'GBP':
-      return '£'
-    case 'INR':
-      return '₹'
-    default:
-      return 'R'
-  }
 }
 
 function lineFieldInvalid(
@@ -353,10 +298,6 @@ async function createShipment() {
               Number(line.expectedQuantity),
             packSizeKg:
               Number(line.packSizeKg),
-            unitCost:
-              Number(line.unitCost),
-            currency:
-              shipmentCurrency.value,
           }),
         },
       )
@@ -437,23 +378,11 @@ async function createShipment() {
           </span>
         </div>
         <p>
-          Record incoming supplier stock and freight details
+          Record incoming supplier stock and freight details. Finance can enter purchase costs separately.
         </p>
       </div>
 
-      <label class="shipment-currency-picker">
-        <span>Currency</span>
-        <select
-          v-model="shipmentCurrency"
-          class="form-select"
-        >
-          <option value="USD">USD ($)</option>
-          <option value="EUR">EUR (€)</option>
-          <option value="GBP">GBP (£)</option>
-          <option value="ZAR">ZAR (R)</option>
-          <option value="INR">INR (₹)</option>
-        </select>
-      </label>
+
     </header>
 
     <main class="shipment-form-page-body">
@@ -652,21 +581,19 @@ async function createShipment() {
         </div>
 
         <div class="shipment-line-table-wrap shipment-lines-desktop">
-          <div class="shipment-line-table shipment-line-table-head">
+          <div class="shipment-line-table shipment-line-table-head operational-line-table">
             <span>Product</span>
             <span>Variety</span>
             <span>Batch code</span>
             <span>Crates</span>
             <span>Pack kg</span>
-            <span>Unit price</span>
-            <span>Line total</span>
             <span />
           </div>
 
           <div
             v-for="(line, index) in lines"
             :key="index"
-            class="shipment-line-table shipment-line-table-row"
+            class="shipment-line-table shipment-line-table-row operational-line-table"
           >
             <select
               v-model="line.productId"
@@ -745,33 +672,6 @@ async function createShipment() {
               step="0.001"
               placeholder="0"
             >
-
-            <div class="shipment-price-input">
-              <span>{{ currencySymbol() }}</span>
-              <input
-                v-model.number="line.unitCost"
-                class="form-control"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-              >
-            </div>
-
-            <strong class="shipment-line-total">
-              {{
-                formatDraftMoney(
-                  Math.max(
-                    0,
-                    Number(line.expectedQuantity) || 0,
-                  ) *
-                    Math.max(
-                      0,
-                      Number(line.unitCost) || 0,
-                    ),
-                )
-              }}
-            </strong>
 
             <button
               type="button"
@@ -896,19 +796,7 @@ async function createShipment() {
                 >
               </label>
 
-              <label class="form-field shipment-line-mobile-wide">
-                <span>Unit price</span>
-                <div class="shipment-price-input">
-                  <span>{{ currencySymbol() }}</span>
-                  <input
-                    v-model.number="line.unitCost"
-                    class="form-control"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                  >
-                </div>
-              </label>
+
             </div>
 
             <p
@@ -929,23 +817,7 @@ async function createShipment() {
               }}
             </p>
 
-            <footer>
-              <span>Line total</span>
-              <strong>
-                {{
-                  formatDraftMoney(
-                    Math.max(
-                      0,
-                      Number(line.expectedQuantity) || 0,
-                    ) *
-                      Math.max(
-                        0,
-                        Number(line.unitCost) || 0,
-                      ),
-                  )
-                }}
-              </strong>
-            </footer>
+
           </article>
         </div>
 
@@ -997,13 +869,7 @@ async function createShipment() {
           </strong>
           kg
         </span>
-        <span class="shipment-summary-dot">•</span>
-        <span class="shipment-total-value">
-          Total:
-          <strong>
-            {{ formatDraftMoney(totalDraftValue) }}
-          </strong>
-        </span>
+
       </div>
 
       <div class="shipment-create-footer-actions">
@@ -1037,3 +903,7 @@ async function createShipment() {
     </footer>
   </section>
 </template>
+
+<style scoped>
+.operational-line-table { grid-template-columns: minmax(130px, 1.4fr) minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(75px, .6fr) minmax(75px, .6fr) 40px; }
+</style>
