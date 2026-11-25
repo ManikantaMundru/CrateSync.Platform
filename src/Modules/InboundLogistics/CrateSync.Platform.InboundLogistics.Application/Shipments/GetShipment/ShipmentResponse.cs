@@ -31,7 +31,8 @@ public sealed record ShipmentResponse(
     IReadOnlyCollection<ShipmentDocumentResponse>? Documents = null,
     IReadOnlyCollection<ShipmentReceiptResponse>? Receipts = null,
     IReadOnlyCollection<ShipmentDeliveryResponse>? Deliveries = null,
-    bool IsClearedForWarehouseDispatch = false);
+    bool IsClearedForWarehouseDispatch = false,
+    IReadOnlyCollection<RegulatorySampleResponse>? RegulatorySamples = null);
 
 public sealed record ShipmentLineResponse(
     Guid Id,
@@ -43,7 +44,10 @@ public sealed record ShipmentLineResponse(
     decimal? PackSizeKg,
     decimal? UnitCost,
     string? Currency,
-    int? FruitsPerPack);
+    int? FruitsPerPack,
+    int RegulatorySampleQuantity = 0);
+
+public sealed record RegulatorySampleResponse(Guid Id, Guid ShipmentLineId, string Authority, int Quantity, string? ReferenceNumber, string Remarks, DateTimeOffset RecordedAtUtc);
 
 public sealed record ShipmentClearanceEventResponse(
     Guid Id,
