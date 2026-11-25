@@ -23,6 +23,40 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentExpense", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("ShipmentId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("Category").IsRequired().HasMaxLength(40).HasColumnType("nvarchar(40)");
+                    b.Property<decimal>("Amount").HasColumnType("decimal(18,2)");
+                    b.Property<string>("Currency").IsRequired().HasMaxLength(3).HasColumnType("nvarchar(3)");
+                    b.Property<decimal>("ExchangeRate").HasColumnType("decimal(18,8)");
+                    b.Property<Guid?>("DeliveryId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid?>("LineId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("Reference").HasMaxLength(100).HasColumnType("nvarchar(100)");
+                    b.Property<string>("Description").IsRequired().HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<Guid>("CreatedBy").HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<Guid?>("ReversedBy").HasColumnType("uniqueidentifier");
+                    b.Property<DateTimeOffset?>("ReversedAtUtc").HasColumnType("datetimeoffset");
+                    b.Property<string>("ReversalReason").HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.HasKey("Id");
+                    b.HasIndex("ShipmentId");
+                    b.ToTable("ShipmentExpenses", "logistics");
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentCostExchangeRate", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("ShipmentId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("Currency").IsRequired().HasMaxLength(3).HasColumnType("nvarchar(3)");
+                    b.Property<decimal>("Rate").HasColumnType("decimal(18,8)");
+                    b.Property<DateTimeOffset>("UpdatedAtUtc").HasColumnType("datetimeoffset");
+                    b.HasKey("Id");
+                    b.HasIndex("ShipmentId", "Currency").IsUnique();
+                    b.ToTable("ShipmentCostExchangeRates", "logistics");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -114,6 +148,8 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<string>("VoyageNumber")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CostingCurrency").HasMaxLength(3).HasColumnType("nvarchar(3)");
 
                     b.HasKey("Id");
 
@@ -475,6 +511,16 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Navigation("Allocations");
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentExpense", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null).WithMany("Expenses").HasForeignKey("ShipmentId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+                });
+
+            modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentCostExchangeRate", b =>
+                {
+                    b.HasOne("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", null).WithMany("CostExchangeRates").HasForeignKey("ShipmentId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+                });
+
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.InboundShipment", b =>
                 {
                     b.Navigation("ClearanceEvents");
@@ -484,6 +530,8 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Navigation("Documents");
 
                     b.Navigation("Lines");
+                    b.Navigation("Expenses");
+                    b.Navigation("CostExchangeRates");
 
                     b.Navigation("Receipts");
                     b.Navigation("RegulatorySamples");

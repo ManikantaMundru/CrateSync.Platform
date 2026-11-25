@@ -113,6 +113,12 @@ internal sealed class InboundShipmentConfiguration : IEntityTypeConfiguration<In
             .WithOne().HasForeignKey("ShipmentId").OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.RegulatorySamples).UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.Property(x => x.CostingCurrency).HasMaxLength(3);
+        builder.HasMany(x => x.Expenses).WithOne().HasForeignKey("ShipmentId").OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Expenses).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(x => x.CostExchangeRates).WithOne().HasForeignKey("ShipmentId").OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.CostExchangeRates).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasMany(x => x.Lines)
             .WithOne()
             .HasForeignKey("ShipmentId")
