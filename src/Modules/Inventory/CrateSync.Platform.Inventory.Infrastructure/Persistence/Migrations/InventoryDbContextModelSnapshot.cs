@@ -23,6 +23,22 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CrateSync.Platform.Inventory.Domain.Stock.SellingPriceChange", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("InventoryBalanceId").HasColumnType("uniqueidentifier");
+                    b.Property<decimal?>("PreviousPrice").HasColumnType("decimal(18,2)");
+                    b.Property<string>("PreviousCurrency").HasMaxLength(3).HasColumnType("nvarchar(3)");
+                    b.Property<decimal>("Price").HasColumnType("decimal(18,2)");
+                    b.Property<string>("Currency").IsRequired().HasMaxLength(3).HasColumnType("nvarchar(3)");
+                    b.Property<Guid>("UserId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("Reason").IsRequired().HasMaxLength(500).HasColumnType("nvarchar(500)");
+                    b.Property<DateTimeOffset>("ChangedAtUtc").HasColumnType("datetimeoffset");
+                    b.HasKey("Id");
+                    b.HasIndex("InventoryBalanceId");
+                    b.ToTable("SellingPriceChanges", "inventory");
+                });
+
             modelBuilder.Entity("CrateSync.Platform.Inventory.Domain.Stock.InventoryBalance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -66,6 +82,10 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("WarehouseId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("SellingPrice").HasColumnType("decimal(18,2)");
+                    b.Property<string>("SellingCurrency").HasMaxLength(3).HasColumnType("nvarchar(3)");
+                    b.Property<DateTimeOffset?>("SellingPriceUpdatedAtUtc").HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
 
@@ -231,9 +251,17 @@ namespace CrateSync.Platform.Inventory.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("CrateSync.Platform.Inventory.Domain.Stock.SellingPriceChange", b =>
+                {
+                    b.HasOne("CrateSync.Platform.Inventory.Domain.Stock.InventoryBalance", null)
+                        .WithMany("SellingPriceHistory").HasForeignKey("InventoryBalanceId")
+                        .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                });
+
             modelBuilder.Entity("CrateSync.Platform.Inventory.Domain.Stock.InventoryBalance", b =>
                 {
                     b.Navigation("Movements");
+                    b.Navigation("SellingPriceHistory");
 
                     b.Navigation("Reservations");
                 });
