@@ -531,6 +531,35 @@ public sealed class InboundShipmentTests
         shipment.Status.ShouldBe(ShipmentStatus.Received);
     }
 
+    [Fact]
+    public void Reconciliation_Should_Close_When_All_Packages_Are_Accounted_For()
+    {
+        var shipment = CreateClearedArrivedShipment();
+        var line = shipment.Lines.Single();
+        var deliveryId = shipment.CreateWarehouseDelivery(WarehouseId, "Fruit Logistics", "Driver", "123", null, "Port", "Warehouse", null, null, [(line.Id, 95)], Now.AddDays(2));
+        var sampleId = Guid.NewGuid();
+        Should.Throw<InvalidOperationException>(() => shipment.RecordRegulatorySample(Guid.NewGuid(), line.Id, ClearanceAuthority.Customs, 6, null, "Testing", Now.AddDays(2)));
+        shipment.RecordRegulatorySample(sampleId, line.Id, ClearanceAuthority.FoodSafety, 5, null, "Testing", Now.AddDays(2));
+        shipment.DispatchWarehouseDelivery(deliveryId, Now.AddDays(2));
+        shipment.MarkWarehouseDeliveryDelivered(deliveryId, Now.AddDays(2));
+        var allocation = shipment.Deliveries.Single().Allocations.Single();
+        shipment.ConfirmWarehouseDelivery(deliveryId, Now.AddDays(2), [(allocation.Id.Value, 90, 3, 2, "Transport losses")]);
+        shipment.Status.ShouldBe(ShipmentStatus.ReceivedWithDiscrepancies);
+        line.ReceivedQuantity.Value.ShouldBe(90);
+        shipment.ReverseRegulatorySample(sampleId, "Returned to port", Now.AddDays(3));
+        shipment.Status.ShouldBe(ShipmentStatus.PartiallyReceived);
+        shipment.ReceivedAtUtc.ShouldBeNull();
+        shipment.RegulatorySamples.Single().ReversedAtUtc.ShouldNotBeNull();
+        shipment.ReverseRegulatorySample(sampleId, "Returned to port", Now.AddDays(3));
+        Should.Throw<InvalidOperationException>(() => shipment.CreateWarehouseDelivery(WarehouseId, "Fruit Logistics", "Driver", "123", null, "Port", "Warehouse", null, null, [(line.Id, 6)], Now.AddDays(3)));
+        var next = shipment.CreateWarehouseDelivery(WarehouseId, "Fruit Logistics", "Driver", "123", null, "Port", "Warehouse", null, null, [(line.Id, 5)], Now.AddDays(3));
+        shipment.DispatchWarehouseDelivery(next, Now.AddDays(3));
+        shipment.MarkWarehouseDeliveryDelivered(next, Now.AddDays(3));
+        shipment.ConfirmWarehouseDelivery(next, Now.AddDays(3));
+        shipment.Status.ShouldBe(ShipmentStatus.ReceivedWithDiscrepancies);
+        line.ReceivedQuantity.Value.ShouldBe(95);
+    }
+
     private static InboundShipment CreateShipment()
     {
         return InboundShipment.Create(
