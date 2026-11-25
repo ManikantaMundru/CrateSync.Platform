@@ -1,3 +1,4 @@
+using CrateSync.Platform.InboundLogistics.Application.Shipments.Costing;
 using CrateSync.Platform.InboundLogistics.Domain.Shipments;
 using CrateSync.Platform.InboundLogistics.Domain.Shipments.Events;
 using CrateSync.Platform.InboundLogistics.Domain.ValueObjects;
@@ -558,6 +559,29 @@ public sealed class InboundShipmentTests
         shipment.ConfirmWarehouseDelivery(next, Now.AddDays(3));
         shipment.Status.ShouldBe(ShipmentStatus.ReceivedWithDiscrepancies);
         line.ReceivedQuantity.Value.ShouldBe(95);
+    }
+
+    [Fact]
+    public void LandedCost_ShouldIncludeSamplesAndExpenses()
+    {
+        var shipment = CreateClearedArrivedShipment();
+        var line = shipment.Lines.Single();
+        shipment.SetCostingCurrency("INR", Now);
+        shipment.SetCostExchangeRate("ZAR", 5m, Now);
+        var expense = Guid.NewGuid();
+        var user = Guid.NewGuid();
+        shipment.RecordExpense(expense, "OceanFreight", 1000m, "INR", 1m, null, null, null, "Freight", user, Now);
+        shipment.RecordRegulatorySample(Guid.NewGuid(), line.Id, ClearanceAuthority.Customs, 5, null, "Samples", Now);
+        var delivery = shipment.CreateWarehouseDelivery(WarehouseId, "Transport", "Driver", "123", null, "Port", "Warehouse", null, null, [(line.Id,95)], Now);
+        shipment.DispatchWarehouseDelivery(delivery, Now);
+        shipment.MarkWarehouseDeliveryDelivered(delivery, Now);
+        shipment.ConfirmWarehouseDelivery(delivery, Now);
+        var cost = ShipmentCostingCalculator.Calculate(shipment);
+        cost.TotalPurchaseCost.ShouldBe(62500m);
+        cost.TotalLandedCost.ShouldBe(63500m);
+        cost.Lines.Single().EffectiveCostPerAcceptedPackage.ShouldBe(668.42m);
+        shipment.ReverseExpense(expense, "Duplicate invoice", user, Now);
+        ShipmentCostingCalculator.Calculate(shipment).TotalLandedCost.ShouldBe(62500m);
     }
 
     private static InboundShipment CreateShipment()
