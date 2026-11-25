@@ -1,3 +1,4 @@
+using CrateSync.Platform.InboundLogistics.Application.Shipments.SetShipmentLinePurchaseCost;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkWarehouseDeliveryDelivered;
 using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Api.Authorization;
@@ -72,9 +73,9 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (accessResult is not null)
             return accessResult;
 
-        // The legacy line command requires purchase cost. Until costing is
-        // separated, only a financial owner with operational authority may use it.
-        if (!await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken))
+        // Operational line creation is permitted without costs; supplied costs require financial permission.
+        if ((request.UnitCost.HasValue || request.Currency is not null) &&
+            !await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken))
             return Forbid();
 
         var command = new AddShipmentLineCommand(
@@ -93,6 +94,18 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             return this.ToProblem(result.Error);
 
         return StatusCode(StatusCodes.Status201Created, new AddShipmentLineResponse(result.Value));
+    }
+
+    [HttpPut("{shipmentId:guid}/lines/{lineId:guid}/purchase-cost")]
+    public async Task<IActionResult> SetPurchaseCost(Guid shipmentId, Guid lineId,
+        [FromBody] SetShipmentLinePurchaseCostRequest request, CancellationToken cancellationToken)
+    {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken))
+            return Forbid();
+
+        var result = await sender.Send(new SetShipmentLinePurchaseCostCommand(
+            shipmentId, lineId, request.UnitCost, request.Currency), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
 
     [HttpPut("{shipmentId:guid}/references")]
