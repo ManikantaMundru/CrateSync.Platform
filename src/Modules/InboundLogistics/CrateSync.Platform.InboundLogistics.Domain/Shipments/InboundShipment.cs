@@ -232,7 +232,7 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         BatchCode batchCode,
         CrateQuantity expectedQuantity,
         PackSize packSize,
-        Money unitCost,
+        Money? unitCost,
         DateTimeOffset occurredOnUtc)
     {
         EnsureDraft();
@@ -253,6 +253,16 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         UpdatedAtUtc = occurredOnUtc;
 
         return line.Id;
+    }
+
+    public void SetLinePurchaseCost(ShipmentLineId lineId, Money cost, DateTimeOffset occurredOnUtc)
+    {
+        if (Status == ShipmentStatus.Cancelled)
+            throw new InvalidOperationException("Cannot update costs on a cancelled shipment.");
+        var line = _lines.SingleOrDefault(x => x.Id == lineId)
+            ?? throw new InvalidOperationException("Shipment line was not found.");
+        line.SetPurchaseCost(cost);
+        UpdatedAtUtc = occurredOnUtc;
     }
 
     public void MarkShipped(DateTimeOffset occurredOnUtc)
