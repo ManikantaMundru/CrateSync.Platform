@@ -10,5 +10,5 @@ public sealed record AddShipmentLineCommand(
     string BatchCode,
     int ExpectedQuantity,
     decimal PackSizeKg,
-    decimal UnitCost,
-    string Currency) : ICommand<Result<Guid>>;
+    decimal? UnitCost = null,
+    string? Currency = null) : ICommand<Result<Guid>>;
