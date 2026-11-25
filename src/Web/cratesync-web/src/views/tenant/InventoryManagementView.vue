@@ -98,6 +98,18 @@ const canTransfer = computed(() => sourceWarehouses.value.some(w => w.isActive))
 const stock = ref<StockSummary[]>([])
 const movements = ref<StockMovement[]>([])
 const selectedStock = ref<StockSummary | null>(null)
+type InventoryDetailTab = 'overview' | 'pricing' | 'fifo' | 'movements'
+const detailTab = ref<InventoryDetailTab>('overview')
+const detailTabs: { id: InventoryDetailTab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'pricing', label: 'Pricing' },
+  { id: 'fifo', label: 'FIFO' },
+  { id: 'movements', label: 'Movements' },
+]
+watch(() => selectedStock.value?.id, (id, previous) => {
+  if (id !== previous) detailTab.value = 'overview'
+})
+
 interface PriceChange { id: string; previousPrice: number | null; previousCurrency: string | null; price: number; currency: string; userId: string; reason: string; changedAtUtc: string }
 const priceHistory = ref<PriceChange[]>([])
 const priceVisible = ref(false)
@@ -901,16 +913,11 @@ onMounted(async () => {
             </span>
           </header>
 
-          <section class="inventory-movement-section"><h3>Stock age</h3><strong>{{ ageLabel(selectedStock) }}</strong><p>Original receipt: {{ selectedStock.originalReceivedAtUtc ? formatDateTime(selectedStock.originalReceivedAtUtc) : 'Unknown' }}</p><small>Age is measured from original warehouse receipt, not harvest or expiry.</small></section>
-          <section v-if="selectedStock.sellingCurrency && selectedStock.batchCode && (selectedStock.packWeightKg != null || selectedStock.fruitsPerPack != null)" class="inventory-movement-section">
-            <h3>FIFO allocation preview</h3><p>Find oldest available, priced batches matching this warehouse, variety, origin, pack and currency. No stock is reserved.</p>
-            <label class="form-field">Requested packages<input v-model.number="fifoQuantity" type="number" min="1" step="1" class="form-control"></label>
-            <CButton size="sm" :disabled="fifoBusy || Number(fifoQuantity)<=0" @click="previewFifo">Preview allocation</CButton>
-            <p v-if="fifoError" class="text-danger">{{ fifoError }}</p>
-            <div v-if="fifoPlan" class="mt-2"><strong>{{ fifoPlan.allocated }} allocated in preview · {{ fifoPlan.shortfall }} shortfall</strong><div v-for="line in fifoPlan.lines" :key="line.balanceId" class="border rounded p-2 mt-1">{{ line.batchCode }} · {{ line.quantity }} packages · {{ line.currency }} {{ line.sellingPrice.toFixed(2) }} / pack<br><small>Original receipt: {{ formatDateTime(line.originalReceivedAtUtc) }}</small></div></div>
-          </section>
+          <nav class="d-flex flex-wrap gap-1 border-bottom pb-2 mb-3" aria-label="Stock position sections">
+            <CButton v-for="tab in detailTabs" :key="tab.id" size="sm" :color="detailTab === tab.id ? 'primary' : 'secondary'" :variant="detailTab === tab.id ? undefined : 'outline'" :aria-current="detailTab === tab.id ? 'page' : undefined" @click="detailTab = tab.id">{{ tab.label }}</CButton>
+          </nav>
 
-          <section class="inventory-detail-kpis">
+          <section v-if="detailTab === 'overview'" class="inventory-detail-kpis">
             <article>
               <small>On hand</small>
               <strong>
@@ -931,14 +938,22 @@ onMounted(async () => {
             </article>
           </section>
 
-          <section class="inventory-movement-section">
+          <section v-if="detailTab === 'overview'" class="inventory-movement-section">
+            <div class="section-heading"><div><h3>Stock age</h3><p>Original warehouse receipt, not harvest or expiry.</p></div></div>
+            <strong>{{ ageLabel(selectedStock) }}</strong>
+            <p>Original receipt: {{ selectedStock.originalReceivedAtUtc ? formatDateTime(selectedStock.originalReceivedAtUtc) : 'Unknown' }}</p>
+            <div class="section-heading"><div><h3>Selling price</h3><p>Per package</p></div><CButton size="sm" color="secondary" variant="outline" @click="detailTab = 'pricing'">View pricing</CButton></div>
+            <strong>{{ selectedStock.sellingPrice == null ? 'Not priced' : selectedStock.sellingCurrency + ' ' + selectedStock.sellingPrice.toFixed(2) }}</strong>
+          </section>
+
+          <section v-if="detailTab === 'pricing'" class="inventory-movement-section">
             <div class="section-heading">
               <div><h3>Selling price</h3><p>Per package · specific to this warehouse and batch</p></div>
               <CButton v-if="canAdmin(selectedStock.warehouseId) && selectedStock.onHand > 0" size="sm" color="primary" variant="outline" @click="openPrice(selectedStock)">{{ selectedStock.sellingPrice == null ? 'Set price' : 'Change price' }}</CButton>
             </div>
             <strong>{{ selectedStock.sellingPrice == null ? 'Not priced' : selectedStock.sellingCurrency + ' ' + selectedStock.sellingPrice.toFixed(2) }}</strong>
             <small v-if="selectedStock.sellingPriceUpdatedAtUtc" class="d-block">{{ formatDateTime(selectedStock.sellingPriceUpdatedAtUtc) }}</small>
-            <h4 class="mt-3">Price history</h4>
+            <div class="section-heading mt-3"><div><h3>Price history</h3></div></div>
             <div v-for="change in priceHistory" :key="change.id" class="border rounded p-2 mb-2">
               <strong>{{ change.previousPrice == null ? 'Not priced' : change.previousCurrency + ' ' + change.previousPrice.toFixed(2) }} → {{ change.currency }} {{ change.price.toFixed(2) }}</strong>
               <div>{{ change.reason }}</div><small>{{ formatDateTime(change.changedAtUtc) }} · User {{ change.userId }}</small>
@@ -946,12 +961,23 @@ onMounted(async () => {
             <p v-if="!priceHistory.length" class="shipment-muted">No selling price changes recorded.</p>
           </section>
 
-          <section class="inventory-movement-section">
+          <section v-if="detailTab === 'fifo'" class="inventory-movement-section">
+            <div class="section-heading"><div><h3>FIFO allocation preview</h3><p>Find oldest available, priced batches matching this warehouse, variety, origin, pack and currency. No stock is reserved.</p></div></div>
+            <template v-if="selectedStock.sellingCurrency && selectedStock.batchCode && selectedStock.originalReceivedAtUtc && (selectedStock.packWeightKg != null || selectedStock.fruitsPerPack != null)">
+            <label class="form-field">Requested packages<input v-model.number="fifoQuantity" type="number" min="1" step="1" class="form-control"></label>
+            <CButton size="sm" :disabled="fifoBusy || Number(fifoQuantity)<=0" @click="previewFifo">Preview allocation</CButton>
+            <p v-if="fifoError" class="text-danger">{{ fifoError }}</p>
+            <div v-if="fifoPlan" class="mt-2"><strong>{{ fifoPlan.allocated }} allocated in preview · {{ fifoPlan.shortfall }} shortfall</strong><div v-for="line in fifoPlan.lines" :key="line.balanceId" class="border rounded p-2 mt-1">{{ line.batchCode }} · {{ line.quantity }} packages · {{ line.currency }} {{ line.sellingPrice.toFixed(2) }} / pack<br><small>Original receipt: {{ formatDateTime(line.originalReceivedAtUtc) }}</small></div></div>
+            </template>
+            <p v-else class="shipment-muted">FIFO requires a verified batch, known original receipt date, packaging information and a selling price. Set a price in the Pricing tab where applicable.</p>
+          </section>
+
+          <section v-if="detailTab === 'movements'" class="inventory-movement-section">
             <div class="section-heading">
               <div>
                 <h3>Recent movements</h3>
                 <p>
-                  Audit trail for this warehouse / variety / origin balance
+                  Audit trail for this warehouse, variety, origin and batch
                 </p>
               </div>
             </div>
