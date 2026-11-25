@@ -1,3 +1,4 @@
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.InboundShipments;
@@ -34,7 +35,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         [FromBody] CreateInboundShipmentRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.HasTenantAccessAsync(cancellationToken))
+        if (!await accessService.IsTenantAdminAsync(cancellationToken))
         {
             return Forbid();
         }
@@ -69,6 +70,11 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
 
         if (accessResult is not null)
             return accessResult;
+
+        // The legacy line command requires purchase cost. Until costing is
+        // separated, only a financial owner with operational authority may use it.
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken))
+            return Forbid();
 
         var command = new AddShipmentLineCommand(
             shipmentId,
@@ -203,9 +209,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         [FromBody] CreateWarehouseDeliveryRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.CanOperateWarehouseAsync(
-                request.WarehouseId,
-                cancellationToken))
+        if (!await accessService.IsTenantAdminAsync(cancellationToken))
         {
             return Forbid();
         }
@@ -255,9 +259,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (delivery is null)
             return NotFound();
 
-        if (!await accessService.CanOperateWarehouseAsync(
-                delivery.WarehouseId,
-                cancellationToken))
+        if (!await accessService.IsTenantAdminAsync(cancellationToken))
         {
             return Forbid();
         }
@@ -292,9 +294,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (delivery is null)
             return NotFound();
 
-        if (!await accessService.CanOperateWarehouseAsync(
-                delivery.WarehouseId,
-                cancellationToken))
+        if (!await accessService.IsTenantAdminAsync(cancellationToken))
         {
             return Forbid();
         }
@@ -331,7 +331,34 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        return await accessService.HasTenantAccessAsync(cancellationToken) ? Ok(result.Value) : Forbid();
+        if (!await accessService.HasTenantWideReadAsync(cancellationToken))
+            return Forbid();
+
+        if (await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken))
+            return Ok(result.Value);
+
+        var shipment = result.Value;
+        // Explicit operational projection: never serialize original costs or
+        // unclassified document metadata to operational roles.
+        return Ok(new
+        {
+            shipment.Id, shipment.SupplierId, shipment.TrackingNumber,
+            shipment.OriginCountry, shipment.Status, shipment.ExpectedArrivalAtUtc,
+            shipment.ShippedAtUtc, shipment.ArrivedAtUtc, shipment.ReceivedAtUtc,
+            shipment.CancelledAtUtc, shipment.CreatedAtUtc, shipment.UpdatedAtUtc,
+            Lines = shipment.Lines.Select(line => new
+            {
+                line.Id, line.ProductId, line.ProductVarietyId, line.BatchCode,
+                line.ExpectedQuantity, line.ReceivedQuantity, line.PackSizeKg
+            }),
+            shipment.ContainerNumber, shipment.BillOfLadingNumber,
+            shipment.PortOfLoading, shipment.PortOfDischarge, shipment.VesselName,
+            shipment.VoyageNumber, shipment.CustomsBrokerName, shipment.BillOfEntryNumber,
+            shipment.BillOfEntryDate, shipment.OutOfChargeAtUtc, shipment.CustomsStatus,
+            shipment.PlantQuarantineStatus, shipment.FoodSafetyStatus,
+            shipment.ClearanceEvents, Documents = Array.Empty<object>(),
+            shipment.Receipts, shipment.Deliveries, shipment.IsClearedForWarehouseDispatch
+        });
     }
 
     [HttpGet]
@@ -360,6 +387,6 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (shipment.IsFailure)
             return this.ToProblem(shipment.Error);
 
-        return await accessService.HasTenantAccessAsync(cancellationToken) ? null : Forbid();
+        return await accessService.IsTenantAdminAsync(cancellationToken) ? null : Forbid();
     }
 }
