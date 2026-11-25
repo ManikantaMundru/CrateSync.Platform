@@ -188,6 +188,21 @@ const suppliers = ref<SupplierSummary[]>([])
 const warehouses = ref<WarehouseSummary[]>([])
 const products = ref<ProductSummary[]>([])
 const selectedShipment = ref<ShipmentDetails | null>(null)
+type DetailTab = 'overview' | 'lines' | 'clearance' | 'deliveries' | 'documents' | 'costing'
+const detailTab = ref<DetailTab>('overview')
+const detailTabs = computed<{ id: DetailTab; label: string }[]>(() => [
+  { id: 'overview', label: 'Overview' },
+  { id: 'lines', label: 'Shipment lines' },
+  { id: 'clearance', label: 'Clearance' },
+  { id: 'deliveries', label: 'Deliveries' },
+  { id: 'documents', label: 'Documents' },
+  ...(canManageCosts.value ? [{ id: 'costing' as const, label: 'Costing' }] : []),
+])
+watch(() => selectedShipment.value?.id, (id, previous) => {
+  if (id && id !== previous) detailTab.value = 'overview'
+})
+watch(canManageCosts, allowed => { if (!allowed && detailTab.value === 'costing') detailTab.value = 'overview' })
+
 const sampleVisible = ref(false)
 const sampleError = ref<string | null>(null)
 const sampleForm = reactive({ sampleId: '', lineId: '', authority: 'Customs', quantity: 1, referenceNumber: '', remarks: '' })
@@ -1147,7 +1162,11 @@ onMounted(async () => {
             </CButton>
           </div>
 
-          <div class="shipment-summary-grid">
+          <nav class="shipment-detail-tabs d-flex flex-wrap gap-1 border-bottom pb-2 mb-3" aria-label="Shipment detail sections">
+            <CButton v-for="tab in detailTabs" :key="tab.id" size="sm" :color="detailTab === tab.id ? 'primary' : 'secondary'" :variant="detailTab === tab.id ? undefined : 'outline'" :aria-current="detailTab === tab.id ? 'page' : undefined" @click="detailTab = tab.id">{{ tab.label }}</CButton>
+          </nav>
+
+          <div v-if="detailTab === 'overview'" class="shipment-summary-grid">
             <div>
               <small>ETA</small>
               <strong>{{ formatDate(selectedShipment.expectedArrivalAtUtc) }}</strong>
@@ -1178,7 +1197,20 @@ onMounted(async () => {
             </div>
           </div>
 
-          <section class="shipment-detail-section">
+          <section v-if="detailTab === 'overview'" class="shipment-detail-section">
+            <h3>Shipment reconciliation</h3>
+            <div class="row g-2">
+              <div class="col-6">Original: <strong>{{ reconciliation.expected }}</strong></div>
+              <div class="col-6">Accepted: <strong>{{ reconciliation.accepted }}</strong></div>
+              <div class="col-6">Damaged: <strong>{{ reconciliation.damaged }}</strong></div>
+              <div class="col-6">Missing: <strong>{{ reconciliation.missing }}</strong></div>
+              <div class="col-6">Regulatory samples: <strong>{{ reconciliation.sampled }}</strong></div>
+              <div class="col-6">Awaiting receipt: <strong>{{ reconciliation.remaining }}</strong></div>
+            </div>
+            <div class="mt-3">Customs: {{ friendlyStatus(selectedShipment.customsStatus) }} · Plant quarantine: {{ friendlyStatus(selectedShipment.plantQuarantineStatus) }} · Food safety: {{ friendlyStatus(selectedShipment.foodSafetyStatus) }}</div>
+          </section>
+
+          <section v-if="detailTab === 'clearance'" class="shipment-detail-section">
             <div class="section-heading">
               <div>
                 <h3>Clearance</h3>
@@ -1217,8 +1249,8 @@ onMounted(async () => {
             </div>
           </section>
 
-          <ShipmentCostingPanel v-if="canManageCosts && selectedShipment" :key="selectedShipment.id" :shipment-id="selectedShipment.id" :status="selectedShipment.status" :lines="selectedShipment.lines" :deliveries="selectedShipment.deliveries ?? []" :can-edit="canManageCosts" />
-          <section class="shipment-detail-section">
+          <ShipmentCostingPanel v-if="detailTab === 'costing' && canManageCosts && selectedShipment" :key="selectedShipment.id" :shipment-id="selectedShipment.id" :status="selectedShipment.status" :lines="selectedShipment.lines" :deliveries="selectedShipment.deliveries ?? []" :can-edit="canManageCosts" />
+          <section v-if="detailTab === 'lines'" class="shipment-detail-section">
             <div class="section-heading">
               <div>
                 <h3>Shipment lines</h3>
@@ -1272,7 +1304,7 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section class="shipment-detail-section">
+          <section v-if="detailTab === 'clearance'" class="shipment-detail-section">
             <div class="section-heading">
               <div><h3>Regulatory sample deductions</h3><p>Packages permanently retained by inspection authorities; deductions use only unallocated stock.</p></div>
               <CButton v-if="canRecordSample" color="primary" variant="outline" size="sm" @click="openSample">Record retained sample</CButton>
@@ -1287,7 +1319,7 @@ onMounted(async () => {
             </div>
           </section>
 
-          <section class="shipment-detail-section">
+          <section v-if="detailTab === 'deliveries'" class="shipment-detail-section">
             <div class="section-heading">
               <div>
                 <h3>Port → Warehouse deliveries</h3>
@@ -1447,7 +1479,7 @@ onMounted(async () => {
             </p>
           </section>
 
-          <section class="shipment-detail-section">
+          <section v-if="detailTab === 'clearance'" class="shipment-detail-section">
             <div class="section-heading">
               <div>
                 <h3>Clearance timeline</h3>
@@ -1484,7 +1516,7 @@ onMounted(async () => {
             </p>
           </section>
 
-          <section class="shipment-detail-section">
+          <section v-if="detailTab === 'documents'" class="shipment-detail-section">
             <div class="section-heading">
               <div>
                 <h3>Documents</h3>
