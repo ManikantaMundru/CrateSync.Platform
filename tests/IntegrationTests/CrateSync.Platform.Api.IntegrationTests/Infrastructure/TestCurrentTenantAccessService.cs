@@ -1,3 +1,4 @@
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Api.Authorization;
 
 namespace CrateSync.Platform.Api.IntegrationTests.Infrastructure;
@@ -5,6 +6,10 @@ namespace CrateSync.Platform.Api.IntegrationTests.Infrastructure;
 internal sealed class TestCurrentTenantAccessService
     : ICurrentTenantAccessService
 {
+    public Task<bool> HasPermissionAsync(
+        TenantPermission permission,
+        CancellationToken cancellationToken = default) => Task.FromResult(true);
+
     public Task<bool> HasTenantAccessAsync(
         CancellationToken cancellationToken = default) =>
         Task.FromResult(true);

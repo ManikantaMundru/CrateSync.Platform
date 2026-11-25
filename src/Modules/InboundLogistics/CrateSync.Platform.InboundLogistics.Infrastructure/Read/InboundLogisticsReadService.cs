@@ -162,6 +162,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                     WHEN 2 THEN 'InTransit'
                     WHEN 3 THEN 'Received'
                     WHEN 4 THEN 'Cancelled'
+                    WHEN 5 THEN 'DeliveredToWarehouse'
                 END AS Status,
                 TransportCompany,
                 DriverName,

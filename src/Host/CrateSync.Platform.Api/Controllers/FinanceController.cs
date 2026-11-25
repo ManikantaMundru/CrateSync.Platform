@@ -1,3 +1,4 @@
+using CrateSync.Platform.Identity.Domain.Authorization;
 using CrateSync.Platform.Api.Authorization;
 using CrateSync.Platform.Api.Extensions;
 using CrateSync.Platform.Api.Requests.Finance;
@@ -30,6 +31,9 @@ public sealed class FinanceController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken))
+            return Forbid();
+
         var result = await sender.Send(
             new GetCustomerInvoiceQuery(id),
             cancellationToken);
@@ -59,6 +63,9 @@ public sealed class FinanceController(
         [FromQuery] Guid? customerId,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken))
+            return Forbid();
+
         var result = await sender.Send(
             new SearchCustomerInvoicesQuery(
                 status,
@@ -102,6 +109,9 @@ public sealed class FinanceController(
         RecordPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageFinance, cancellationToken))
+            return Forbid();
+
         var accessResult =
             await EnsureCustomerInvoiceAdminAccessAsync(
                 id,
@@ -129,6 +139,9 @@ public sealed class FinanceController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageFinance, cancellationToken))
+            return Forbid();
+
         var accessResult =
             await EnsureCustomerInvoiceAdminAccessAsync(
                 id,
@@ -151,6 +164,9 @@ public sealed class FinanceController(
         CreateSupplierInvoiceRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageFinance, cancellationToken))
+            return Forbid();
+
         var shipment =
             await sender.Send(
                 new GetShipmentQuery(
@@ -160,7 +176,7 @@ public sealed class FinanceController(
         if (shipment.IsFailure)
             return this.ToProblem(shipment.Error);
 
-        if (!await accessService.IsTenantAdminAsync(
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageFinance,
                 cancellationToken))
         {
             return Forbid();
@@ -196,6 +212,9 @@ public sealed class FinanceController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken))
+            return Forbid();
+
         var result = await sender.Send(
             new GetSupplierInvoiceQuery(id),
             cancellationToken);
@@ -215,6 +234,9 @@ public sealed class FinanceController(
         [FromQuery] Guid? supplierId,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken))
+            return Forbid();
+
         var result = await sender.Send(
             new SearchSupplierInvoicesQuery(
                 status,
@@ -233,6 +255,9 @@ public sealed class FinanceController(
         RecordPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageFinance, cancellationToken))
+            return Forbid();
+
         var accessResult =
             await EnsureSupplierInvoiceAdminAccessAsync(
                 id,
@@ -260,6 +285,9 @@ public sealed class FinanceController(
         Guid id,
         CancellationToken cancellationToken)
     {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageFinance, cancellationToken))
+            return Forbid();
+
         var accessResult =
             await EnsureSupplierInvoiceAdminAccessAsync(
                 id,
@@ -300,8 +328,8 @@ public sealed class FinanceController(
         if (!warehouseId.HasValue)
             return NotFound();
 
-        return await accessService.CanAdminWarehouseAsync(
-                warehouseId.Value,
+        return await accessService.HasPermissionAsync(
+                TenantPermission.ManageFinance,
                 cancellationToken)
             ? null
             : Forbid();
@@ -322,7 +350,7 @@ public sealed class FinanceController(
             return this.ToProblem(
                 invoice.Error);
 
-        return await accessService.IsTenantAdminAsync(
+        return await accessService.HasPermissionAsync(TenantPermission.ManageFinance,
                 cancellationToken)
             ? null
             : Forbid();

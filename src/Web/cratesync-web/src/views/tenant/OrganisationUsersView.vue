@@ -25,6 +25,7 @@ import {
 } from '@tanstack/vue-table'
 import { apiFetch } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import UserAccessEditor from '@/components/users/UserAccessEditor.vue'
 
 interface WarehouseSummary {
   id: string
@@ -60,6 +61,13 @@ interface ProvisionResult {
 }
 
 const auth = useAuthStore()
+const canManageFinancialRoles = computed(() =>
+  auth.me?.currentTenant?.accessMode === 'SuperAdmin' ||
+  auth.me?.currentTenant?.roles.includes('TenantOwner') === true,
+)
+function canManageUser(user: OrganisationUser) {
+  return canManageFinancialRoles.value || !user.roles.some(role => role === 'TenantOwner' || role === 'Finance')
+}
 const users = ref<OrganisationUser[]>([])
 const warehouses = ref<WarehouseSummary[]>([])
 const loading = ref(true)
@@ -82,15 +90,13 @@ const addForm = reactive({
   lastName: '',
   email: '',
   userName: '',
-  tenantAdmin: false,
-  viewer: false,
-  warehouseRoles: {} as Record<string, string>,
+  role: '',
+  warehouseIds: [] as string[],
 })
 
 const editForm = reactive({
-  tenantAdmin: false,
-  viewer: false,
-  warehouseRoles: {} as Record<string, string>,
+  role: '',
+  warehouseIds: [] as string[],
 })
 
 const filteredUsers = computed(() => {
@@ -110,7 +116,7 @@ const filteredUsers = computed(() => {
 
     const matchesRole =
       !roleFilter.value ||
-      user.roles.includes(roleFilter.value)
+      effectiveRoles(user).includes(roleFilter.value)
 
     return matchesSearch && matchesRole
   })
@@ -229,8 +235,12 @@ onMounted(load)
 
 function displayRole(role: string) {
   switch (role) {
+    case 'TenantOwner':
+      return 'Tenant owner'
+    case 'Finance':
+      return 'Finance'
     case 'TenantAdmin':
-      return 'Administrator'
+      return 'Tenant Administrator'
     case 'Viewer':
       return 'Viewer'
     case 'WarehouseAdmin':
@@ -242,16 +252,23 @@ function displayRole(role: string) {
   }
 }
 
-function displayRoles(user: OrganisationUser) {
-  const roles = user.roles.map(displayRole)
-
-  if (user.warehouses.length > 0)
-    roles.push('Warehouse access')
-
-  return roles.length > 0
-    ? roles.join(', ')
-    : 'No access'
+function effectiveRoles(user: OrganisationUser) {
+  return [...new Set([...user.roles, ...user.warehouses.map(w => w.role)])]
 }
+
+function displayRoles(user: OrganisationUser) {
+  return effectiveRoles(user).map(displayRole).join(', ') || 'No access'
+}
+
+function primaryRole(user: OrganisationUser) {
+  if (user.roles.length === 1 && user.warehouses.length === 0) return user.roles[0] ?? ''
+  if (user.roles.length === 0 && user.warehouses.length > 0 &&
+      new Set(user.warehouses.map(w => w.role)).size === 1)
+    return user.warehouses[0]?.role ?? ''
+  return ''
+}
+
+const legacyAccess = computed(() => selectedUser.value !== null && !primaryRole(selectedUser.value))
 
 function warehouseName(id: string) {
   const warehouse =
@@ -274,23 +291,15 @@ function userInitials(user: OrganisationUser) {
 function warehouseAccessLabel(
   user: OrganisationUser,
 ) {
-  if (user.roles.includes('TenantAdmin'))
+  if (user.roles.includes('TenantAdmin') || user.roles.includes('TenantOwner'))
     return 'All warehouses'
+  if (user.roles.includes('Finance') || user.roles.includes('Viewer'))
+    return 'All warehouses · Read-only'
 
   if (user.warehouses.length === 0)
     return 'None assigned'
 
   return null
-}
-
-function resetWarehouseRoles(
-  target: Record<string, string>,
-) {
-  for (const key of Object.keys(target))
-    delete target[key]
-
-  for (const warehouse of warehouses.value)
-    target[warehouse.id] = ''
 }
 
 function openAddModal() {
@@ -299,9 +308,8 @@ function openAddModal() {
   addForm.lastName = ''
   addForm.email = ''
   addForm.userName = ''
-  addForm.tenantAdmin = false
-  addForm.viewer = false
-  resetWarehouseRoles(addForm.warehouseRoles)
+  addForm.role = ''
+  addForm.warehouseIds = []
   addModalVisible.value = true
 }
 
@@ -313,18 +321,11 @@ function closeAddModal() {
 }
 
 function openEditModal(user: OrganisationUser) {
+  if (!canManageUser(user)) return
   editModalError.value = null
   selectedUser.value = user
-  editForm.tenantAdmin =
-    user.roles.includes('TenantAdmin')
-  editForm.viewer =
-    user.roles.includes('Viewer')
-  resetWarehouseRoles(editForm.warehouseRoles)
-
-  for (const access of user.warehouses) {
-    editForm.warehouseRoles[access.warehouseId] =
-      access.role
-  }
+  editForm.role = primaryRole(user)
+  editForm.warehouseIds = user.warehouses.map(w => w.warehouseId)
 
   editModalVisible.value = true
 }
@@ -337,43 +338,23 @@ function closeEditModal() {
   }
 }
 
-function buildRoles(
-  tenantAdmin: boolean,
-  viewer: boolean,
-) {
-  const roles: string[] = []
-
-  if (tenantAdmin)
-    roles.push('TenantAdmin')
-
-  if (viewer)
-    roles.push('Viewer')
-
-  return roles
+function scopedRole(role: string) {
+  return role === 'WarehouseAdmin' || role === 'WarehouseUser'
 }
 
-function buildWarehouses(
-  values: Record<string, string>,
-): WarehouseAccess[] {
-  return Object.entries(values)
-    .filter(([, role]) => role)
-    .map(([warehouseId, role]) => ({
-      warehouseId,
-      role:
-        role as WarehouseAccess['role'],
-    }))
+function buildAccess(form: { role: string; warehouseIds: string[] }) {
+  const role = form.role
+  return {
+    roles: scopedRole(role) ? [] : [role],
+    warehouses: scopedRole(role)
+      ? form.warehouseIds.map(warehouseId => ({ warehouseId, role }))
+      : [],
+  }
 }
 
-function hasAccess(
-  tenantAdmin: boolean,
-  viewer: boolean,
-  values: Record<string, string>,
-) {
-  return (
-    tenantAdmin ||
-    viewer ||
-    Object.values(values).some(Boolean)
-  )
+function hasAccess(form: { role: string; warehouseIds: string[] }) {
+  return !!form.role && (!scopedRole(form.role) ||
+    (form.warehouseIds.length > 0 && form.warehouseIds.every(id => warehouses.value.some(w => w.id === id && w.isActive))))
 }
 
 function showActivation(
@@ -392,14 +373,10 @@ function showActivation(
 
 async function createUser() {
   if (
-    !hasAccess(
-      addForm.tenantAdmin,
-      addForm.viewer,
-      addForm.warehouseRoles,
-    )
+    !hasAccess(addForm)
   ) {
     addModalError.value =
-      'Assign at least one organisation role or warehouse.'
+      'Select a primary role and at least one active warehouse if required.'
     return
   }
 
@@ -424,13 +401,7 @@ async function createUser() {
               addForm.userName.trim() || null,
             firstName: addForm.firstName,
             lastName: addForm.lastName,
-            roles: buildRoles(
-              addForm.tenantAdmin,
-              addForm.viewer,
-            ),
-            warehouses: buildWarehouses(
-              addForm.warehouseRoles,
-            ),
+            ...buildAccess(addForm),
           }),
         },
       )
@@ -450,18 +421,16 @@ async function createUser() {
 }
 
 async function updateAccess() {
-  if (!selectedUser.value)
+  if (!selectedUser.value || selectedUser.value.userId === currentUserId.value)
     return
 
+  if (legacyAccess.value && !window.confirm('Replace the existing mixed access with the selected primary role?')) return
+
   if (
-    !hasAccess(
-      editForm.tenantAdmin,
-      editForm.viewer,
-      editForm.warehouseRoles,
-    )
+    !hasAccess(editForm)
   ) {
     editModalError.value =
-      'Assign at least one organisation role or warehouse.'
+      'Select a primary role and at least one active warehouse if required.'
     return
   }
 
@@ -480,13 +449,7 @@ async function updateAccess() {
             'application/json',
         },
         body: JSON.stringify({
-          roles: buildRoles(
-            editForm.tenantAdmin,
-            editForm.viewer,
-          ),
-          warehouses: buildWarehouses(
-            editForm.warehouseRoles,
-          ),
+          ...buildAccess(editForm),
         }),
       },
     )
@@ -658,12 +621,7 @@ async function copyActivationLink() {
           <option value="">
             All roles
           </option>
-          <option value="TenantAdmin">
-            Administrator
-          </option>
-          <option value="Viewer">
-            Viewer
-          </option>
+          <option v-for="role in ['TenantOwner', 'TenantAdmin', 'Finance', 'WarehouseAdmin', 'WarehouseUser', 'Viewer']" :key="role" :value="role">{{ displayRole(role) }}</option>
         </select>
 
         <CButton
@@ -760,7 +718,7 @@ async function copyActivationLink() {
               <td data-label="Organisation role">
                 <div class="badge-row compact-badges">
                   <span
-                    v-for="role in row.original.roles"
+                    v-for="role in effectiveRoles(row.original)"
                     :key="role"
                     class="user-role-pill"
                     :class="{
@@ -772,7 +730,7 @@ async function copyActivationLink() {
                   </span>
 
                   <span
-                    v-if="row.original.roles.length === 0"
+                    v-if="effectiveRoles(row.original).length === 0"
                     class="muted-value"
                   >
                     —
@@ -844,6 +802,7 @@ async function copyActivationLink() {
                     color="secondary"
                     variant="outline"
                     size="sm"
+                    v-if="canManageUser(row.original)"
                     title="Edit access"
                     @click="openEditModal(row.original)"
                   >
@@ -855,7 +814,7 @@ async function copyActivationLink() {
                   </CButton>
 
                   <CButton
-                    v-if="row.original.requiresActivation"
+                    v-if="canManageUser(row.original) && row.original.requiresActivation"
                     color="warning"
                     variant="outline"
                     size="sm"
@@ -875,6 +834,7 @@ async function copyActivationLink() {
 
                   <CButton
                     v-if="
+                      canManageUser(row.original) &&
                       row.original.isActive &&
                       row.original.userId !==
                         currentUserId
@@ -898,7 +858,7 @@ async function copyActivationLink() {
                   </CButton>
 
                   <CButton
-                    v-else-if="!row.original.isActive"
+                    v-else-if="canManageUser(row.original) && !row.original.isActive"
                     color="success"
                     variant="outline"
                     size="sm"
@@ -1040,64 +1000,15 @@ async function copyActivationLink() {
             >
           </label>
 
-          <div class="access-editor form-field-wide">
-            <strong>Organisation roles</strong>
-
-            <label class="check-row">
-              <input
-                v-model="addForm.tenantAdmin"
-                type="checkbox"
-              >
-              Administrator
-            </label>
-
-            <label class="check-row">
-              <input
-                v-model="addForm.viewer"
-                type="checkbox"
-              >
-              Viewer
-            </label>
-          </div>
-
-          <div class="access-editor form-field-wide">
-            <strong>Warehouse access</strong>
-
-            <p v-if="warehouses.length === 0">
-              No active warehouses are available.
-            </p>
-
-            <div
-              v-for="warehouse in warehouses"
-              :key="warehouse.id"
-              class="warehouse-role-row"
-            >
-              <div>
-                <strong>{{ warehouse.name }}</strong>
-                <small>
-                  {{ warehouse.code }}
-                  ·
-                  {{ warehouse.city }}
-                </small>
-              </div>
-
-              <select
-                v-model="
-                  addForm.warehouseRoles[warehouse.id]
-                "
-                class="form-select"
-              >
-                <option value="">
-                  No access
-                </option>
-                <option value="WarehouseUser">
-                  Warehouse user
-                </option>
-                <option value="WarehouseAdmin">
-                  Warehouse administrator
-                </option>
-              </select>
-            </div>
+          <div class="form-field-wide">
+            
+            <UserAccessEditor
+              v-model:role="addForm.role"
+              v-model:warehouse-ids="addForm.warehouseIds"
+              :warehouses="warehouses"
+              :can-assign-financial="canManageFinancialRoles"
+              
+            />
           </div>
         </form>
       </CModalBody>
@@ -1116,7 +1027,7 @@ async function copyActivationLink() {
           color="primary"
           type="submit"
           form="add-user-form"
-          :disabled="saving"
+          :disabled="saving || !hasAccess(addForm)"
         >
           {{
             saving
@@ -1160,69 +1071,15 @@ async function copyActivationLink() {
           class="admin-form admin-form-single"
           @submit.prevent="updateAccess"
         >
-          <div class="access-editor">
-            <strong>Organisation roles</strong>
-
-            <label class="check-row">
-              <input
-                v-model="editForm.tenantAdmin"
-                type="checkbox"
-                :disabled="
-                  selectedUser?.userId ===
-                    currentUserId &&
-                  editForm.tenantAdmin
-                "
-              >
-              Administrator
-            </label>
-
-            <label class="check-row">
-              <input
-                v-model="editForm.viewer"
-                type="checkbox"
-              >
-              Viewer
-            </label>
-          </div>
-
-          <div class="access-editor">
-            <strong>Warehouse access</strong>
-
-            <p v-if="warehouses.length === 0">
-              No active warehouses are available.
-            </p>
-
-            <div
-              v-for="warehouse in warehouses"
-              :key="warehouse.id"
-              class="warehouse-role-row"
-            >
-              <div>
-                <strong>{{ warehouse.name }}</strong>
-                <small>
-                  {{ warehouse.code }}
-                  ·
-                  {{ warehouse.city }}
-                </small>
-              </div>
-
-              <select
-                v-model="
-                  editForm.warehouseRoles[warehouse.id]
-                "
-                class="form-select"
-              >
-                <option value="">
-                  No access
-                </option>
-                <option value="WarehouseUser">
-                  Warehouse user
-                </option>
-                <option value="WarehouseAdmin">
-                  Warehouse administrator
-                </option>
-              </select>
-            </div>
+          <div class="form-field-wide">
+            <p v-if="legacyAccess" class="modal-help">Existing mixed access: {{ selectedUser ? displayRoles(selectedUser) : '' }}. Choose a primary role to explicitly replace it; cancel to keep existing permissions.</p>
+            <UserAccessEditor
+              v-model:role="editForm.role"
+              v-model:warehouse-ids="editForm.warehouseIds"
+              :warehouses="warehouses"
+              :can-assign-financial="canManageFinancialRoles"
+              :locked="selectedUser?.userId === currentUserId"
+            />
           </div>
         </form>
       </CModalBody>
@@ -1241,7 +1098,7 @@ async function copyActivationLink() {
           color="primary"
           type="submit"
           form="edit-user-form"
-          :disabled="saving"
+          :disabled="saving || selectedUser?.userId === currentUserId || !hasAccess(editForm)"
         >
           {{
             saving

@@ -15,12 +15,11 @@ namespace CrateSync.Platform.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CustomerController(ISender sender) : ControllerBase
+    public class CustomerController(ISender sender, ICurrentTenantAccessService accessService) : ControllerBase
     {
         private readonly ISender _sender = sender;
 
         [HttpPost]
-        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType<CreateCustomerResponse>(StatusCodes.Status201Created)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -28,6 +27,8 @@ namespace CrateSync.Platform.Api.Controllers
             [FromBody] CreateCustomerRequest request,
             CancellationToken cancellationToken)
         {
+            if (!await CanManageCustomersAsync(cancellationToken)) return Forbid();
+
             var command = new CreateCustomerCommand(
                 request.Name,
                 request.CommercialIdentifier,
@@ -52,7 +53,6 @@ namespace CrateSync.Platform.Api.Controllers
         }
 
         [HttpPut("{customerId:guid}")]
-        [Authorize(Policy = AuthorizationPolicies.TenantAdmin)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
         [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -62,6 +62,8 @@ namespace CrateSync.Platform.Api.Controllers
             [FromBody] UpdateCustomerRequest request,
             CancellationToken cancellationToken)
         {
+            if (!await CanManageCustomersAsync(cancellationToken)) return Forbid();
+
             var command = new UpdateCustomerCommand(
                 customerId,
                 request.Name,
@@ -90,6 +92,9 @@ namespace CrateSync.Platform.Api.Controllers
             Guid customerId,
             CancellationToken cancellationToken)
         {
+            if (!await accessService.HasTenantWideReadAsync(cancellationToken) &&
+                !await CanManageCustomersAsync(cancellationToken)) return Forbid();
+
             var result = await _sender.Send(
                 new GetCustomerQuery(customerId),
                 cancellationToken);
@@ -108,6 +113,9 @@ namespace CrateSync.Platform.Api.Controllers
             [FromQuery] int pageSize = 25,
             CancellationToken cancellationToken = default)
         {
+            if (!await accessService.HasTenantWideReadAsync(cancellationToken) &&
+                !await CanManageCustomersAsync(cancellationToken)) return Forbid();
+
             var result = await _sender.Send(
                 new SearchCustomersQuery(
                     search,
@@ -134,6 +142,18 @@ namespace CrateSync.Platform.Api.Controllers
             if (result.IsFailure) return this.ToProblem(result.Error);
 
             return NoContent();
+        }
+        private async Task<bool> CanManageCustomersAsync(CancellationToken cancellationToken)
+        {
+            if (await accessService.IsTenantAdminAsync(cancellationToken))
+                return true;
+
+            var assigned = await accessService.GetAssignedWarehouseIdsAsync(cancellationToken);
+            foreach (var warehouseId in assigned)
+                if (await accessService.CanAdminWarehouseAsync(warehouseId, cancellationToken))
+                    return true;
+
+            return false;
         }
     }
 }

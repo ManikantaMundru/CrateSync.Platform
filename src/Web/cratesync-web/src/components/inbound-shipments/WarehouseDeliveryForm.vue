@@ -96,7 +96,7 @@ const selectedWarehouse = computed(() =>
 const alreadyAllocated = (lineId: string) =>
   (props.shipment.deliveries ?? [])
     .filter((delivery) =>
-      ['Planned', 'InTransit'].includes(
+      ['Planned', 'InTransit', 'DeliveredToWarehouse'].includes(
         delivery.status,
       ),
     )

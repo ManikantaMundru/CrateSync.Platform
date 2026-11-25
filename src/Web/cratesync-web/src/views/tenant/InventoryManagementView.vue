@@ -12,6 +12,7 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import WarehouseTransferForm from '@/components/inventory/WarehouseTransferForm.vue'
@@ -56,6 +57,11 @@ interface StockMovement {
 
 const viewMode = ref<'list' | 'transfer'>('list')
 const warehouses = ref<WarehouseSummary[]>([])
+const auth = useAuthStore()
+const transferDestinations = ref<WarehouseSummary[]>([])
+const tenantOperations = computed(() => auth.me?.currentTenant?.accessMode === 'SuperAdmin' || auth.me?.currentTenant?.roles.some(r => r === 'TenantOwner' || r === 'TenantAdmin') === true)
+const sourceWarehouses = computed(() => warehouses.value.filter(w => tenantOperations.value || auth.me?.currentTenant?.warehouses.some(a => a.warehouseId === w.id && a.role === 'WarehouseAdmin')))
+const canTransfer = computed(() => sourceWarehouses.value.some(w => w.isActive))
 const stock = ref<StockSummary[]>([])
 const movements = ref<StockMovement[]>([])
 const selectedStock = ref<StockSummary | null>(null)
@@ -280,8 +286,14 @@ function movementReference(
   )} · ${shortId}`
 }
 
-function openTransfer() {
-  viewMode.value = 'transfer'
+async function openTransfer() {
+  if (!canTransfer.value) return
+  try {
+    transferDestinations.value = await apiFetch<WarehouseSummary[]>('/api/inventory/transfer-destinations')
+    viewMode.value = 'transfer'
+  } catch (exception) {
+    error.value = exception instanceof Error ? exception.message : 'Unable to load transfer destinations.'
+  }
 }
 
 function showInventory() {
@@ -412,7 +424,8 @@ onMounted(async () => {
 <template>
   <WarehouseTransferForm
     v-if="viewMode === 'transfer'"
-    :warehouses="warehouses"
+    :warehouses="sourceWarehouses"
+    :destinations="transferDestinations"
     :stock="stock"
     @cancel="showInventory"
     @completed="handleTransferCompleted"
@@ -436,6 +449,7 @@ onMounted(async () => {
       <CButton
         color="primary"
         class="users-add-button"
+        v-if="canTransfer"
         @click="openTransfer"
       >
         <i class="cil-swap-horizontal me-1" aria-hidden="true" />

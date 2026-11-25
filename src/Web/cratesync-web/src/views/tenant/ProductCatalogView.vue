@@ -83,6 +83,9 @@ const canManageCatalog = computed(
     auth.me?.currentTenant?.accessMode ===
       'SuperAdmin' ||
     auth.me?.currentTenant?.roles.includes(
+      'TenantOwner',
+    ) === true ||
+    auth.me?.currentTenant?.roles.includes(
       'TenantAdmin',
     ) === true,
 )

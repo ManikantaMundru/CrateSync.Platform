@@ -29,7 +29,7 @@ public sealed class SalesOrderController(
         [FromBody] CreateSalesOrderRequest request,
         CancellationToken cancellationToken)
     {
-        if (!await accessService.CanOperateWarehouseAsync(
+        if (!await accessService.CanAdminWarehouseAsync(
                 request.WarehouseId,
                 cancellationToken))
         {
@@ -297,7 +297,7 @@ public sealed class SalesOrderController(
         if (order.IsFailure)
             return this.ToProblem(order.Error);
 
-        return await accessService.CanOperateWarehouseAsync(
+        return await accessService.CanAdminWarehouseAsync(
                 order.Value.WarehouseId,
                 cancellationToken)
             ? null

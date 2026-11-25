@@ -18,6 +18,12 @@ import {
   CSpinner,
 } from '@coreui/vue'
 import { apiFetch } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+const isOwner = computed(() => auth.me?.currentTenant?.accessMode === 'SuperAdmin' || auth.me?.currentTenant?.roles.includes('TenantOwner') === true)
+const canReceive = (warehouseId: string) => canOperate.value || auth.me?.currentTenant?.warehouses.some(w => w.warehouseId === warehouseId && w.role === 'WarehouseAdmin') === true
+const canOperate = computed(() => isOwner.value || (auth.me?.currentTenant?.roles.includes('TenantAdmin') === true && auth.me?.currentTenant?.roles.includes('Finance') !== true))
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
 import InboundShipmentForm from '@/components/inbound-shipments/InboundShipmentForm.vue'
@@ -539,6 +545,40 @@ async function dispatchWarehouseDelivery(
   }
 }
 
+async function markWarehouseDeliveryDelivered(
+  deliveryId: string,
+) {
+  if (!selectedShipment.value)
+    return
+
+  saving.value = true
+  error.value = null
+
+  try {
+    await apiFetch(
+      `/api/InboundShipment/${selectedShipment.value.id}/warehouse-deliveries/${deliveryId}/deliver`,
+      { method: 'PATCH' },
+    )
+
+    success.value =
+      'Transport marked delivered. Stock is awaiting warehouse receipt.'
+
+    await Promise.all([
+      loadShipments(),
+      loadShipment(
+        selectedShipment.value.id,
+      ),
+    ])
+  } catch (exception) {
+    error.value =
+      exception instanceof Error
+        ? exception.message
+        : 'Unable to mark transport delivered.'
+  } finally {
+    saving.value = false
+  }
+}
+
 async function confirmWarehouseDelivery(
   deliveryId: string,
 ) {
@@ -783,6 +823,7 @@ onMounted(async () => {
       <CButton
         color="primary"
         class="users-add-button"
+        v-if="isOwner"
         @click="openCreate"
       >
         <i class="button-icon cil-plus" aria-hidden="true" />
@@ -957,7 +998,7 @@ onMounted(async () => {
 
           <div class="shipment-actions">
             <CButton
-              v-if="selectedShipment.status === 'Draft'"
+              v-if="canOperate && selectedShipment.status === 'Draft'"
               color="primary"
               size="sm"
               @click="transition('ship')"
@@ -965,7 +1006,7 @@ onMounted(async () => {
               Mark shipped
             </CButton>
             <CButton
-              v-if="selectedShipment.status === 'Shipped'"
+              v-if="canOperate && selectedShipment.status === 'Shipped'"
               color="primary"
               size="sm"
               @click="transition('arrive')"
@@ -1015,6 +1056,7 @@ onMounted(async () => {
                 color="secondary"
                 variant="outline"
                 size="sm"
+                v-if="canOperate"
                 @click="openClearance"
               >
                 Update clearance
@@ -1114,7 +1156,7 @@ onMounted(async () => {
 
               <CButton
                 v-if="
-                  selectedShipment.isClearedForWarehouseDispatch &&
+                  canOperate && selectedShipment.isClearedForWarehouseDispatch &&
                   ['Arrived', 'Receiving', 'PartiallyReceived'].includes(
                     selectedShipment.status,
                   ) &&
@@ -1222,7 +1264,7 @@ onMounted(async () => {
 
                 <div class="warehouse-delivery-actions">
                   <CButton
-                    v-if="delivery.status === 'Planned'"
+                    v-if="canOperate && delivery.status === 'Planned'"
                     color="primary"
                     variant="outline"
                     size="sm"
@@ -1237,7 +1279,17 @@ onMounted(async () => {
                   </CButton>
 
                   <CButton
-                    v-if="delivery.status === 'InTransit'"
+                    v-if="canOperate && delivery.status === 'InTransit'"
+                    color="primary"
+                    size="sm"
+                    :disabled="saving"
+                    @click="markWarehouseDeliveryDelivered(delivery.id)"
+                  >
+                    Mark delivered to warehouse
+                  </CButton>
+
+                  <CButton
+                    v-if="canReceive(delivery.warehouseId) && delivery.status === 'DeliveredToWarehouse'"
                     color="primary"
                     size="sm"
                     :disabled="saving"
@@ -1305,6 +1357,7 @@ onMounted(async () => {
                 color="secondary"
                 variant="outline"
                 size="sm"
+                v-if="canOperate"
                 @click="openDocument"
               >
                 Add reference
