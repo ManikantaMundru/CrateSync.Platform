@@ -41,8 +41,8 @@ public sealed record ShipmentLineResponse(
     int ExpectedQuantity,
     int ReceivedQuantity,
     decimal PackSizeKg,
-    decimal UnitCost,
-    string Currency);
+    decimal? UnitCost,
+    string? Currency);
 
 public sealed record ShipmentClearanceEventResponse(
     Guid Id,
