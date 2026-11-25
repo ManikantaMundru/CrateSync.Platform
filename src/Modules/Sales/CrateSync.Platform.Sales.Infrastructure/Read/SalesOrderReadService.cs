@@ -46,12 +46,12 @@ internal sealed class SalesOrderReadService(ISqlConnectionFactory connectionFact
             SELECT
                 Id,
                 ProductVarietyId,
-                OriginCountry,
                 Quantity,
                 PackSize,
                 UnitPrice,
                 Currency,
-                Quantity * UnitPrice AS LineTotal
+                Quantity * UnitPrice AS LineTotal,
+                OriginCountry
             FROM sales.SalesOrderLines
             WHERE SalesOrderId = @SalesOrderId
             ORDER BY Id;
