@@ -7,6 +7,8 @@ namespace CrateSync.Platform.InboundLogistics.Domain.Shipments;
 public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
 {
     private readonly List<ShipmentLine> _lines = [];
+    private readonly List<ShipmentExpense> _expenses = [];
+    private readonly List<ShipmentCostExchangeRate> _costExchangeRates = [];
     private readonly List<RegulatorySample> _regulatorySamples = [];
     private readonly List<ShipmentClearanceEvent> _clearanceEvents = [];
     private readonly List<ShipmentDocument> _documents = [];
@@ -39,6 +41,82 @@ public sealed class InboundShipment : AggregateRoot<InboundShipmentId>
         FoodSafetyStatus = FoodSafetyStatus.NotRequired;
         CreatedAtUtc = occurredOnUtc;
         UpdatedAtUtc = occurredOnUtc;
+    }
+
+    public string? CostingCurrency { get; private set; }
+    public IReadOnlyCollection<ShipmentExpense> Expenses => _expenses.AsReadOnly();
+    public IReadOnlyCollection<ShipmentCostExchangeRate> CostExchangeRates => _costExchangeRates.AsReadOnly();
+
+    public void SetCostingCurrency(string currency, DateTimeOffset now)
+    {
+        EnsureCostingOpen();
+        currency = NormalizeCostCurrency(currency);
+        if (CostingCurrency == currency) return;
+        if (_expenses.Count != 0 || _costExchangeRates.Count != 0)
+            throw new InvalidOperationException("Costing currency cannot change after expenses or exchange rates are recorded.");
+        CostingCurrency = currency;
+        UpdatedAtUtc = now;
+    }
+
+    public void SetCostExchangeRate(string currency, decimal rate, DateTimeOffset now)
+    {
+        EnsureCostingOpen();
+        currency = NormalizeCostCurrency(currency);
+        if (CostingCurrency is null) throw new InvalidOperationException("Set the costing currency first.");
+        if (currency == CostingCurrency || rate <= 0 || rate > 9999999999m || decimal.Round(rate, 8) != rate)
+            throw new InvalidOperationException("Enter a positive exchange rate of up to eight decimals for a foreign currency.");
+        var existing = _costExchangeRates.SingleOrDefault(x => x.Currency == currency);
+        if (existing is null) _costExchangeRates.Add(new ShipmentCostExchangeRate(currency, rate, now));
+        else existing.Update(rate, now);
+        UpdatedAtUtc = now;
+    }
+
+    public void RecordExpense(Guid id, string category, decimal amount, string currency, decimal rate,
+        Guid? deliveryId, Guid? lineId, string? reference, string description, Guid userId, DateTimeOffset now)
+    {
+        EnsureCostingOpen();
+        currency = NormalizeCostCurrency(currency);
+        if (CostingCurrency is null) throw new InvalidOperationException("Set the costing currency first.");
+        if (id == Guid.Empty || userId == Guid.Empty || !ShipmentExpense.Categories.Contains(category) ||
+            amount <= 0 || amount > 9999999999999999.99m || decimal.Round(amount,2) != amount ||
+            rate <= 0 || rate > 9999999999m || decimal.Round(rate,8) != rate ||
+            (currency == CostingCurrency && rate != 1m) || amount * rate > 9999999999999999.99m ||
+            string.IsNullOrWhiteSpace(description) || description.Length > 500 || reference?.Length > 100)
+            throw new InvalidOperationException("Invalid expense details or exchange rate.");
+        if (deliveryId.HasValue && lineId.HasValue) throw new InvalidOperationException("Choose either a delivery or a shipment line, not both.");
+        if (lineId.HasValue && !_lines.Any(x => x.Id.Value == lineId)) throw new InvalidOperationException("Shipment line not found.");
+        if (deliveryId.HasValue && !_deliveries.Any(x => x.Id.Value == deliveryId && x.Status != ShipmentDeliveryStatus.Cancelled))
+            throw new InvalidOperationException("Active shipment delivery not found.");
+        var existing = _expenses.SingleOrDefault(x => x.Id == id);
+        if (existing is not null)
+        {
+            if (existing.Category == category && existing.Amount == amount && existing.Currency == currency && existing.ExchangeRate == rate &&
+                existing.DeliveryId == deliveryId && existing.LineId == lineId && existing.Reference == reference?.Trim() && existing.Description == description.Trim())
+                return;
+            throw new InvalidOperationException("Expense ID already used for different details.");
+        }
+        _expenses.Add(new ShipmentExpense(id, category, amount, currency, rate, deliveryId, lineId, reference, description, userId, now));
+        UpdatedAtUtc = now;
+    }
+
+    public void ReverseExpense(Guid id, string reason, Guid userId, DateTimeOffset now)
+    {
+        EnsureCostingOpen();
+        var expense = _expenses.SingleOrDefault(x => x.Id == id) ?? throw new InvalidOperationException("Expense not found.");
+        expense.Reverse(reason, userId, now);
+        UpdatedAtUtc = now;
+    }
+
+    private void EnsureCostingOpen()
+    {
+        if (Status == ShipmentStatus.Cancelled) throw new InvalidOperationException("Cancelled shipment costs cannot be modified.");
+    }
+
+    private static string NormalizeCostCurrency(string currency)
+    {
+        currency = currency?.Trim().ToUpperInvariant() ?? "";
+        if (currency.Length != 3 || currency.Any(x => x < 'A' || x > 'Z')) throw new InvalidOperationException("A three-letter currency code is required.");
+        return currency;
     }
 
     public Guid TenantId { get; private set; }
