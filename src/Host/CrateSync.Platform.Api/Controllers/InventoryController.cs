@@ -148,13 +148,37 @@ public sealed class InventoryController(
                 request.OriginCountry,
                 request.Quantity,
                 request.TransferReference,
-                request.Remarks, request.BatchId),
+                request.Remarks, request.BatchId, request.TransportCompany, request.DriverName, request.DriverPhone, request.VehicleNumber),
             cancellationToken);
 
         return result.IsFailure
             ? this.ToProblem(result.Error)
             : NoContent();
     }
+
+    [HttpGet("transfers")]
+    public async Task<IActionResult> ListTransfers(CancellationToken cancellationToken)
+    {
+        var rows = await sender.Send(new ListWarehouseTransfersQuery(), cancellationToken);
+        if (await accessService.HasTenantWideReadAsync(cancellationToken)) return Ok(rows);
+        var assigned = await accessService.GetAssignedWarehouseIdsAsync(cancellationToken);
+        return Ok(rows.Where(x => assigned.Contains(x.SourceWarehouseId) || assigned.Contains(x.DestinationWarehouseId)));
+    }
+
+    [HttpPatch("transfers/{id:guid}/{action}")]
+    public async Task<IActionResult> TransitionTransfer(Guid id, string action, [FromBody] TransferInspectionRequest? request, CancellationToken cancellationToken)
+    {
+        if (action is not ("dispatch" or "cancel" or "receive")) return BadRequest();
+        var transfer = await sender.Send(new GetWarehouseTransferQuery(id), cancellationToken);
+        if (transfer is null) return NotFound();
+        var warehouseId = action == "receive" ? transfer.DestinationWarehouseId : transfer.SourceWarehouseId;
+        if (!await accessService.CanAdminWarehouseAsync(warehouseId, cancellationToken)) return Forbid();
+        if (action == "receive" && request is null) return BadRequest();
+        var result = await sender.Send(new TransitionWarehouseTransferCommand(id, action, request?.Accepted ?? 0, request?.Damaged ?? 0, request?.Missing ?? 0, request?.Remarks), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
+    }
+
+    public sealed record TransferInspectionRequest(int Accepted, int Damaged, int Missing, string? Remarks);
 
     [HttpPost("adjustments")]
     public async Task<IActionResult> Adjust(
