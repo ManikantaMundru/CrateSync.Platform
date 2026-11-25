@@ -28,6 +28,10 @@ interface StockSummary {
   warehouseName: string
   warehouseCode: string
   originCountry: string
+  batchId: string
+  batchCode: string | null
+  packWeightKg: number | null
+  fruitsPerPack: number | null
   onHand: number
   reserved: number
   available: number
@@ -45,6 +49,7 @@ const emit = defineEmits<{
     destinationWarehouseId: string,
     productVarietyId: string,
     originCountry: string,
+    batchId: string,
   ]
 }>()
 
@@ -189,6 +194,7 @@ async function submitTransfer() {
             selectedPosition.value!.productVarietyId,
           originCountry:
             selectedPosition.value!.originCountry,
+          batchId: selectedPosition.value!.batchId,
           quantity: Number(form.quantity),
           transferReference:
             form.transferReference.trim() ||
@@ -204,6 +210,7 @@ async function submitTransfer() {
       form.destinationWarehouseId,
       selectedPosition.value!.productVarietyId,
       selectedPosition.value!.originCountry,
+      selectedPosition.value!.batchId,
     )
   } catch (exception) {
     error.value =
@@ -319,7 +326,7 @@ async function submitTransfer() {
                 :key="item.id"
                 :value="item.id"
               >
-                {{ item.productName }} / {{ item.varietyName }}
+                {{ item.productName }} / {{ item.varietyName }} · {{ item.batchCode || 'Legacy / unclassified' }} · {{ item.fruitsPerPack != null ? item.fruitsPerPack + ' fruits' : item.packWeightKg != null ? item.packWeightKg + ' kg' : 'Unknown pack' }}
                 · {{ countryFlag(item.originCountry) }}
                 {{ originName(item.originCountry) }}
                 — {{ item.available.toLocaleString() }} available
@@ -443,7 +450,7 @@ async function submitTransfer() {
         <span v-if="selectedPosition">
           {{ selectedPosition.productName }}
           /
-          {{ selectedPosition.varietyName }}
+          {{ selectedPosition.varietyName }} · {{ selectedPosition.batchCode || 'Legacy / unclassified' }} · {{ selectedPosition.fruitsPerPack != null ? selectedPosition.fruitsPerPack + ' fruits' : selectedPosition.packWeightKg != null ? selectedPosition.packWeightKg + ' kg' : 'Unknown pack' }}
           · {{ countryFlag(selectedPosition.originCountry) }}
           {{ originName(selectedPosition.originCountry) }}
         </span>
