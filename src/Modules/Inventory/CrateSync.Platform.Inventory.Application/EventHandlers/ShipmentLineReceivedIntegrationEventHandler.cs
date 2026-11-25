@@ -19,6 +19,6 @@ internal sealed class ShipmentLineReceivedIntegrationEventHandler(ISender sender
                 notification.OriginCountry,
                 notification.Quantity,
                 notification.ShipmentId,
-                notification.ReceiptId),
+                notification.ReceiptId, notification.BatchId, notification.BatchCode, notification.PackWeightKg, notification.FruitsPerPack),
             cancellationToken);
 }
