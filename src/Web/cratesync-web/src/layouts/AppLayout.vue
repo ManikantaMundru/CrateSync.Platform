@@ -62,6 +62,7 @@ const canSwitchOrganisation = computed(
 const canManageTenant = computed(
   () =>
     isSuperAdminSession.value ||
+    currentTenant.value?.roles.includes('TenantOwner') === true ||
     currentTenant.value?.roles.includes(
       'TenantAdmin',
     ) === true,
@@ -134,7 +135,11 @@ const tenantLinks = computed(() => {
     })
   }
 
-  return links.map((link) => ({
+  const roles = currentTenant.value?.roles ?? []
+  const financial = isSuperAdminSession.value || roles.includes('TenantOwner') || roles.includes('Finance')
+  const tenantWide = financial || roles.includes('TenantAdmin') || roles.includes('Viewer')
+  return links.filter(link => (link.suffix !== '/finance' || financial) &&
+    (link.suffix !== '/shipments' || tenantWide)).map((link) => ({
     ...link,
     to:
       `/tenant/${tenantId.value}${link.suffix}`,
