@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using CrateSync.Platform.InboundLogistics.Application.Shipments.Costing;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.RecordRegulatorySample;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.SetShipmentLinePurchaseCost;
 using CrateSync.Platform.InboundLogistics.Application.Shipments.MarkWarehouseDeliveryDelivered;
@@ -109,6 +111,26 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             shipmentId, lineId, request.UnitCost, request.Currency), cancellationToken);
         return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
     }
+
+    [HttpGet("{shipmentId:guid}/costing")]
+    public async Task<IActionResult> GetCosting(Guid shipmentId, CancellationToken cancellationToken)
+    {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken)) return Forbid();
+        var result = await sender.Send(new GetShipmentCostingQuery(shipmentId), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : Ok(result.Value);
+    }
+
+    [HttpPost("{shipmentId:guid}/costing/{action}")]
+    public async Task<IActionResult> UpdateCosting(Guid shipmentId, string action, [FromBody] ShipmentCostingRequest request, CancellationToken cancellationToken)
+    {
+        if (!await accessService.HasPermissionAsync(TenantPermission.ManageCosts, cancellationToken)) return Forbid();
+        if (action is not ("currency" or "rate" or "expense" or "reverse")) return BadRequest();
+        if (!Guid.TryParse(User.FindFirstValue(CrateSyncClaimTypes.Subject) ?? User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Forbid();
+        var result = await sender.Send(new UpdateShipmentCostingCommand(shipmentId, action, request.ExpenseId, request.Currency, request.Amount, request.Rate, request.Category, request.DeliveryId, request.LineId, request.Reference, request.Description, userId), cancellationToken);
+        return result.IsFailure ? this.ToProblem(result.Error) : NoContent();
+    }
+
+    public sealed record ShipmentCostingRequest(Guid ExpenseId = default, string? Currency = null, decimal Amount = 0, decimal Rate = 0, string? Category = null, Guid? DeliveryId = null, Guid? LineId = null, string? Reference = null, string? Description = null);
 
     [HttpPost("{shipmentId:guid}/regulatory-samples")]
     public async Task<IActionResult> RecordSample(Guid shipmentId, [FromBody] RecordRegulatorySampleRequest request, CancellationToken cancellationToken)
