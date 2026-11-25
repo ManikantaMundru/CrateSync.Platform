@@ -45,9 +45,17 @@ public sealed record ShipmentLineResponse(
     decimal? UnitCost,
     string? Currency,
     int? FruitsPerPack,
-    int RegulatorySampleQuantity = 0);
+    int RegulatorySampleQuantity = 0,
+    int DamagedQuantity = 0,
+    int MissingQuantity = 0,
+    int PendingAllocationQuantity = 0)
+{
+    public int AccountedQuantity => ReceivedQuantity + RegulatorySampleQuantity + DamagedQuantity + MissingQuantity;
+    public int RemainingQuantity => Math.Max(0, ExpectedQuantity - AccountedQuantity);
+    public int AvailableForAllocation => Math.Max(0, RemainingQuantity - PendingAllocationQuantity);
+}
 
-public sealed record RegulatorySampleResponse(Guid Id, Guid ShipmentLineId, string Authority, int Quantity, string? ReferenceNumber, string Remarks, DateTimeOffset RecordedAtUtc);
+public sealed record RegulatorySampleResponse(Guid Id, Guid ShipmentLineId, string Authority, int Quantity, string? ReferenceNumber, string Remarks, DateTimeOffset RecordedAtUtc, DateTimeOffset? ReversedAtUtc = null, string? ReversalReason = null);
 
 public sealed record ShipmentClearanceEventResponse(
     Guid Id,
