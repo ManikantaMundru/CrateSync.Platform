@@ -30,6 +30,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                     WHEN 5 THEN 'PartiallyReceived'
                     WHEN 6 THEN 'Received'
                     WHEN 7 THEN 'Cancelled'
+                    WHEN 8 THEN 'ReceivedWithDiscrepancies'
                 END AS Status,
                 ExpectedArrivalAtUtc,
                 ShippedAtUtc,
@@ -98,7 +99,10 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 UnitCost,
                 Currency,
                 FruitsPerPack,
-                COALESCE((SELECT SUM(rs.Quantity) FROM logistics.RegulatorySamples rs WHERE rs.ShipmentId = @ShipmentId AND rs.ShipmentLineId = logistics.InboundShipmentLines.Id), 0) AS RegulatorySampleQuantity
+                COALESCE((SELECT SUM(rs.Quantity) FROM logistics.RegulatorySamples rs WHERE rs.ShipmentId = @ShipmentId AND rs.ShipmentLineId = logistics.InboundShipmentLines.Id AND rs.ReversedAtUtc IS NULL), 0) AS RegulatorySampleQuantity,
+                COALESCE((SELECT SUM(a.DamagedQuantity) FROM logistics.ShipmentDeliveryAllocations a JOIN logistics.ShipmentDeliveries d ON d.Id = a.DeliveryId WHERE d.ShipmentId = @ShipmentId AND d.Status = 3 AND a.ShipmentLineId = logistics.InboundShipmentLines.Id), 0) AS DamagedQuantity,
+                COALESCE((SELECT SUM(a.MissingQuantity) FROM logistics.ShipmentDeliveryAllocations a JOIN logistics.ShipmentDeliveries d ON d.Id = a.DeliveryId WHERE d.ShipmentId = @ShipmentId AND d.Status = 3 AND a.ShipmentLineId = logistics.InboundShipmentLines.Id), 0) AS MissingQuantity,
+                COALESCE((SELECT SUM(a.Quantity) FROM logistics.ShipmentDeliveryAllocations a JOIN logistics.ShipmentDeliveries d ON d.Id = a.DeliveryId WHERE d.ShipmentId = @ShipmentId AND d.Status IN (1,2,5) AND a.ShipmentLineId = logistics.InboundShipmentLines.Id), 0) AS PendingAllocationQuantity
             FROM logistics.InboundShipmentLines
             WHERE ShipmentId = @ShipmentId
             ORDER BY Id;
@@ -196,7 +200,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             WHERE d.ShipmentId = @ShipmentId
             ORDER BY a.Id;
 
-            SELECT Id, ShipmentLineId, CASE Authority WHEN 1 THEN 'Customs' WHEN 2 THEN 'PlantQuarantine' WHEN 3 THEN 'FoodSafety' WHEN 4 THEN 'Port' WHEN 5 THEN 'Other' END AS Authority, Quantity, ReferenceNumber, Remarks, RecordedAtUtc
+            SELECT Id, ShipmentLineId, CASE Authority WHEN 1 THEN 'Customs' WHEN 2 THEN 'PlantQuarantine' WHEN 3 THEN 'FoodSafety' WHEN 4 THEN 'Port' WHEN 5 THEN 'Other' END AS Authority, Quantity, ReferenceNumber, Remarks, RecordedAtUtc, ReversedAtUtc, ReversalReason
             FROM logistics.RegulatorySamples WHERE ShipmentId = @ShipmentId ORDER BY RecordedAtUtc DESC;
             """;
 
@@ -314,6 +318,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                     WHEN 5 THEN 'PartiallyReceived'
                     WHEN 6 THEN 'Received'
                     WHEN 7 THEN 'Cancelled'
+                    WHEN 8 THEN 'ReceivedWithDiscrepancies'
                 END AS Status,
                 s.ExpectedArrivalAtUtc,
                 COALESCE(SUM(l.ExpectedQuantity), 0) AS TotalExpectedCrates,
