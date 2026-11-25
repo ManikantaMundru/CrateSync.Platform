@@ -54,10 +54,21 @@ interface ShipmentLine {
   batchCode: string
   expectedQuantity: number
   receivedQuantity: number
+  regulatorySampleQuantity?: number
   packSizeKg: number | null
   fruitsPerPack?: number | null
   unitCost?: number | null
   currency?: string | null
+}
+
+interface RegulatorySample {
+  id: string
+  shipmentLineId: string
+  authority: string
+  quantity: number
+  referenceNumber: string | null
+  remarks?: string
+  recordedAtUtc: string
 }
 
 interface ClearanceEvent {
@@ -132,6 +143,7 @@ interface ShipmentDetails extends ShipmentSummary {
   billOfEntryDate: string | null
   outOfChargeAtUtc: string | null
   lines: ShipmentLine[]
+  regulatorySamples?: RegulatorySample[] | null
   clearanceEvents: ClearanceEvent[] | null
   documents: ShipmentDocument[] | null
   receipts: ShipmentReceipt[] | null
@@ -167,6 +179,41 @@ const suppliers = ref<SupplierSummary[]>([])
 const warehouses = ref<WarehouseSummary[]>([])
 const products = ref<ProductSummary[]>([])
 const selectedShipment = ref<ShipmentDetails | null>(null)
+const sampleVisible = ref(false)
+const sampleError = ref<string | null>(null)
+const sampleForm = reactive({ sampleId: '', lineId: '', authority: 'Customs', quantity: 1, referenceNumber: '', remarks: '' })
+const canRecordSample = computed(() => canOperate.value && selectedShipment.value?.status === 'Arrived' && !selectedShipment.value.deliveries?.length && !selectedShipment.value.receipts?.length)
+const sampleAvailable = computed(() => {
+  const line = selectedShipment.value?.lines.find(l => l.id === sampleForm.lineId)
+  return line ? line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) - line.receivedQuantity : 0
+})
+function openSample() {
+  if (!canRecordSample.value) return
+  Object.assign(sampleForm, { sampleId: crypto.randomUUID(), lineId: '', authority: 'Customs', quantity: 1, referenceNumber: '', remarks: '' })
+  sampleError.value = null
+  sampleVisible.value = true
+}
+async function saveSample() {
+  if (!canRecordSample.value || !selectedShipment.value || !sampleForm.lineId || !Number.isInteger(sampleForm.quantity) || sampleForm.quantity <= 0 || sampleForm.quantity > sampleAvailable.value || !sampleForm.remarks.trim()) {
+    sampleError.value = 'Select a shipment line, enter a valid quantity and provide remarks.'
+    return
+  }
+  const shipmentId = selectedShipment.value.id
+  saving.value = true
+  sampleError.value = null
+  try {
+    await apiFetch(`/api/InboundShipment/${shipmentId}/regulatory-samples`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sampleForm, referenceNumber: sampleForm.referenceNumber.trim() || null, remarks: sampleForm.remarks.trim() }),
+    })
+    sampleVisible.value = false
+    success.value = 'Regulatory sample deduction recorded.'
+    await Promise.all([loadShipments(), loadShipment(shipmentId)])
+  } catch (exception) {
+    sampleError.value = exception instanceof Error ? exception.message : 'Unable to record sample.'
+  } finally { saving.value = false }
+}
+
 const costLineId = ref<string | null>(null)
 const costAmount = ref<number | string>('')
 const costCurrency = ref('USD')
@@ -534,8 +581,8 @@ function remainingQuantity(
 ) {
   return Math.max(
     0,
-    line.expectedQuantity -
-      line.receivedQuantity,
+    line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) -
+      line.receivedQuantity - (selectedShipment.value?.deliveries ?? []).flatMap(d => d.allocations).filter(a => a.shipmentLineId === line.id).reduce((sum, a) => sum + (a.damagedQuantity ?? 0) + (a.missingQuantity ?? 0), 0),
   )
 }
 
@@ -1162,11 +1209,12 @@ onMounted(async () => {
                     </CButton>
                   </div>
 
+                  <small v-if="line.regulatorySampleQuantity">{{ line.regulatorySampleQuantity }} packages retained for regulatory testing · {{ line.expectedQuantity }} originally expected</small>
                   <div class="shipment-receipt-progress">
                     <span>
                       Received
                       {{ line.receivedQuantity }}
-                      / {{ line.expectedQuantity }}
+                      / {{ line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) }}
                     </span>
                     <span>
                       {{ remainingQuantity(line) }}
@@ -1178,11 +1226,11 @@ onMounted(async () => {
                     <span
                       :style="{
                         width:
-                          line.expectedQuantity > 0
+                          line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) > 0
                             ? `${Math.min(
                                 100,
                                 (line.receivedQuantity /
-                                  line.expectedQuantity) *
+                                  (line.expectedQuantity - (line.regulatorySampleQuantity ?? 0))) *
                                   100,
                               )}%`
                             : '0%',
@@ -1194,13 +1242,26 @@ onMounted(async () => {
                 <span
                   v-if="
                     line.receivedQuantity ===
-                    line.expectedQuantity
+                    line.expectedQuantity - (line.regulatorySampleQuantity ?? 0)
                   "
                   class="shipment-received-complete"
                 >
                   Complete
                 </span>
               </div>
+            </div>
+          </section>
+
+          <section class="shipment-detail-section">
+            <div class="section-heading">
+              <div><h3>Regulatory sample deductions</h3><p>Packages permanently retained by inspection authorities; record before planning transport.</p></div>
+              <CButton v-if="canRecordSample" color="primary" variant="outline" size="sm" @click="openSample">Record retained sample</CButton>
+            </div>
+            <p v-if="!selectedShipment.regulatorySamples?.length" class="shipment-muted">No retained samples recorded.</p>
+            <div v-for="sample in selectedShipment.regulatorySamples ?? []" :key="sample.id" class="border rounded p-2 mb-2">
+              <strong>{{ sample.authority }} · {{ sample.quantity }} packages</strong>
+              <div>{{ selectedShipment.lines.find(l => l.id === sample.shipmentLineId)?.batchCode ?? 'Line' }} · {{ sample.referenceNumber || 'No reference' }} · {{ formatDate(sample.recordedAtUtc) }}</div>
+              <small v-if="sample.remarks">{{ sample.remarks }}</small>
             </div>
           </section>
 
@@ -1676,5 +1737,20 @@ onMounted(async () => {
       <CButton color="secondary" :disabled="saving" @click="receiptDeliveryId = null">Cancel</CButton>
       <CButton color="primary" :disabled="saving || !inspectionRows.length || !inspectionRows.every(validInspection)" @click="confirmWarehouseDelivery">Confirm receipt</CButton>
     </CModalFooter>
+  </CModal>
+  <CModal :visible="sampleVisible" alignment="center" @close="!saving && (sampleVisible = false)">
+    <CModalHeader><CModalTitle>Record permanently retained regulatory sample</CModalTitle></CModalHeader>
+    <CModalBody>
+      <p>Use only for packages confirmed not to be returned. This reduces the quantity available for warehouse allocation.</p>
+      <p v-if="sampleError" class="status-message status-error">{{ sampleError }}</p>
+      <div class="admin-form admin-form-single">
+        <label class="form-field"><span>Shipment line</span><select v-model="sampleForm.lineId" class="form-select"><option value="">Select batch</option><option v-for="line in selectedShipment?.lines ?? []" :key="line.id" :value="line.id">{{ line.batchCode }} — {{ line.expectedQuantity - (line.regulatorySampleQuantity ?? 0) }} remaining</option></select></label>
+        <label class="form-field"><span>Authority</span><select v-model="sampleForm.authority" class="form-select"><option value="Customs">Customs</option><option value="FoodSafety">Food Safety</option><option value="PlantQuarantine">Plant Quarantine</option><option value="Port">Port</option><option value="Other">Other</option></select></label>
+        <label class="form-field"><span>Packages retained (max {{ sampleAvailable }})</span><input v-model.number="sampleForm.quantity" type="number" min="1" :max="sampleAvailable" step="1" class="form-control"></label>
+        <label class="form-field"><span>Inspection reference (optional)</span><input v-model="sampleForm.referenceNumber" maxlength="100" class="form-control"></label>
+        <label class="form-field"><span>Reason / remarks (required)</span><textarea v-model="sampleForm.remarks" maxlength="500" class="form-control" rows="3"/></label>
+      </div>
+    </CModalBody>
+    <CModalFooter><CButton color="secondary" :disabled="saving" @click="sampleVisible = false">Cancel</CButton><CButton color="primary" :disabled="saving || !sampleForm.lineId || !sampleForm.remarks.trim() || sampleForm.quantity <= 0 || sampleForm.quantity > sampleAvailable" @click="saveSample">Record deduction</CButton></CModalFooter>
   </CModal>
 </template>
