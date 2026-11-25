@@ -10,4 +10,4 @@ public sealed record AddSalesOrderLineCommand(
     decimal PackSize,
     decimal UnitPrice,
     string Currency,
-    string OriginCountry) : ICommand<Result<Guid>>;
+    string OriginCountry, Guid BatchId = default, string? BatchCode = null, int? FruitsPerPack = null) : ICommand<Result<Guid>>;
