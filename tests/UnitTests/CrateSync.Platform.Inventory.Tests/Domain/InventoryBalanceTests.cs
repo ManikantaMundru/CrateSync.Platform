@@ -425,6 +425,14 @@ public sealed class InventoryBalanceTests
             .ShouldBe(transferId);
         destination.Movements.Last().Reference.Id
             .ShouldBe(transferId);
+
+        var outgoingReference = source.Movements.Last().Reference;
+        var incomingReference = destination.Movements.Last().Reference;
+
+        outgoingReference.Type.ShouldBe("WarehouseTransfer");
+        incomingReference.Type.ShouldBe("WarehouseTransfer");
+        outgoingReference.ShouldBe(incomingReference);
+        ReferenceEquals(outgoingReference, incomingReference).ShouldBeFalse();
     }
 
     [Fact]

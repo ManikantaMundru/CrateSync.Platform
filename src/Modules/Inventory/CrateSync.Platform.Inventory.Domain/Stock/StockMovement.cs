@@ -23,7 +23,10 @@ public sealed class StockMovement : Entity<StockMovementId>
         ReservedChange = reservedChange;
         OnHandAfter = onHandAfter;
         ReservedAfter = reservedAfter;
-        Reference = reference;
+        // Each movement owns its reference instance in EF Core. Keep the
+        // reference value identical without sharing the tracked owned entity.
+        ArgumentNullException.ThrowIfNull(reference);
+        Reference = reference with { };
         Reason = reason;
         OccurredAtUtc = occurredAtUtc;
     }
