@@ -93,10 +93,19 @@ public sealed class ShipmentDelivery : Entity<ShipmentDeliveryId>
         DispatchedAtUtc = occurredAtUtc;
     }
 
+    internal void MarkDelivered()
+    {
+        if (Status == ShipmentDeliveryStatus.DeliveredToWarehouse)
+            return;
+        if (Status != ShipmentDeliveryStatus.InTransit)
+            throw new InvalidOperationException("Only in-transit deliveries can be marked delivered.");
+        Status = ShipmentDeliveryStatus.DeliveredToWarehouse;
+    }
+
     internal void MarkReceived(DateTimeOffset occurredAtUtc)
     {
-        if (Status != ShipmentDeliveryStatus.InTransit)
-            throw new InvalidOperationException("Only in-transit deliveries can be received.");
+        if (Status != ShipmentDeliveryStatus.DeliveredToWarehouse)
+            throw new InvalidOperationException("Only delivered transports can be received.");
 
         Status = ShipmentDeliveryStatus.Received;
         ReceivedAtUtc = occurredAtUtc;
