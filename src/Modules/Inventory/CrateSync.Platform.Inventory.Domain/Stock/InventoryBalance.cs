@@ -35,6 +35,10 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
     public Guid WarehouseId { get; private set; }
     public Guid ProductVarietyId { get; private set; }
     public string OriginCountry { get; private set; } = null!;
+    public Guid BatchId { get; private set; }
+    public string? BatchCode { get; private set; }
+    public decimal? PackWeightKg { get; private set; }
+    public int? FruitsPerPack { get; private set; }
     public StockQuantity OnHand { get; private set; }
     public StockQuantity Reserved { get; private set; }
     public int Available => OnHand.Value - Reserved.Value;
@@ -43,19 +47,23 @@ public sealed class InventoryBalance : AggregateRoot<InventoryBalanceId>
     public IReadOnlyCollection<StockMovement> Movements => _movements.AsReadOnly();
     public IReadOnlyCollection<StockReservation> Reservations => _reservations.AsReadOnly();
 
-    public static InventoryBalance Create(Guid tenantId, Guid warehouseId, Guid productVarietyId, string originCountry, DateTimeOffset createdAtUtc)
+    public static InventoryBalance Create(Guid tenantId, Guid warehouseId, Guid productVarietyId, string originCountry, DateTimeOffset createdAtUtc, Guid batchId = default, string? batchCode = null, decimal? packWeightKg = null, int? fruitsPerPack = null)
     {
         if (tenantId == Guid.Empty) throw new ArgumentException("Tenant ID cannot be empty.", nameof(tenantId));
         if (warehouseId == Guid.Empty) throw new ArgumentException("Warehouse ID cannot be empty.", nameof(warehouseId));
         if (productVarietyId == Guid.Empty) throw new ArgumentException("Product variety ID cannot be empty.", nameof(productVarietyId));
 
+        if (batchId != Guid.Empty && (string.IsNullOrWhiteSpace(batchCode) || batchCode.Length > 100 || packWeightKg.HasValue == fruitsPerPack.HasValue || packWeightKg is <= 0 || fruitsPerPack is <= 0))
+            throw new ArgumentException("Batch code and exactly one positive packaging measurement are required.");
+        if (batchId == Guid.Empty && (batchCode is not null || packWeightKg.HasValue || fruitsPerPack.HasValue))
+            throw new ArgumentException("Batch identity is required for classified stock.");
         return new InventoryBalance(
             InventoryBalanceId.New(),
             tenantId,
             warehouseId,
             productVarietyId,
             originCountry,
-            createdAtUtc);
+            createdAtUtc) { BatchId = batchId, BatchCode = batchCode, PackWeightKg = packWeightKg, FruitsPerPack = fruitsPerPack };
     }
 
     public bool Receive(CrateQuantity quantity, StockReference reference, DateTimeOffset occurredAtUtc)
