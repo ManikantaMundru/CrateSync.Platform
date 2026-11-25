@@ -35,6 +35,7 @@ interface StockSummary {
 
 const props = defineProps<{
   warehouses: WarehouseSummary[]
+  destinations: WarehouseSummary[]
   stock: StockSummary[]
 }>()
 
@@ -107,7 +108,7 @@ const selectedPosition = computed(() =>
 )
 
 const destinationWarehouses = computed(() =>
-  props.warehouses.filter(
+  props.destinations.filter(
     (warehouse) =>
       warehouse.isActive &&
       warehouse.id !== form.sourceWarehouseId,
@@ -146,7 +147,9 @@ async function submitTransfer() {
   if (
     !form.sourceWarehouseId ||
     !form.destinationWarehouseId ||
-    !form.stockPositionId
+    !form.stockPositionId ||
+    !props.warehouses.some(w => w.id === form.sourceWarehouseId && w.isActive) ||
+    !destinationWarehouses.value.some(w => w.id === form.destinationWarehouseId)
   ) {
     error.value =
       'Source warehouse, destination warehouse and stock item are required.'
