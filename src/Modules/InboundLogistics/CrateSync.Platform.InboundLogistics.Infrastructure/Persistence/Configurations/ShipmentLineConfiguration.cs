@@ -50,13 +50,12 @@ internal sealed class ShipmentLineConfiguration : IEntityTypeConfiguration<Shipm
                 value => new CrateQuantity(value))
             .IsRequired();
 
-        builder.Property(x => x.PackSize)
-            .HasConversion(
-                packSize => packSize.WeightKg,
-                value => new PackSize(value))
-            .HasColumnType("decimal(18,3)")
-            .IsRequired();
-
+        builder.Ignore(x => x.PackSize);
+        builder.Property(x => x.PackWeightKg)
+            .HasColumnName("PackSize")
+            .HasColumnType("decimal(18,3)");
+        builder.Property(x => x.FruitsPerPack);
+ 
         builder.Ignore(x => x.UnitCost);
         builder.Property(x => x.PurchaseCostAmount)
             .HasColumnName("UnitCost")
