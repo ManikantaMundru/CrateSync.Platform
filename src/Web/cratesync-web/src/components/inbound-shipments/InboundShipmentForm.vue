@@ -41,13 +41,16 @@ interface DraftLine {
   productVarietyId: string
   batchCode: string
   expectedQuantity: number
-  packSizeKg: number
+  packType: 'Weight' | 'Count'
+  packValue: number
+  unitCost: number | string
   varieties: ProductVariety[]
 }
 
-defineProps<{
+const props = defineProps<{
   suppliers: SupplierSummary[]
   products: ProductSummary[]
+  canEnterCosts: boolean
 }>()
 
 const emit = defineEmits<{
@@ -59,6 +62,7 @@ const saving = ref(false)
 const submitted = ref(false)
 const error = ref<string | null>(null)
 const freightExpanded = ref(true)
+const shipmentCurrency = ref('USD')
 
 const form = reactive({
   supplierId: '',
@@ -79,7 +83,9 @@ const lines = ref<DraftLine[]>([
     productVarietyId: '',
     batchCode: '',
     expectedQuantity: 1,
-    packSizeKg: 1,
+    packType: 'Weight',
+    packValue: 1,
+    unitCost: '',
     varieties: [],
   },
 ])
@@ -96,21 +102,10 @@ const totalDraftCrates = computed(() =>
   ),
 )
 
-const totalDraftWeightKg = computed(() =>
-  lines.value.reduce(
-    (total, line) =>
-      total +
-      Math.max(
-        0,
-        Number(line.expectedQuantity) || 0,
-      ) *
-        Math.max(
-          0,
-          Number(line.packSizeKg) || 0,
-        ),
-    0,
-  ),
-)
+const totalDraftWeightKg = computed(() => lines.value.filter(l => l.packType === 'Weight').reduce((total, l) => total + Number(l.expectedQuantity || 0) * Number(l.packValue || 0), 0))
+const totalDraftFruits = computed(() => lines.value.filter(l => l.packType === 'Count').reduce((total, l) => total + Number(l.expectedQuantity || 0) * Number(l.packValue || 0), 0))
+const totalDraftValue = computed(() => lines.value.reduce((total, l) => total + Number(l.expectedQuantity || 0) * Number(l.unitCost || 0), 0))
+const pendingCosts = computed(() => lines.value.some(l => l.unitCost === ''))
 
 function addLine() {
   lines.value.push({
@@ -118,7 +113,9 @@ function addLine() {
     productVarietyId: '',
     batchCode: '',
     expectedQuantity: 1,
-    packSizeKg: 1,
+    packType: 'Weight',
+    packValue: 1,
+    unitCost: '',
     varieties: [],
   })
 }
@@ -187,6 +184,10 @@ function lineValidationMessage(
 
   if (!line.batchCode.trim())
     missing.push('batch code')
+
+  if (!Number.isInteger(Number(line.expectedQuantity)) || Number(line.expectedQuantity) <= 0) missing.push('positive whole pack quantity')
+  if (!Number.isFinite(Number(line.packValue)) || Number(line.packValue) <= 0 || (line.packType === 'Count' && !Number.isInteger(Number(line.packValue)))) missing.push('valid pack size')
+  if (props.canEnterCosts && line.unitCost !== '' && (!Number.isFinite(Number(line.unitCost)) || Number(line.unitCost) < 0)) missing.push('valid purchase cost')
 
   return missing.length
     ? `Line ${index + 1}: select/enter ${missing.join(', ')}.`
@@ -296,8 +297,9 @@ async function createShipment() {
               line.batchCode.trim(),
             expectedQuantity:
               Number(line.expectedQuantity),
-            packSizeKg:
-              Number(line.packSizeKg),
+            packSizeKg: line.packType === 'Weight' ? Number(line.packValue) : null,
+            fruitsPerPack: line.packType === 'Count' ? Number(line.packValue) : null,
+            ...(props.canEnterCosts && line.unitCost !== '' ? { unitCost: Number(line.unitCost), currency: shipmentCurrency.value } : {}),
           }),
         },
       )
@@ -378,11 +380,17 @@ async function createShipment() {
           </span>
         </div>
         <p>
-          Record incoming supplier stock and freight details. Finance can enter purchase costs separately.
+          Record incoming supplier stock and freight details.
         </p>
       </div>
 
 
+      <label v-if="canEnterCosts" class="shipment-currency-picker">
+        <span>Purchase currency</span>
+        <select v-model="shipmentCurrency" class="form-select">
+          <option v-for="currency in ['USD', 'EUR', 'GBP', 'ZAR', 'INR', 'NZD', 'CLP', 'PLN']" :key="currency" :value="currency">{{ currency }}</option>
+        </select>
+      </label>
     </header>
 
     <main class="shipment-form-page-body">
@@ -581,19 +589,22 @@ async function createShipment() {
         </div>
 
         <div class="shipment-line-table-wrap shipment-lines-desktop">
-          <div class="shipment-line-table shipment-line-table-head operational-line-table">
+          <div class="shipment-line-table shipment-line-table-head operational-line-table" :class="{ costing: canEnterCosts }">
             <span>Product</span>
             <span>Variety</span>
             <span>Batch code</span>
-            <span>Crates</span>
-            <span>Pack kg</span>
+            <span>Crates / boxes</span>
+            <span>Pack type</span>
+            <span>Per pack</span>
+            <span v-if="canEnterCosts">Cost / pack</span>
+            <span v-if="canEnterCosts">Line value</span>
             <span />
           </div>
 
           <div
             v-for="(line, index) in lines"
             :key="index"
-            class="shipment-line-table shipment-line-table-row operational-line-table"
+            class="shipment-line-table shipment-line-table-row operational-line-table" :class="{ costing: canEnterCosts }"
           >
             <select
               v-model="line.productId"
@@ -664,14 +675,12 @@ async function createShipment() {
               placeholder="0"
             >
 
-            <input
-              v-model.number="line.packSizeKg"
-              class="form-control shipment-number-input"
-              type="number"
-              min="0.001"
-              step="0.001"
-              placeholder="0"
-            >
+            <select v-model="line.packType" class="form-select" aria-label="Pack quantity type">
+              <option value="Weight">Kilograms</option><option value="Count">Fruit count</option>
+            </select>
+            <input v-model.number="line.packValue" class="form-control" type="number" :min="line.packType === 'Count' ? 1 : 0.001" :step="line.packType === 'Count' ? 1 : 0.001" aria-label="Quantity per pack">
+            <input v-if="canEnterCosts" v-model.number="line.unitCost" class="form-control" type="number" min="0" step="0.01" placeholder="Pending" aria-label="Purchase cost per pack">
+            <strong v-if="canEnterCosts">{{ line.unitCost === '' ? 'Pending' : shipmentCurrency + ' ' + (Number(line.unitCost) * Number(line.expectedQuantity)).toFixed(2) }}</strong>
 
             <button
               type="button"
@@ -785,16 +794,10 @@ async function createShipment() {
                 >
               </label>
 
-              <label class="form-field">
-                <span>Pack kg</span>
-                <input
-                  v-model.number="line.packSizeKg"
-                  class="form-control"
-                  type="number"
-                  min="0.001"
-                  step="0.001"
-                >
-              </label>
+              <label class="form-field"><span>Pack type</span><select v-model="line.packType" class="form-select"><option value="Weight">Kilograms</option><option value="Count">Fruit count</option></select></label>
+              <label class="form-field"><span>Quantity per pack</span><input v-model.number="line.packValue" type="number" class="form-control" :min="line.packType === 'Count' ? 1 : 0.001" :step="line.packType === 'Count' ? 1 : 0.001"></label>
+              <label v-if="canEnterCosts" class="form-field"><span>Purchase cost / pack ({{ shipmentCurrency }})</span><input v-model.number="line.unitCost" type="number" min="0" step="0.01" placeholder="Pending" class="form-control"></label>
+              <span v-if="canEnterCosts">Line value: {{ line.unitCost === '' ? 'Pending' : shipmentCurrency + ' ' + (Number(line.unitCost) * Number(line.expectedQuantity)).toFixed(2) }}</span>
 
 
             </div>
@@ -860,15 +863,17 @@ async function createShipment() {
         <span class="shipment-summary-dot">•</span>
         <span>
           <strong>{{ totalDraftCrates }}</strong>
-          crates
+          crates / boxes
         </span>
         <span class="shipment-summary-dot">•</span>
         <span>
           <strong>
             {{ totalDraftWeightKg.toLocaleString() }}
           </strong>
-          kg
+          kg (weight-based packs)
         </span>
+        <span v-if="totalDraftFruits">{{ totalDraftFruits.toLocaleString() }} fruits (count-based packs)</span>
+        <span v-if="canEnterCosts">{{ pendingCosts ? 'Recorded subtotal' : 'Purchase total' }}: {{ shipmentCurrency }} {{ totalDraftValue.toFixed(2) }}</span>
 
       </div>
 
@@ -905,5 +910,6 @@ async function createShipment() {
 </template>
 
 <style scoped>
-.operational-line-table { grid-template-columns: minmax(130px, 1.4fr) minmax(130px, 1.4fr) minmax(100px, 1fr) minmax(75px, .6fr) minmax(75px, .6fr) 40px; }
+.operational-line-table { grid-template-columns: minmax(110px, 1.3fr) minmax(110px, 1.3fr) minmax(100px, 1fr) minmax(80px, .7fr) minmax(110px, 1fr) minmax(80px, .7fr) 40px; }
+.operational-line-table.costing { grid-template-columns: minmax(110px, 1.3fr) minmax(110px, 1.3fr) minmax(100px, 1fr) minmax(80px, .7fr) minmax(110px, 1fr) minmax(80px, .7fr) minmax(100px, .9fr) minmax(110px, 1fr) 40px; min-width: 930px; }
 </style>
