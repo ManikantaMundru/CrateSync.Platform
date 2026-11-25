@@ -23,7 +23,8 @@ public sealed class TenantUsersController(
     TenantUserManagementService tenantUserManagementService,
     UserManager<ApplicationUser> userManager,
     IConfiguration configuration,
-    ISender sender)
+    ISender sender,
+    ICurrentTenantAccessService accessService)
     : ControllerBase
 {
     [HttpGet]
@@ -51,6 +52,11 @@ public sealed class TenantUsersController(
 
         if (validation is not null)
             return validation;
+
+        var existingUser = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (existingUser is not null &&
+            !await CanManageTargetAsync(existingUser.Id, cancellationToken))
+            return Forbid();
 
         var result =
             await tenantUserManagementService.CreateOrAddAsync(
@@ -104,6 +110,9 @@ public sealed class TenantUsersController(
         Guid userId,
         CancellationToken cancellationToken)
     {
+        if (!await CanManageTargetAsync(userId, cancellationToken))
+            return Forbid();
+
         var canManage =
             await tenantUserManagementService
                 .CanManageUserAsync(
@@ -153,9 +162,12 @@ public sealed class TenantUsersController(
         UpdateTenantUserAccessRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await CanManageTargetAsync(userId, cancellationToken))
+            return Forbid();
+
         if (IsCurrentUser(userId) &&
-            !request.Roles.Contains(
-                TenantRole.TenantAdmin))
+            !request.Roles.Contains(TenantRole.TenantAdmin) &&
+            !request.Roles.Contains(TenantRole.TenantOwner))
         {
             return Conflict(new
             {
@@ -197,6 +209,9 @@ public sealed class TenantUsersController(
         Guid userId,
         CancellationToken cancellationToken)
     {
+        if (!await CanManageTargetAsync(userId, cancellationToken))
+            return Forbid();
+
         var updated =
             await tenantUserManagementService
                 .SetMembershipActiveAsync(
@@ -215,6 +230,9 @@ public sealed class TenantUsersController(
         Guid userId,
         CancellationToken cancellationToken)
     {
+        if (!await CanManageTargetAsync(userId, cancellationToken))
+            return Forbid();
+
         if (IsCurrentUser(userId))
         {
             return Conflict(new
@@ -255,16 +273,23 @@ public sealed class TenantUsersController(
 
         if (roles.Any(
                 role =>
-                    role is not TenantRole.TenantAdmin
-                        and not TenantRole.Viewer))
+                    !Enum.IsDefined(role)))
         {
             return BadRequest(new
             {
                 title = "Invalid tenant role",
                 detail =
-                    "Tenant roles are limited to TenantAdmin and Viewer."
+                    "Unknown tenant role."
             });
         }
+
+        if (roles.Any(TenantPermissions.IsFinancialRole) &&
+            !await accessService.HasPermissionAsync(TenantPermission.ManageFinancialRoles, cancellationToken))
+            return Forbid();
+
+        if (roles.Contains(TenantRole.Finance) &&
+            (roles.Count != 1 || warehouses.Count != 0))
+            return BadRequest(new { title = "Finance must be a standalone role without warehouse assignments" });
 
         if (warehouses.Any(
                 warehouse =>
@@ -308,6 +333,15 @@ public sealed class TenantUsersController(
         }
 
         return null;
+    }
+
+    private async Task<bool> CanManageTargetAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (await accessService.HasPermissionAsync(TenantPermission.ManageFinancialRoles, cancellationToken))
+            return true;
+
+        var users = await tenantUserManagementService.GetUsersAsync(tenantContext.TenantId, cancellationToken);
+        return !users.Any(x => x.UserId == userId && x.Roles.Any(TenantPermissions.IsFinancialRole));
     }
 
     private async Task<string?> BuildActivationUrlAsync(
