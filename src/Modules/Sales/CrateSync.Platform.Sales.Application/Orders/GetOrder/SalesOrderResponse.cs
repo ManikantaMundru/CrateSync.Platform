@@ -27,4 +27,4 @@ public sealed record SalesOrderLineResponse(
     decimal UnitPrice,
     string Currency,
     decimal LineTotal,
-    string OriginCountry = "ZZ");
+    string OriginCountry = "ZZ", Guid BatchId = default, string? BatchCode = null, int? FruitsPerPack = null);
