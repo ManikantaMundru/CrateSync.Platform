@@ -18,5 +18,6 @@ public interface IInventoryBalanceRepository
         Guid salesOrderId,
         CancellationToken cancellationToken = default);
 
+    Task<InventoryBalance?> GetByIdAsync(Guid tenantId, Guid balanceId, CancellationToken cancellationToken = default);
     void Add(InventoryBalance balance);
 }
