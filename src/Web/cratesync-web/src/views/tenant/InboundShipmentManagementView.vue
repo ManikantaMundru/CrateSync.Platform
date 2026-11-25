@@ -22,6 +22,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const isOwner = computed(() => auth.me?.currentTenant?.accessMode === 'SuperAdmin' || auth.me?.currentTenant?.roles.includes('TenantOwner') === true)
+const canReceive = (warehouseId: string) => canOperate.value || auth.me?.currentTenant?.warehouses.some(w => w.warehouseId === warehouseId && w.role === 'WarehouseAdmin') === true
 const canOperate = computed(() => isOwner.value || (auth.me?.currentTenant?.roles.includes('TenantAdmin') === true && auth.me?.currentTenant?.roles.includes('Finance') !== true))
 import { countries } from '@/data/countries'
 import TradingPartnerPager from '@/components/trading-partners/TradingPartnerPager.vue'
@@ -1244,7 +1245,7 @@ onMounted(async () => {
                   </CButton>
 
                   <CButton
-                    v-if="canOperate && delivery.status === 'InTransit'"
+                    v-if="canReceive(delivery.warehouseId) && delivery.status === 'InTransit'"
                     color="primary"
                     size="sm"
                     :disabled="saving"
