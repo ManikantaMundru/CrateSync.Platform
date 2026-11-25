@@ -27,6 +27,8 @@ interface ShipmentLine {
 interface DeliveryAllocation {
   shipmentLineId: string
   quantity: number
+  damagedQuantity?: number | null
+  missingQuantity?: number | null
 }
 
 interface ShipmentDelivery {
@@ -118,7 +120,7 @@ const availableForAllocation = (
     0,
     line.expectedQuantity -
       line.receivedQuantity -
-      alreadyAllocated(line.id),
+      alreadyAllocated(line.id) - (props.shipment.deliveries ?? []).flatMap(d => d.allocations).filter(a => a.shipmentLineId === line.id).reduce((total, a) => total + (a.damagedQuantity ?? 0) + (a.missingQuantity ?? 0), 0),
   )
 
 const allocations = computed(() =>
