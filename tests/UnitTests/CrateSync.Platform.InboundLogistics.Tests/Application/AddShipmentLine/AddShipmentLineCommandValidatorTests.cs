@@ -51,6 +51,26 @@ public sealed class AddShipmentLineCommandValidatorTests
         result.IsValid.ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task Validate_Should_Accept_Count_Based_Packaging_Without_Cost()
+    {
+        var command = CreateValidCommand() with { PackSizeKg = null, FruitsPerPack = 100, UnitCost = null, Currency = null };
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(18, 100)]
+    [InlineData(null, 0)]
+    [InlineData(null, -1)]
+    public async Task Validate_Should_Reject_Invalid_Packaging(int? weight, int? count)
+    {
+        var command = CreateValidCommand() with { PackSizeKg = weight, FruitsPerPack = count };
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+        result.IsValid.ShouldBeFalse();
+    }
+
     private static AddShipmentLineCommand CreateValidCommand() =>
         new(
             Guid.NewGuid(),
