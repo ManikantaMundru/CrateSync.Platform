@@ -14,6 +14,21 @@ public sealed class CurrentTenantAccessService(
     private IdentityAccessSnapshot? _snapshot;
     private bool _loaded;
 
+    public async Task<bool> HasPermissionAsync(
+        TenantPermission permission,
+        CancellationToken cancellationToken = default)
+    {
+        if (!tenantContext.HasTenant || !Enum.IsDefined(permission))
+            return false;
+
+        if (IsSuperAdmin())
+            return true;
+
+        var membership = await GetCurrentMembershipAsync(cancellationToken);
+        return membership is not null &&
+            TenantPermissions.Grants(membership.Roles, permission);
+    }
+
     public async Task<bool> HasTenantAccessAsync(
         CancellationToken cancellationToken = default)
     {
@@ -24,19 +39,9 @@ public sealed class CurrentTenantAccessService(
                    cancellationToken) is not null;
     }
 
-    public async Task<bool> IsTenantAdminAsync(
-        CancellationToken cancellationToken = default)
-    {
-        if (IsSuperAdmin())
-            return true;
-
-        var membership =
-            await GetCurrentMembershipAsync(
-                cancellationToken);
-
-        return membership?.Roles.Contains(
-            TenantRole.TenantAdmin) == true;
-    }
+    public Task<bool> IsTenantAdminAsync(
+        CancellationToken cancellationToken = default) =>
+        HasPermissionAsync(TenantPermission.ManageOperations, cancellationToken);
 
     public async Task<bool> HasTenantWideReadAsync(
         CancellationToken cancellationToken = default)
@@ -54,7 +59,8 @@ public sealed class CurrentTenantAccessService(
         return membership.Roles.Contains(
                    TenantRole.TenantAdmin) ||
                membership.Roles.Contains(
-                   TenantRole.Viewer);
+                   TenantRole.Viewer) ||
+               membership.Roles.Any(TenantPermissions.IsFinancialRole);
     }
 
     public async Task<bool> CanReadWarehouseAsync(
@@ -90,12 +96,14 @@ public sealed class CurrentTenantAccessService(
             await GetCurrentMembershipAsync(
                 cancellationToken);
 
-        return membership?.Warehouses.Any(
+        return membership is not null &&
+            !membership.Roles.Contains(TenantRole.Finance) &&
+            membership.Warehouses.Any(
             x =>
                 x.WarehouseId == warehouseId &&
                 x.Role is
                     WarehouseAccessRole.WarehouseUser
-                    or WarehouseAccessRole.WarehouseAdmin) == true;
+                    or WarehouseAccessRole.WarehouseAdmin);
     }
 
     public async Task<bool> CanAdminWarehouseAsync(
@@ -113,11 +121,13 @@ public sealed class CurrentTenantAccessService(
             await GetCurrentMembershipAsync(
                 cancellationToken);
 
-        return membership?.Warehouses.Any(
+        return membership is not null &&
+            !membership.Roles.Contains(TenantRole.Finance) &&
+            membership.Warehouses.Any(
             x =>
                 x.WarehouseId == warehouseId &&
                 x.Role ==
-                    WarehouseAccessRole.WarehouseAdmin) == true;
+                    WarehouseAccessRole.WarehouseAdmin);
     }
 
     public async Task<IReadOnlySet<Guid>>
