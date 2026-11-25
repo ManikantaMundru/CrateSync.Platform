@@ -96,7 +96,8 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 ReceivedQuantity,
                 PackSize AS PackSizeKg,
                 UnitCost,
-                Currency
+                Currency,
+                FruitsPerPack
             FROM logistics.InboundShipmentLines
             WHERE ShipmentId = @ShipmentId
             ORDER BY Id;
