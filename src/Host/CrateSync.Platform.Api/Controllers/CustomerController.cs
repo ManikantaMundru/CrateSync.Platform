@@ -15,7 +15,7 @@ namespace CrateSync.Platform.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CustomerController(ISender sender) : ControllerBase
+    public class CustomerController(ISender sender, ICurrentTenantAccessService accessService) : ControllerBase
     {
         private readonly ISender _sender = sender;
 
@@ -90,6 +90,8 @@ namespace CrateSync.Platform.Api.Controllers
             Guid customerId,
             CancellationToken cancellationToken)
         {
+            if (!await accessService.HasTenantWideReadAsync(cancellationToken)) return Forbid();
+
             var result = await _sender.Send(
                 new GetCustomerQuery(customerId),
                 cancellationToken);
@@ -108,6 +110,8 @@ namespace CrateSync.Platform.Api.Controllers
             [FromQuery] int pageSize = 25,
             CancellationToken cancellationToken = default)
         {
+            if (!await accessService.HasTenantWideReadAsync(cancellationToken)) return Forbid();
+
             var result = await _sender.Send(
                 new SearchCustomersQuery(
                     search,
