@@ -10,4 +10,4 @@ public sealed record ReceiveStockCommand(
     string OriginCountry,
     int Quantity,
     Guid ShipmentId,
-    Guid? ReceiptId = null) : ICommand<Result>;
+    Guid? ReceiptId = null, Guid BatchId = default, string? BatchCode = null, decimal? PackWeightKg = null, int? FruitsPerPack = null) : ICommand<Result>;
