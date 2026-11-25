@@ -294,7 +294,7 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (delivery is null)
             return NotFound();
 
-        if (!await accessService.IsTenantAdminAsync(cancellationToken))
+        if (!await accessService.CanAdminWarehouseAsync(delivery.WarehouseId, cancellationToken))
         {
             return Forbid();
         }
@@ -331,7 +331,12 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
         if (result.IsFailure)
             return this.ToProblem(result.Error);
 
-        if (!await accessService.HasTenantWideReadAsync(cancellationToken))
+        var tenantWide = await accessService.HasTenantWideReadAsync(cancellationToken);
+        var assigned = await accessService.GetAssignedWarehouseIdsAsync(cancellationToken);
+        var visibleDeliveries = (result.Value.Deliveries ?? Array.Empty<ShipmentDeliveryResponse>())
+            .Where(x => tenantWide || (assigned.Contains(x.WarehouseId) && x.Status is "InTransit" or "Received"))
+            .ToArray();
+        if (!tenantWide && visibleDeliveries.Length == 0)
             return Forbid();
 
         if (await accessService.HasPermissionAsync(TenantPermission.ViewCosts, cancellationToken))
@@ -357,7 +362,8 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
             shipment.BillOfEntryDate, shipment.OutOfChargeAtUtc, shipment.CustomsStatus,
             shipment.PlantQuarantineStatus, shipment.FoodSafetyStatus,
             shipment.ClearanceEvents, Documents = Array.Empty<object>(),
-            shipment.Receipts, shipment.Deliveries, shipment.IsClearedForWarehouseDispatch
+            Receipts = (shipment.Receipts ?? Array.Empty<ShipmentReceiptResponse>()).Where(x => tenantWide || assigned.Contains(x.WarehouseId)),
+            Deliveries = visibleDeliveries, shipment.IsClearedForWarehouseDispatch
         });
     }
 
@@ -375,7 +381,19 @@ public sealed class InboundShipmentController(ISender sender, ICurrentTenantAcce
 
         var result = await sender.Send(new SearchShipmentsQuery(searchTerm, status, supplierId), cancellationToken);
 
-        return Ok(result);
+        if (await accessService.HasTenantWideReadAsync(cancellationToken))
+            return Ok(result);
+
+        var assigned = await accessService.GetAssignedWarehouseIdsAsync(cancellationToken);
+        var visible = new List<CrateSync.Platform.InboundLogistics.Application.Shipments.SearchShipments.ShipmentSummaryResponse>();
+        foreach (var summary in result)
+        {
+            var shipment = await sender.Send(new GetShipmentQuery(summary.Id), cancellationToken);
+            if (!shipment.IsFailure && shipment.Value.Deliveries?.Any(x =>
+                assigned.Contains(x.WarehouseId) && x.Status is "InTransit" or "Received") == true)
+                visible.Add(summary);
+        }
+        return Ok(visible);
     }
 
     private async Task<IActionResult?> EnsureShipmentOperationAccessAsync(
