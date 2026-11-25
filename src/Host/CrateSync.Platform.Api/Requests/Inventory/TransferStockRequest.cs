@@ -8,4 +8,4 @@ public sealed record TransferStockRequest(
     string OriginCountry,
     int Quantity,
     string? TransferReference,
-    string? Remarks);
+    string? Remarks, Guid BatchId = default);
