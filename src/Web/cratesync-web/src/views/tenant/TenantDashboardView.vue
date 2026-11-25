@@ -64,7 +64,7 @@ function displayRole(role: string) {
     </div>
 
     <div class="metric-grid">
-      <CCard v-if="tenantWide" class="metric-card">
+      <CCard v-if="tenantWide || currentTenant?.warehouses.some(w => w.role === 'WarehouseAdmin')" class="metric-card">
         <CCardBody>
           <span>Sales</span>
           <strong>Ready</strong>
