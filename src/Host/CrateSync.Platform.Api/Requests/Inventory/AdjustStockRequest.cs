@@ -5,4 +5,4 @@ public sealed record AdjustStockRequest(
     Guid ProductVarietyId,
     string OriginCountry,
     int QuantityChange,
-    string Reason);
+    string Reason, Guid BatchId = default);
