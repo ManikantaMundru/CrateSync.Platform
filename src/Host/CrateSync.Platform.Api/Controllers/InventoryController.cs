@@ -148,7 +148,7 @@ public sealed class InventoryController(
                 request.OriginCountry,
                 request.Quantity,
                 request.TransferReference,
-                request.Remarks),
+                request.Remarks, request.BatchId),
             cancellationToken);
 
         return result.IsFailure
@@ -174,7 +174,7 @@ public sealed class InventoryController(
                 request.ProductVarietyId,
                 request.OriginCountry,
                 request.QuantityChange,
-                request.Reason),
+                request.Reason, request.BatchId),
             cancellationToken);
 
         return result.IsFailure
