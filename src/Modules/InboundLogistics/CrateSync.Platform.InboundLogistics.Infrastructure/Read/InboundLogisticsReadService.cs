@@ -97,7 +97,8 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 PackSize AS PackSizeKg,
                 UnitCost,
                 Currency,
-                FruitsPerPack
+                FruitsPerPack,
+                COALESCE((SELECT SUM(rs.Quantity) FROM logistics.RegulatorySamples rs WHERE rs.ShipmentId = @ShipmentId AND rs.ShipmentLineId = logistics.InboundShipmentLines.Id), 0) AS RegulatorySampleQuantity
             FROM logistics.InboundShipmentLines
             WHERE ShipmentId = @ShipmentId
             ORDER BY Id;
@@ -194,6 +195,9 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
                 ON d.Id = a.DeliveryId
             WHERE d.ShipmentId = @ShipmentId
             ORDER BY a.Id;
+
+            SELECT Id, ShipmentLineId, CASE Authority WHEN 1 THEN 'Customs' WHEN 2 THEN 'PlantQuarantine' WHEN 3 THEN 'FoodSafety' WHEN 4 THEN 'Port' WHEN 5 THEN 'Other' END AS Authority, Quantity, ReferenceNumber, Remarks, RecordedAtUtc
+            FROM logistics.RegulatorySamples WHERE ShipmentId = @ShipmentId ORDER BY RecordedAtUtc DESC;
             """;
 
         await using var connection =
@@ -225,6 +229,8 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             (await result.ReadAsync<ShipmentDeliveryRow>()).AsList();
         var allocationRows =
             (await result.ReadAsync<ShipmentDeliveryAllocationResponse>()).AsList();
+
+        var samples = (await result.ReadAsync<RegulatorySampleResponse>()).AsList();
 
         var deliveries =
             deliveryRows
@@ -284,7 +290,7 @@ internal sealed class InboundLogisticsReadService(ISqlConnectionFactory connecti
             documents,
             receipts,
             deliveries,
-            isClearedForWarehouseDispatch);
+            isClearedForWarehouseDispatch, samples);
     }
 
     public async Task<IReadOnlyCollection<ShipmentSummaryResponse>> SearchAsync(
