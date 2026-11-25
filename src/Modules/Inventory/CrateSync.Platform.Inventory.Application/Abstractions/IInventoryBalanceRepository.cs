@@ -11,6 +11,8 @@ public interface IInventoryBalanceRepository
         string originCountry,
         CancellationToken cancellationToken = default);
 
+    Task<InventoryBalance?> GetBatchAsync(Guid tenantId, Guid warehouseId, Guid productVarietyId, string originCountry, Guid batchId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyCollection<InventoryBalance>> GetBySalesOrderIdAsync(
         Guid tenantId,
         Guid salesOrderId,
