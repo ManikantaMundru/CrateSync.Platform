@@ -40,9 +40,10 @@ public sealed record ShipmentLineResponse(
     string BatchCode,
     int ExpectedQuantity,
     int ReceivedQuantity,
-    decimal PackSizeKg,
+    decimal? PackSizeKg,
     decimal? UnitCost,
-    string? Currency);
+    string? Currency,
+    int? FruitsPerPack);
 
 public sealed record ShipmentClearanceEventResponse(
     Guid Id,
