@@ -93,7 +93,7 @@ const form = reactive({
   phone: '',
 })
 
-const canManageCustomers = computed(
+const canDeactivateCustomers = computed(
   () =>
     auth.me?.currentTenant?.accessMode ===
       'SuperAdmin' ||
@@ -104,6 +104,9 @@ const canManageCustomers = computed(
       'TenantAdmin',
     ) === true,
 )
+
+const canManageCustomers = computed(() => canDeactivateCustomers.value ||
+  auth.me?.currentTenant?.warehouses.some(w => w.role === 'WarehouseAdmin') === true)
 
 watch(
   [statusFilter, pageSize],
@@ -486,7 +489,7 @@ async function saveCustomer() {
 }
 
 async function deactivateCustomer() {
-  if (!selectedCustomer.value)
+  if (!canDeactivateCustomers.value || !selectedCustomer.value)
     return
 
   if (
@@ -793,7 +796,7 @@ function formatAddress(
                   </CButton>
 
                   <CButton
-                    v-if="selectedCustomer.isActive"
+                    v-if="canDeactivateCustomers && selectedCustomer.isActive"
                     color="danger"
                     variant="outline"
                     size="sm"
