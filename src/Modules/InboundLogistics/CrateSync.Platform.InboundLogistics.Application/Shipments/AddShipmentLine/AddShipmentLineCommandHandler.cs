@@ -37,10 +37,10 @@ internal sealed class AddShipmentLineCommandHandler(
             request.ProductVarietyId,
             new BatchCode(request.BatchCode),
             new CrateQuantity(request.ExpectedQuantity),
-            new PackSize(request.PackSizeKg),
-            new Money(
-                request.UnitCost,
-                new Currency(request.Currency)),
+            request.FruitsPerPack is int count ? PackSize.ByCount(count) : new PackSize(request.PackSizeKg!.Value),
+            request.UnitCost.HasValue && request.Currency is not null
+                ? new Money(request.UnitCost.Value, new Currency(request.Currency))
+                : null,
             _timeProvider.GetUtcNow());
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

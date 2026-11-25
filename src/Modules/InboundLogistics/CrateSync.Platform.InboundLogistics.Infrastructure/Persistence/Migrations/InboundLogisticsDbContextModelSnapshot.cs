@@ -344,8 +344,12 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                     b.Property<int>("ExpectedQuantity")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("PackSize")
-                        .HasColumnType("decimal(18,3)");
+                    b.Property<decimal?>("PackWeightKg")
+                        .HasColumnType("decimal(18,3)")
+                        .HasColumnName("PackSize");
+
+                    b.Property<int?>("FruitsPerPack")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uniqueidentifier");
@@ -358,6 +362,15 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
 
                     b.Property<Guid>("ShipmentId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("PurchaseCostAmount")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("UnitCost");
+
+                    b.Property<string>("PurchaseCostCurrency")
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasColumnName("Currency");
 
                     b.HasKey("Id");
 
@@ -423,47 +436,7 @@ namespace CrateSync.Platform.InboundLogistics.Infrastructure.Persistence.Migrati
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsOne("CrateSync.Platform.InboundLogistics.Domain.ValueObjects.Money", "UnitCost", b1 =>
-                        {
-                            b1.Property<Guid>("ShipmentLineId")
-                                .HasColumnType("uniqueidentifier");
 
-                            b1.Property<decimal>("Amount")
-                                .HasColumnType("decimal(18,2)")
-                                .HasColumnName("UnitCost");
-
-                            b1.HasKey("ShipmentLineId");
-
-                            b1.ToTable("InboundShipmentLines", "logistics");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ShipmentLineId");
-
-                            b1.OwnsOne("CrateSync.Platform.InboundLogistics.Domain.ValueObjects.Currency", "Currency", b2 =>
-                                {
-                                    b2.Property<Guid>("MoneyShipmentLineId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("Code")
-                                        .IsRequired()
-                                        .HasMaxLength(3)
-                                        .HasColumnType("nvarchar(3)")
-                                        .HasColumnName("Currency");
-
-                                    b2.HasKey("MoneyShipmentLineId");
-
-                                    b2.ToTable("InboundShipmentLines", "logistics");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("MoneyShipmentLineId");
-                                });
-
-                            b1.Navigation("Currency")
-                                .IsRequired();
-                        });
-
-                    b.Navigation("UnitCost")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("CrateSync.Platform.InboundLogistics.Domain.Shipments.ShipmentDelivery", b =>

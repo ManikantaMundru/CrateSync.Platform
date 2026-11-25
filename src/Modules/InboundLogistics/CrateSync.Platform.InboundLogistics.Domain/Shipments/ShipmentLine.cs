@@ -14,7 +14,7 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
         BatchCode batchCode,
         CrateQuantity expectedQuantity,
         PackSize packSize,
-        Money unitCost)
+        Money? unitCost)
         : base(id)
     {
         if (productId == Guid.Empty) throw new ArgumentException("Product ID cannot be empty.", nameof(productId));
@@ -26,8 +26,10 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
         BatchCode = batchCode ?? throw new ArgumentNullException(nameof(batchCode));
         ExpectedQuantity = expectedQuantity;
         ReceivedQuantity = CrateQuantity.Zero;
-        PackSize = packSize ?? throw new ArgumentNullException(nameof(packSize));
-        UnitCost = unitCost ?? throw new ArgumentNullException(nameof(unitCost));
+        ArgumentNullException.ThrowIfNull(packSize);
+        PackWeightKg = packSize.WeightKg;
+        FruitsPerPack = packSize.FruitCount;
+        SetPurchaseCost(unitCost);
     }
 
     public Guid ProductId { get; private set; }
@@ -40,9 +42,24 @@ public sealed class ShipmentLine : Entity<ShipmentLineId>
 
     public CrateQuantity ReceivedQuantity { get; private set; }
 
-    public PackSize PackSize { get; private set; } = null!;
+    public decimal? PackWeightKg { get; private set; }
+    public int? FruitsPerPack { get; private set; }
+    public PackSize PackSize => FruitsPerPack is int count
+        ? PackSize.ByCount(count)
+        : new PackSize(PackWeightKg!.Value);
 
-    public Money UnitCost { get; private set; } = null!;
+    public decimal? PurchaseCostAmount { get; private set; }
+    public string? PurchaseCostCurrency { get; private set; }
+
+    public Money? UnitCost => PurchaseCostAmount is decimal amount && PurchaseCostCurrency is string currency
+        ? new Money(amount, new Currency(currency))
+        : null;
+
+    internal void SetPurchaseCost(Money? cost)
+    {
+        PurchaseCostAmount = cost?.Amount;
+        PurchaseCostCurrency = cost?.Currency.Code;
+    }
 
     public bool IsFullyReceived => ReceivedQuantity.Value == ExpectedQuantity.Value;
 
