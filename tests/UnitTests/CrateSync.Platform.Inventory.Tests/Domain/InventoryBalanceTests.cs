@@ -509,4 +509,16 @@ public sealed class InventoryBalanceTests
         Should.Throw<InvalidOperationException>(() => balance.SetSellingPrice(100m, "INR", Guid.NewGuid(), "", Now));
         balance.SellingPriceHistory.ShouldBeEmpty();
     }
+    [Fact]
+    public void OriginalReceiptAge_IsPreservedAcrossTransfer()
+    {
+        var batch = Guid.NewGuid();
+        var source = InventoryBalance.Create(TenantId, WarehouseId, ProductVarietyId, "ZA", Now, batch, "BATCH-1", 18m);
+        source.Receive(new CrateQuantity(100), StockReference.Shipment(Guid.NewGuid()), Now.AddDays(2), Now);
+        var destination = InventoryBalance.Create(TenantId, Guid.NewGuid(), ProductVarietyId, "ZA", Now.AddDays(5), batch, "BATCH-1", 18m);
+        destination.TransferIn(new CrateQuantity(40), StockReference.WarehouseTransfer(Guid.NewGuid()), null, Now.AddDays(5), source.OriginalReceivedAtUtc);
+        source.OriginalReceivedAtUtc.ShouldBe(Now);
+        destination.OriginalReceivedAtUtc.ShouldBe(Now);
+    }
+
 }
