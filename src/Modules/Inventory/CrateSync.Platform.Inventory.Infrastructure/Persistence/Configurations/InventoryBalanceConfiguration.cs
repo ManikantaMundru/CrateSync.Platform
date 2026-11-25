@@ -42,7 +42,9 @@ internal sealed class InventoryBalanceConfiguration : IEntityTypeConfiguration<I
             .IsConcurrencyToken()
             .IsRequired();
 
-        builder.HasIndex(x => new { x.TenantId, x.WarehouseId, x.ProductVarietyId, x.OriginCountry }).IsUnique();
+        builder.Property(x => x.BatchCode).HasMaxLength(100);
+        builder.Property(x => x.PackWeightKg).HasColumnType("decimal(18,3)");
+        builder.HasIndex(x => new { x.TenantId, x.WarehouseId, x.ProductVarietyId, x.OriginCountry, x.BatchId }).IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.WarehouseId });
         builder.HasIndex(x => new { x.TenantId, x.ProductVarietyId });
 
