@@ -92,4 +92,8 @@ public sealed record ShipmentDeliveryAllocationResponse(
     Guid Id,
     Guid DeliveryId,
     Guid ShipmentLineId,
-    int Quantity);
+    int Quantity,
+    int? AcceptedQuantity = null,
+    int? DamagedQuantity = null,
+    int? MissingQuantity = null,
+    string? ReceivingRemarks = null);
